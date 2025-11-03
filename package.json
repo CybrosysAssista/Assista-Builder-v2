@@ -1,0 +1,280 @@
+{
+  "name": "assista-x",
+  "displayName": "assista-x",
+  "description": "VS Code extension for Assista X (Odoo AI Assistant)",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.102.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:assistaXView",
+    "onCommand:assistaX.generateOdooModule",
+    "onCommand:assistaX.createManifest",
+    "onCommand:assistaX.open",
+    "onCommand:assistaX.settings",
+    "onCommand:assistaX.openHistory",
+    "onCommand:assistaX.addFolder",
+    "onCommand:assistaX.editOdooProject",
+    "onCommand:assistaX.openChat",
+    "onCommand:assistaX.more"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "assistaXSidebar",
+          "title": "Assista X",
+          "icon": "media/chat.svg"
+        }
+      ]
+    },
+    "views": {
+      "assistaXSidebar": [
+        {
+          "id": "assistaXView",
+          "name": "Chat",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "assistaX.open",
+        "title": "Open Assista X"
+      },
+      {
+        "command": "assistaX.applyEditsFromPrompt",
+        "title": "Assista X: Apply Edits From Prompt"
+      },
+      {
+        "command": "assistaX.insertContent",
+        "title": "Assista X: Insert Content Into Active File"
+      },
+      {
+        "command": "assistaX.searchAndReplace",
+        "title": "Assista X: Search And Replace In Active File"
+      },
+      {
+        "command": "assistaX.addFolder",
+        "title": "New Chat",
+        "icon": "$(comment-add)"
+      },
+      {
+        "command": "assistaX.settings",
+        "title": "Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "assistaX.openHistory",
+        "title": "History",
+        "icon": "$(history)"
+      },
+      {
+        "command": "assistaX.editOdooProject",
+        "title": "Assista X: Edit Existing Odoo Project"
+      },
+      {
+        "command": "assistaX.openChat",
+        "title": "Assista X: Open Chat"
+      },
+      {
+        "command": "assistaX.more",
+        "title": "Assista X: More"
+      },
+      {
+        "command": "assistaX.generateOdooModule",
+        "title": "Generate Odoo Module"
+      },
+      {
+        "command": "assistaX.createManifest",
+        "title": "Assista X: Create __manifest__.py"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "assistaX.addFolder",
+          "when": "view == assistaXView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "assistaX.settings",
+          "when": "view == assistaXView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "assistaX.openHistory",
+          "when": "view == assistaXView",
+          "group": "overflow@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Assista X",
+      "properties": {
+        "assistaX.activeProvider": {
+          "type": "string",
+          "enum": [
+            "google",
+            "openai",
+            "anthropic",
+            "openrouter",
+            "custom"
+          ],
+          "default": "openrouter",
+          "description": "Active AI provider for generation and chat."
+        },
+        "assistaX.providers": {
+          "type": "object",
+          "description": "Configuration for each AI provider (API keys saved securely).",
+          "properties": {
+            "google": {
+              "type": "object",
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "default": "gemini-1.5-flash-001",
+                  "description": "Google Gemini model."
+                }
+              },
+              "description": "Google AI configuration."
+            },
+            "openai": {
+              "type": "object",
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "default": "gpt-4o",
+                  "description": "OpenAI model."
+                }
+              },
+              "description": "OpenAI configuration."
+            },
+            "anthropic": {
+              "type": "object",
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "default": "claude-3-haiku-20240307",
+                  "description": "Anthropic model (via OpenRouter)."
+                }
+              },
+              "description": "Anthropic configuration."
+            },
+            "openrouter": {
+              "type": "object",
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "default": "anthropic/claude-3.5-sonnet",
+                  "description": "OpenRouter model."
+                },
+                "customUrl": {
+                  "type": "string",
+                  "default": "https://openrouter.ai/api/v1",
+                  "description": "Custom OpenRouter endpoint."
+                }
+              },
+              "description": "OpenRouter configuration."
+            },
+            "custom": {
+              "type": "object",
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "default": "gpt-4o",
+                  "description": "Custom model."
+                },
+                "customUrl": {
+                  "type": "string",
+                  "description": "Custom API endpoint (OpenAI-compatible)."
+                }
+              },
+              "description": "Custom provider configuration."
+            }
+          },
+          "default": {
+            "google": {
+              "model": "gemini-1.5-flash-001"
+            },
+            "openai": {
+              "model": "gpt-4o"
+            },
+            "anthropic": {
+              "model": "claude-3-haiku-20240307"
+            },
+            "openrouter": {
+              "model": "anthropic/claude-3.5-sonnet",
+              "customUrl": "https://openrouter.ai/api/v1"
+            },
+            "custom": {
+              "model": "gpt-4o"
+            }
+          }
+        },
+        "assistaX.defaultAddonsPath": {
+          "type": "string",
+          "default": "",
+          "description": "Preferred Odoo custom addons directory for creating new modules. If empty, the extension will ask you to pick a folder when creating modules."
+        },
+        "assistaX.customAddonsNames": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["custom_addons", "custom_addon"],
+          "description": "Folder names to treat as Odoo custom addons directories when scanning the workspace."
+        },
+        "assistaX.openrouterHeaders.referer": {
+          "type": "string",
+          "default": "https://assista-x.vscode",
+          "description": "Custom HTTP-Referer header to send when using OpenRouter-compatible providers."
+        },
+        "assistaX.openrouterHeaders.title": {
+          "type": "string",
+          "default": "Assista X Extension",
+          "description": "Custom X-Title header to send when using OpenRouter-compatible providers."
+        },
+        "assistaX.editScope": {
+          "type": "string",
+          "enum": ["openEditors", "visibleEditors", "moduleDirectory", "workspace"],
+          "default": "openEditors",
+          "description": "Scope for quick edit operations (e.g., label changes)."
+        },
+        "assistaX.systemPrompt.allowFileOverrides": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow workspace override files in .assista-x/ to replace the system prompt per mode."
+        },
+        "assistaX.systemPrompt.customInstructions": {
+          "type": "string",
+          "default": "",
+          "description": "Custom instructions appended to the system prompt for all modes."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.102.0",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.34.0",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.20.0"
+  }
+}
