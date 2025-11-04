@@ -8,9 +8,9 @@ export interface ProviderConfig {
     customUrl?: string;
 }
 
-// (removed stray incomplete helper block)
-
-// Helper: normalize a provided path into a `${moduleName}/...` scoped relative path
+/**
+ * Helper: normalize a provided path into a `${moduleName}/...` scoped relative path
+ */
 export function normalizeModuleScopedPath(
     relOrWeirdPath: string,
     moduleRoot: vscode.Uri,
