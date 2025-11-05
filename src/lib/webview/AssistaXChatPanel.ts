@@ -98,7 +98,7 @@ export class AssistaXChatPanel {
         try {
             this.appendAssistant('Starting validation and specification generation...');
             // Import AI module
-            const { generateOdooModule } = await import('../ai.js');
+            const { generateOdooModule } = await import('../ai/index.js');
             const result = await generateOdooModule(
                 text,
                 version,
@@ -113,7 +113,8 @@ export class AssistaXChatPanel {
             const progressInfo = result.progressInfo || {};
 
             // Ensure destination folder exists
-            try { await vscode.workspace.fs.createDirectory(folderUri); } catch { }
+            const { ensureDirectory, writeFileContent } = await import('../services/fileService.js');
+            try { await ensureDirectory(folderUri); } catch { }
 
             // Write files
             for (const [relPath, content] of Object.entries(files)) {
@@ -122,10 +123,10 @@ export class AssistaXChatPanel {
                 const parts = relPath.split('/');
                 if (parts.length > 1) {
                     const dir = vscode.Uri.joinPath(folderUri, ...parts.slice(0, -1));
-                    try { await vscode.workspace.fs.createDirectory(dir); } catch { }
+                    try { await ensureDirectory(dir); } catch { }
                 }
                 const fileStr = typeof content === 'string' ? content : String(content);
-                await vscode.workspace.fs.writeFile(dest, Buffer.from(fileStr, 'utf8'));
+                await writeFileContent(dest, fileStr);
                 this.appendEvent({ type: 'file.written', payload: { path: relPath } });
                 // Open the file immediately after generation (non-preview, do not steal focus)
                 try {

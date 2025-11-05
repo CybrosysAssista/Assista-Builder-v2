@@ -104,27 +104,54 @@ export const createSingleFilePrompt = (tasks: string, menuStructure: string, spe
     const truncatedSpecs = specifications.length > 1000 ? specifications.substring(0, 1000) + '\n\n... (Functional specifications truncated - complete requirements available in module documentation)' : specifications;
     const truncatedMenu = menuStructure.length > 600 ? menuStructure.substring(0, 600) + '\n\n... (Menu structure truncated - full navigation hierarchy available)' : menuStructure;
 
-    // Enhanced file type detection for better prompt engineering
+    // Enhanced file type detection - prioritize file extension over path
+    const fileExt = (filePath.split('.').pop() || '').toLowerCase();
+    const pathLower = filePath.toLowerCase();
+    
     const fileTypeAnalysis = {
-        pythonModel: filePath.includes('models') || taskDescription.includes('model') || taskDescription.includes('class') || taskDescription.includes('_name'),
-        pythonView: filePath.includes('views') && filePath.endsWith('.py'),
-        xmlView: (filePath.includes('views') || filePath.includes('.xml')) && !filePath.includes('security') && !filePath.includes('data'),
-        manifest: filePath.includes('__manifest__.py'),
-        securityCsv: filePath.includes('security') && filePath.endsWith('.csv'),
-        securityXml: filePath.includes('security') && filePath.endsWith('.xml'),
-        initPy: filePath.includes('__init__.py'),
-        dataXml: filePath.includes('data') || (filePath.endsWith('.xml') && !filePath.includes('views') && !filePath.includes('security')),
-        testPy: filePath.includes('test') || filePath.includes('__test__'),
-        wizardPy: filePath.includes('wizards'),
-        reportXml: filePath.includes('report'),
-        configPy: filePath.includes('config') || filePath.includes('settings')
+        // Explicitly check file extension first, then path
+        pythonModel: (fileExt === 'py' && (pathLower.includes('/models/') || pathLower.includes('models/'))) || 
+                     (fileExt === 'py' && !pathLower.includes('__init__') && !pathLower.includes('__manifest__') && !pathLower.includes('test')),
+        pythonView: fileExt === 'py' && pathLower.includes('views'),
+        xmlView: fileExt === 'xml' && (pathLower.includes('views') || pathLower.includes('/views/')) && !pathLower.includes('security') && !pathLower.includes('data'),
+        manifest: filePath.includes('__manifest__.py') || (fileExt === 'py' && pathLower.includes('__manifest__')),
+        securityCsv: fileExt === 'csv' && pathLower.includes('security'),
+        securityXml: fileExt === 'xml' && pathLower.includes('security'),
+        initPy: filePath.includes('__init__.py') || (fileExt === 'py' && pathLower.includes('__init__')),
+        dataXml: fileExt === 'xml' && (pathLower.includes('data') || (pathLower.includes('/data/'))) && !pathLower.includes('views') && !pathLower.includes('security'),
+        testPy: fileExt === 'py' && (pathLower.includes('test') || pathLower.includes('__test__')),
+        wizardPy: fileExt === 'py' && (pathLower.includes('wizards') || pathLower.includes('wizard')),
+        reportXml: fileExt === 'xml' && pathLower.includes('report'),
+        configPy: fileExt === 'py' && (pathLower.includes('config') || pathLower.includes('settings'))
     };
 
     // Convenience flags used in the prompt templates
     const isModel = fileTypeAnalysis.pythonModel;
     const isView = fileTypeAnalysis.xmlView || fileTypeAnalysis.pythonView;
+    
+    // Determine expected file type for explicit warning
+    let expectedType = 'Unknown';
+    if (fileExt === 'py' && !fileTypeAnalysis.manifest && !fileTypeAnalysis.initPy) {
+        expectedType = 'Python code (.py file)';
+    } else if (fileExt === 'xml') {
+        expectedType = 'XML content (.xml file)';
+    } else if (fileExt === 'csv') {
+        expectedType = 'CSV content (.csv file)';
+    } else if (fileTypeAnalysis.manifest) {
+        expectedType = 'Python dictionary (__manifest__.py)';
+    } else if (fileTypeAnalysis.initPy) {
+        expectedType = 'Python imports (__init__.py)';
+    }
 
     return `---
+
+**🚨 CRITICAL FILE TYPE REQUIREMENT 🚨**
+This file MUST be generated as: **${expectedType}**
+- File extension: **.${fileExt}**
+- Expected content type: **${expectedType}**
+- **DO NOT generate XML content for .py files**
+- **DO NOT generate Python code for .xml files**
+- **Match the file extension with the correct content format**
 
 **🚨 ABSOLUTE FORMATTING REQUIREMENT 🚨**
 You MUST respond with ONLY the raw, complete file content. NO JSON WRAPPERS. NO MARKDOWN CODE BLOCKS. NO EXPLANATIONS. NO "Here is the file" text. NO COMMENTS ABOUT THIS PROMPT.

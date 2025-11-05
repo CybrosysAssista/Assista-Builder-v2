@@ -3,7 +3,6 @@
  * Centralizes all command handler registrations
  */
 import * as vscode from 'vscode';
-import { registerWelcomePanelCommand } from './welcome.js';
 import { registerEditProjectCommand } from './editProject.js';
 import { registerFileOperationsCommands } from './fileOperations.js';
 import { registerApplyEditsCommand } from './applyEdits.js';
@@ -16,9 +15,6 @@ export function registerAllCommands(
     provider: AssistaXProvider
 ): vscode.Disposable[] {
     const disposables: vscode.Disposable[] = [];
-
-    // Register welcome panel
-    disposables.push(registerWelcomePanelCommand(context, provider));
 
     // Register edit project command
     disposables.push(registerEditProjectCommand(context, provider));

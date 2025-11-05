@@ -28,3 +28,11 @@ export function sanitizeModuleName(input: string): string {
         return 'my_module';
     }
 }
+
+/**
+ * Convert snake_case module name to Title Case for display names
+ * @example "real_estate_management" -> "Real Estate Management"
+ */
+export function formatModuleNameForDisplay(moduleName: string): string {
+    return moduleName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}

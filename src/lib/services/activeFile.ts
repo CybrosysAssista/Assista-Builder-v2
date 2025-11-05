@@ -2,6 +2,7 @@
  * Service for tracking active editor file and module root
  */
 import * as vscode from 'vscode';
+import { findModuleRoot as findModuleRootFromService } from './moduleService.js';
 
 export interface ActiveFileInfo {
     fileName: string | null;
@@ -9,29 +10,6 @@ export interface ActiveFileInfo {
     languageId: string | null;
     moduleRoot: string | null;
     timestamp: number;
-}
-
-/**
- * Finds the nearest module root containing __manifest__.py
- */
-async function findModuleRoot(uri: vscode.Uri): Promise<string | null> {
-    const pathMod = require('path');
-    let curDir = pathMod.dirname(uri.fsPath);
-    const wsRoots = (vscode.workspace.workspaceFolders || []).map(f => f.uri.fsPath);
-    
-    while (curDir && wsRoots.some(w => curDir.startsWith(w))) {
-        try {
-            const probe = vscode.Uri.file(pathMod.join(curDir, '__manifest__.py'));
-            await vscode.workspace.fs.stat(probe);
-            return curDir;
-        } catch {
-            // keep climbing
-        }
-        const parent = pathMod.dirname(curDir);
-        if (parent === curDir) break;
-        curDir = parent;
-    }
-    return null;
 }
 
 /**
@@ -52,7 +30,7 @@ export async function getActiveFileInfo(): Promise<ActiveFileInfo> {
         const uri = ed.document.uri;
         const fileName = require('path').basename(uri.fsPath);
         const languageId = ed.document.languageId || '';
-        const moduleRoot = await findModuleRoot(uri);
+        const moduleRoot = await findModuleRootFromService(uri);
         
         if (moduleRoot) {
             console.log('[Assista X] Active module root:', moduleRoot);

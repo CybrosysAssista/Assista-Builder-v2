@@ -32,7 +32,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     // All commands are now registered via registerAllCommands above
     // The following commands have been extracted to modules:
-    // - showWelcomePanel → lib/commands/welcome.ts
     // - editOdooProject → lib/commands/editProject.ts
     // - insertContent, searchAndReplace → lib/commands/fileOperations.ts
     // - applyEditsFromPrompt → lib/commands/applyEdits.ts

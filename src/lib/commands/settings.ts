@@ -42,8 +42,9 @@ export function registerSettingsCommands(
             const folderUri = targetUris[0];
 
             // Minimal manifest content
+            const { formatModuleNameForDisplay } = await import('../utils/moduleName.js');
             const manifest = `{
-    'name': '${moduleName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}',
+    'name': '${formatModuleNameForDisplay(moduleName)}',
     'summary': 'Real Estate Management',
     'version': '${version}',
     'category': 'Real Estate',
@@ -63,10 +64,11 @@ export function registerSettingsCommands(
             const dirUri = segments.length ? vscode.Uri.joinPath(folderUri, ...segments) : folderUri;
 
             // Ensure subdirectories exist before writing file
-            await vscode.workspace.fs.createDirectory(dirUri);
+            const { ensureDirectory, writeFileContent } = await import('../services/fileService.js');
+            await ensureDirectory(dirUri);
 
             const fullPath = vscode.Uri.joinPath(dirUri, fileName);
-            await vscode.workspace.fs.writeFile(fullPath, Buffer.from(manifest, 'utf8'));
+            await writeFileContent(fullPath, manifest);
 
             vscode.window.showInformationMessage(`Created ${relativePath}`);
         } catch (err) {

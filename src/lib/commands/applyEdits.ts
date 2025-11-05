@@ -35,20 +35,8 @@ export function registerApplyEditsCommand(
                     const uri = ed.document.uri;
                     const fileName = require('path').basename(uri.fsPath);
                     const languageId = ed.document.languageId || '';
-                    let curDir = require('path').dirname(uri.fsPath);
-                    const wsRoots = (vscode.workspace.workspaceFolders || []).map(f => f.uri.fsPath);
-                    let moduleRootPath: string | null = null;
-                    while (curDir && wsRoots.some(w => curDir.startsWith(w))) {
-                        try {
-                            const probe = vscode.Uri.file(require('path').join(curDir, '__manifest__.py'));
-                            await vscode.workspace.fs.stat(probe);
-                            moduleRootPath = curDir;
-                            break;
-                        } catch { /* keep climbing */ }
-                        const parent = require('path').dirname(curDir);
-                        if (parent === curDir) break;
-                        curDir = parent;
-                    }
+                    const { findModuleRoot } = await import('../services/moduleService.js');
+                    const moduleRootPath = await findModuleRoot(uri);
                     provider.sendMessage({ command: 'activeFile', fileName, fullPath: uri.fsPath, languageId, moduleRoot: moduleRootPath, timestamp: Date.now() });
                 } else {
                     provider.sendMessage({ command: 'activeFile', fileName: null, fullPath: null, languageId: null, moduleRoot: null, timestamp: Date.now() });
@@ -71,20 +59,12 @@ export function registerApplyEditsCommand(
             let moduleRoot: vscode.Uri | undefined;
             const path = require('path');
             if (activeUri) {
-                const wsRoots = (vscode.workspace.workspaceFolders || []).map(f => f.uri.fsPath);
-                let curDir = path.dirname(activeUri.fsPath);
-                while (curDir && wsRoots.some(w => curDir.startsWith(w))) {
-                    try {
-                        const probe = vscode.Uri.file(path.join(curDir, '__manifest__.py'));
-                        await vscode.workspace.fs.stat(probe);
-                        moduleRoot = vscode.Uri.file(curDir);
-                        break;
-                    } catch { /* keep climbing */ }
-                    const parent = path.dirname(curDir);
-                    if (parent === curDir) break;
-                    curDir = parent;
-                }
-                if (!moduleRoot) {
+                const { findModuleRoot } = await import('../services/moduleService.js');
+                const moduleRootPath = await findModuleRoot(activeUri);
+                if (moduleRootPath) {
+                    moduleRoot = vscode.Uri.file(moduleRootPath);
+                } else {
+                    // Fallback: search for manifest files
                     const manifests = await vscode.workspace.findFiles('**/__manifest__.py', exclude, 100);
                     const roots = manifests.map(u => vscode.Uri.joinPath(u, '..'));
                     const inside = roots.find(r => activeUri.fsPath.startsWith(r.fsPath + path.sep));
@@ -101,11 +81,8 @@ export function registerApplyEditsCommand(
             const all = await vscode.workspace.findFiles(rel, exclude, 5000);
             // Use module-relative identifiers like `${moduleName}/path/inside` so it works outside workspace
             const moduleName = path.basename(moduleRoot.fsPath);
-            const toModuleRel = (u: vscode.Uri) => {
-                const pth = require('path');
-                const rp = pth.relative(moduleRoot.fsPath, u.fsPath).replace(/\\/g, '/');
-                return (moduleName + '/' + rp).replace(/\/+/, '/');
-            };
+            const { toModuleRelativePath } = await import('../services/moduleService.js');
+            const toModuleRel = (u: vscode.Uri) => toModuleRelativePath(u, moduleRoot, moduleName);
             const allRel = new Set(all.map(toModuleRel));
             const sep = path.sep;
             const openRel = vscode.window.visibleTextEditors
@@ -116,7 +93,7 @@ export function registerApplyEditsCommand(
             const version = String(context.workspaceState.get('assistaX.odooVersion') || '17.0');
 
             // Ask AI to select relevant files strictly from existing list
-            const { generateContent } = await import('../ai.js');
+            const { generateContent } = await import('../ai/index.js');
             const { createFileSelectionForModificationPrompt, createModificationRequirementsPrompt, createModificationTasksPrompt, createFileContentForModificationPrompt } = await import('../prompts.js');
 
             // Prioritize the active file first, then other open files, then rest of module
@@ -150,6 +127,7 @@ export function registerApplyEditsCommand(
 
             // Read selected files and derive requirements/tasks
             const filesContent: Record<string, string> = {};
+            const { readFileContent } = await import('../services/fileService.js');
             for (const relPath of selected) {
                 try {
                     let uri: vscode.Uri;
@@ -158,8 +136,7 @@ export function registerApplyEditsCommand(
                     } else {
                         uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relPath);
                     }
-                    const buf = await vscode.workspace.fs.readFile(uri);
-                    filesContent[relPath] = Buffer.from(buf).toString('utf8');
+                    filesContent[relPath] = await readFileContent(uri);
                 } catch { /* skip unreadable */ }
             }
 
@@ -352,8 +329,7 @@ export function registerApplyEditsCommand(
                 if (!existing && relPath.startsWith(moduleName + '/')) {
                     try {
                         const targetUri = vscode.Uri.joinPath(moduleRoot, relPath.substring(moduleName.length + 1));
-                        const buf = await vscode.workspace.fs.readFile(targetUri);
-                        existing = Buffer.from(buf).toString('utf8');
+                        existing = await readFileContent(targetUri);
                         filesContent[relPath] = existing;
                     } catch { /* leave empty if unreadable */ }
                 }
@@ -369,7 +345,8 @@ export function registerApplyEditsCommand(
                         targetUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relPath);
                     }
                     await vscode.workspace.fs.stat(targetUri); // ensure exists
-                    await vscode.workspace.fs.writeFile(targetUri, Buffer.from(updated, 'utf8'));
+                    const { writeFileContent } = await import('../services/fileService.js');
+                    await writeFileContent(targetUri, updated);
                     applied++;
                     editedPaths.push(relPath);
                     try { await vscode.window.showTextDocument(targetUri, { preview: false, preserveFocus: true }); } catch {}

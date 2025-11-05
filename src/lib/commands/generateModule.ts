@@ -61,7 +61,7 @@ export function registerGenerateModuleCommand(
             // Step 1: Validation (message only)
             provider.sendMessage({ command: 'generationMessage', sender: 'ai', text: '🔍 **Step 1/6: Validating request**', timestamp: Date.now() });
 
-            const { generateOdooModule } = await import('../ai.js');
+            const { generateOdooModule } = await import('../ai/index.js');
             // Progress/cancel bridge: abort upstream generation when user presses Stop
             const progressCb = (event: { type: string; payload?: any }) => {
                 if (provider.isCancelRequested()) {
@@ -151,97 +151,29 @@ export function registerGenerateModuleCommand(
             const totalFiles = Object.keys(files).length;
             provider.sendMessage({ command: 'generationMessage', sender: 'ai', text: `💻 **Step 5/6: Code Generation** - Creating ${totalFiles} files...`, timestamp: Date.now(), fileCount: totalFiles });
             let written = 0;
-            for (const [filePath, content] of Object.entries(files)) {
+                for (const [filePath, content] of Object.entries(files)) {
                 if (provider.isCancelRequested()) {
                     provider.sendMessage({ command: 'generationMessage', sender: 'ai', text: '⏹️ Module generation cancelled by user.', timestamp: Date.now() });
                     break;
                 }
                 try {
-                    // Normalize and sanitize the incoming path
-                    let relativePath = String(filePath || '')
-                        .replace(/\\/g, '/')
-                        .replace(/^\/+/, '')
-                        .replace(/^\.\//, '');
-                    // Strip any repeated leading "<moduleName>/" to avoid nested paths like
-                    // "module/module/models/...". Keep removing until clean.
-                    try {
-                        const prefix = `${moduleName}/`;
-                        while (relativePath.startsWith(prefix)) {
-                            relativePath = relativePath.slice(prefix.length);
-                        }
-                        // Defensive: if the first segment equals moduleName (case-insensitive), drop it
-                        const probeSegs = relativePath.split('/').filter(Boolean);
-                        if (probeSegs.length && probeSegs[0].toLowerCase() === moduleName.toLowerCase()) {
-                            probeSegs.shift();
-                            relativePath = probeSegs.join('/');
-                        }
-                    } catch { }
-                    // Guard against parent escapes
-                    if (relativePath.includes('..')) {
-                        provider.sendMessage({ command: 'generationWarning', sender: 'ai', text: `⚠️ Skipped unsafe path: ${relativePath}`, filePath: relativePath, timestamp: Date.now() });
+                    // Use centralized path validation utility
+                    const { validateAndNormalizePath } = await import('../utils/pathUtils.js');
+                    const pathResult = validateAndNormalizePath(filePath, moduleName);
+                    
+                    if (!pathResult) {
+                        provider.sendMessage({ command: 'generationWarning', sender: 'ai', text: `⚠️ Skipped invalid path: ${filePath}`, filePath: filePath, timestamp: Date.now() });
                         continue;
                     }
-                    // Sanitize each segment: trim whitespace and replace spaces with underscores
-                    let segments = relativePath
-                        .split('/')
-                        .map(s => s.trim().replace(/\s+/g, '_'))
-                        .filter(Boolean);
-                    const fileName = segments.pop() || relativePath;
-
-                    // Enforce structure at write-time
-                    const allowedTop = new Set(['models','views','security','data','report','wizards','static']);
-                    // If AI added an extra wrapper (e.g., "estate/models/..."), drop the first segment
-                    if (segments.length >= 2 && !allowedTop.has(String(segments[0])) && allowedTop.has(String(segments[1]))) {
-                        segments.shift();
-                    }
-                    // After potential shift, compute top/atRoot
-                    let top = segments[0];
-                    const atRoot = segments.length === 0;
-                    // Block any nested manifest (e.g., models/__manifest__.py)
-                    if (!atRoot && fileName === '__manifest__.py') {
-                        provider.sendMessage({ command: 'generationWarning', sender: 'ai', text: `⚠️ Skipped nested manifest: ${relativePath}`, filePath: relativePath, timestamp: Date.now() });
-                        continue;
-                    }
-                    // Root-level files allowed only for __manifest__.py and __init__.py
-                    if (atRoot && !(fileName === '__manifest__.py' || fileName === '__init__.py')) {
-                        provider.sendMessage({ command: 'generationWarning', sender: 'ai', text: `⚠️ Skipped invalid root file: ${relativePath}`, filePath: relativePath, timestamp: Date.now() });
-                        continue;
-                    }
-                    // If not root and top-level is invalid, try to remap based on extension
-                    if (!atRoot && !allowedTop.has(String(top || ''))) {
-                        const ext = (fileName.split('.').pop() || '').toLowerCase();
-                        if (ext === 'py') {
-                            segments = ['models', ...segments];
-                        } else if (ext === 'xml') {
-                            segments = ['views', ...segments];
-                        } else if (ext === 'csv') {
-                            segments = ['security', ...segments];
-                        } else if (fileName === '__manifest__.py' || fileName === '__init__.py') {
-                            // Move special files to root
-                            segments = [];
-                        } else {
-                            provider.sendMessage({ command: 'generationWarning', sender: 'ai', text: `⚠️ Skipped invalid top-level directory: ${relativePath}`, filePath: relativePath, timestamp: Date.now() });
-                            continue;
-                        }
-                        top = segments[0];
-                    }
-                    // Dir-specific basic checks
-                    if (top === 'models' && !/\.py$/i.test(fileName) && fileName !== '__init__.py') {
-                        provider.sendMessage({ command: 'generationWarning', sender: 'ai', text: `⚠️ Skipped non-Python file in models/: ${relativePath}`, filePath: relativePath, timestamp: Date.now() });
-                        continue;
-                    }
-                    if (top === 'views' && !/\.xml$/i.test(fileName)) {
-                        provider.sendMessage({ command: 'generationWarning', sender: 'ai', text: `⚠️ Skipped non-XML file in views/: ${relativePath}`, filePath: relativePath, timestamp: Date.now() });
-                        continue;
-                    }
-                    if (top === 'security' && !/\.(csv|xml)$/i.test(fileName)) {
-                        provider.sendMessage({ command: 'generationWarning', sender: 'ai', text: `⚠️ Skipped invalid file in security/: ${relativePath}`, filePath: relativePath, timestamp: Date.now() });
-                        continue;
-                    }
+                    
+                    const { normalized, segments, fileName } = pathResult;
+                    const relativePath = normalized.replace(`${moduleName}/`, '');
+                    
+                    const { ensureDirectory, writeFileContent } = await import('../services/fileService.js');
                     const dirUri = segments.length ? vscode.Uri.joinPath(moduleRootUri, ...segments) : moduleRootUri;
-                    await vscode.workspace.fs.createDirectory(dirUri);
+                    await ensureDirectory(dirUri);
                     const fullPath = vscode.Uri.joinPath(dirUri, fileName);
-                    await vscode.workspace.fs.writeFile(fullPath, Buffer.from(String(content), 'utf8'));
+                    await writeFileContent(fullPath, String(content));
                     written++;
                     provider.sendMessage({ command: 'fileGenerated', sender: 'ai', text: `✅ ${relativePath}`, filePath: relativePath, progress: written, total: totalFiles, timestamp: Date.now() });
                 } catch (writeError) {

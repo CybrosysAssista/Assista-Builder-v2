@@ -155,7 +155,7 @@ const chatInput = document.getElementById('chatInput');
         const restoreSessionBtn = document.getElementById('restoreSessionBtn');
         const historySessions = document.getElementById('historySessions');
         const historyMessages = document.getElementById('historyMessages');
-        // History assets loader and renderer (media/history.css + media/history.js)
+        // History assets loader and renderer (lib/webview/ui/history.css + lib/webview/ui/history.js)
         const historyAssetsMeta = document.getElementById('historyAssets');
         let historyAssetsLoaded = false;
         // Inline status bubble (Analyzing… / Generating…) rendered as a normal AI chat bubble

@@ -32,7 +32,7 @@
       </div>
       <div class="controls-row">
         <div class="search-container">
-          <input type="text" class="search-box" placeholder="🔍 Fuzzy search history...">
+          <input type="text" class="search-box" placeholder="🔍 Search history...">
         </div>
         <div class="dropdown-container">
           <select class="dropdown" id="workspaceSelect">
@@ -146,3 +146,5 @@
     render: mount
   };
 })();
+
+
