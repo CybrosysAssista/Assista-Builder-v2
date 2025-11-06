@@ -258,9 +258,8 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./ && node scripts/copy-ui-assets.js",
+    "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "copy-ui": "node scripts/copy-ui-assets.js",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test"
   },
