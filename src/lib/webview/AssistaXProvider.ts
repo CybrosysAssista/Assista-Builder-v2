@@ -42,6 +42,30 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         ];
     }
 
+    // Hard reset provider flow-related state to avoid wedged confirmations across mode switches
+    private resetFlowState(hard: boolean = true) {
+        try {
+            // Resolve and clear any pending plan confirmation
+            if (this._planConfirmTimer) {
+                clearTimeout(this._planConfirmTimer);
+                this._planConfirmTimer = undefined;
+            }
+            if (this._planConfirmResolver) {
+                try { this._planConfirmResolver({ approved: false, allowCreate: false }); } catch { /* ignore */ }
+                this._planConfirmResolver = undefined;
+            }
+            // Clear cancel and pending actions
+            this._cancelRequested = false;
+            this._pendingAction = undefined;
+            // Optionally clear the active flow id
+            if (hard) {
+                this._activeFlowId = undefined;
+            }
+            // Inform webview to clear any confirm UI if still shown
+            try { this._view?.webview.postMessage({ type: 'clearConfirm' }); } catch { /* ignore */ }
+        } catch { /* best-effort */ }
+    }
+
     // Cancel helpers
     public resetCancel() { this._cancelRequested = false; }
     public requestCancel() { this._cancelRequested = true; }
@@ -88,7 +112,8 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         }, 150);
     }
 
-    public async waitForPlanConfirmation(timeoutMs: number = 60000): Promise<{ approved: boolean; allowCreate: boolean } | undefined> {
+    public async waitForPlanConfirmation(_timeoutMs: number = 60000): Promise<{ approved: boolean; allowCreate: boolean } | undefined> {
+        // Remove auto-timeout entirely: wait indefinitely until user clicks Proceed/Cancel.
         this._planConfirmResolver = undefined;
         if (this._planConfirmTimer) {
             clearTimeout(this._planConfirmTimer);
@@ -96,14 +121,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         }
         return new Promise(resolve => {
             this._planConfirmResolver = resolve as (v: { approved: boolean; allowCreate: boolean }) => void;
-            this._planConfirmTimer = setTimeout(() => {
-                if (this._planConfirmResolver) {
-                    const r = this._planConfirmResolver;
-                    this._planConfirmResolver = undefined;
-                    r({ approved: false, allowCreate: false });
-                }
-                resolve(undefined);
-            }, Math.max(5000, timeoutMs));
+            // No timer started intentionally.
         });
     }
 
@@ -124,6 +142,11 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(async message => {
             // Track current flow id from webview
             if (typeof message?.flowId === 'number') {
+                // If a new flow id arrives, reset stale state before adopting it
+                if (this._activeFlowId == null || this._activeFlowId !== message.flowId) {
+                    // Soft reset (keep subsequent flow id we are about to set)
+                    this.resetFlowState(false);
+                }
                 this._activeFlowId = message.flowId;
             }
 
@@ -167,8 +190,10 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 this._planConfirmTimer = undefined;
             }
             resolver?.({ approved: true, allowCreate });
-                    return;
-                }
+            // Soft reset to clear confirm/cancel flags but keep current flowId
+            this.resetFlowState(false);
+            return;
+        }
 
         if (message?.type === 'plan.cancel') {
             const resolver = this._planConfirmResolver;
@@ -178,8 +203,10 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 this._planConfirmTimer = undefined;
             }
             resolver?.({ approved: false, allowCreate: false });
-                    return;
-                }
+            // Ensure we fully clear any lingering flow state so next mode can start clean
+            this.resetFlowState();
+            return;
+        }
 
         // Legacy confirm bar buttons (for plan confirmation)
         if (message?.type === 'confirmProceed') {
@@ -190,6 +217,8 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 this._planConfirmTimer = undefined;
             }
             resolver?.({ approved: true, allowCreate: false });
+            // Soft reset as with plan.confirm
+            this.resetFlowState(false);
             return;
         }
 
@@ -201,6 +230,8 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 this._planConfirmTimer = undefined;
             }
             resolver?.({ approved: false, allowCreate: false });
+            // Also clear state on legacy cancel
+            this.resetFlowState();
             return;
         }
 

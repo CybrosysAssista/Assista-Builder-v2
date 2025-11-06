@@ -1271,7 +1271,7 @@ function renderPlan(){
                     try { renderPlan(); } catch {}
                     hideConfirm();
                 } catch {}
-                try { vscode.postMessage({ command: 'editRequest', text, context: Array.isArray(contextItems) ? contextItems : [] }); } catch {}
+                try { vscode.postMessage({ command: 'editRequest', text, context: Array.isArray(contextItems) ? contextItems : [], flowId: currentFlowId }); } catch {}
                 // Clear input and return
                 if (ti && 'value' in ti) { 
                     try { 
@@ -1314,7 +1314,7 @@ function renderPlan(){
                 pendingModuleName = suggestModuleName(text).slice(0,64);
                 // Show a lightweight Validating bubble while we validate before asking for version
                 try { showStatusBubble('Validating'); } catch {}
-                try { vscode.postMessage({ command: 'validatePrompt', prompt: pendingPrompt, context: Array.isArray(contextItems) ? contextItems : [] }); } catch {}
+                try { vscode.postMessage({ command: 'validatePrompt', prompt: pendingPrompt, context: Array.isArray(contextItems) ? contextItems : [], flowId: currentFlowId }); } catch {}
             }
             if (ti && 'value' in ti) { 
                 try { 
@@ -1460,7 +1460,7 @@ function renderPlan(){
                 if (pendingGenPayload && pendingGenPayload.version && pendingGenPayload.moduleName && pendingGenPayload.prompt) {
                     try { setGenerating(true); } catch {}
                     try { showStatusBubble('Analyzing'); } catch {}
-                    try { vscode.postMessage({ command: 'beginGenerateModule', prompt: pendingGenPayload.prompt, version: pendingGenPayload.version, moduleName: pendingGenPayload.moduleName, context: Array.isArray(contextItems) ? contextItems : [] }); } catch {}
+                    try { vscode.postMessage({ command: 'beginGenerateModule', prompt: pendingGenPayload.prompt, version: pendingGenPayload.version, moduleName: pendingGenPayload.moduleName, context: Array.isArray(contextItems) ? contextItems : [], flowId: currentFlowId }); } catch {}
                     pendingGenPayload = null;
                 } else {
                     // Edit flow: user approved applying the plan
@@ -1738,7 +1738,7 @@ function renderPlan(){
                     } catch {}
                     if (!canShow) {
                         hideConfirm();
-                        try { vscode.postMessage({ command: 'requestPlanResend' }); } catch {}
+                        try { vscode.postMessage({ command: 'requestPlanResend', flowId: currentFlowId }); } catch {}
                         return;
                     }
                     // Show the confirm bar now that plan is present

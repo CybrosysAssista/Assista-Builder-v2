@@ -11,6 +11,9 @@ import { cleanFileContent } from './contentCleaner.js';
 import { extractJsonFromText, repairJsonForValidation } from './jsonRepair.js';
 import { getActiveProviderConfig } from '../services/configService.js';
 
+// Global-ish counter for API calls in this extension host session
+let __assistaApiCallSeq = 0;
+
 export interface ProviderConfig {
     apiKey: string;
     model: string;
@@ -43,11 +46,35 @@ export async function generateContent(params: any, context: vscode.ExtensionCont
 
     const { provider, config } = await getActiveProviderConfig(context);
 
+    // Debug: centralized API call logging
+    try {
+        const seq = (++__assistaApiCallSeq);
+        const mode = (params?.config?.mode as any) || 'general';
+        const respType = params?.config?.responseMimeType || 'text/plain';
+        // Safe prompt preview (truncated)
+        const rawContents: any = (params as any)?.contents;
+        const contentStr = typeof rawContents === 'string' ? rawContents : JSON.stringify(rawContents ?? '');
+        const contentLen = contentStr.length;
+        const contentPreview = contentStr.substring(0, Math.min(1200, contentLen));
+        const sysLen = ((params?.config as any)?.systemInstruction || '').length;
+        console.log(`[Assista X] API called #${seq} -> provider=${provider}, model=${config?.model || ''}, mode=${mode}, responseMimeType=${respType}`);
+        console.log(`[Assista X] API request #${seq} meta: contentsLen=${contentLen}, systemInstructionLen=${sysLen}`);
+        console.log(`[Assista X] API request #${seq} contents preview:\n${contentPreview}`);
+    } catch {}
+
+    let out: string;
     if (provider === 'google') {
-        return generateWithGoogle(params, config, context);
+        out = await generateWithGoogle(params, config, context);
     } else {
-        return generateWithOpenAICompat(params, config, provider, context);
+        out = await generateWithOpenAICompat(params, config, provider, context);
     }
+    try {
+        const bytes = typeof out === 'string' ? out.length : String(out||'').length;
+        const preview = typeof out === 'string' ? out.substring(0, Math.min(800, out.length)) : String(out||'').substring(0,800);
+        console.log(`[Assista X] API call complete (#${__assistaApiCallSeq}), bytes=${bytes}`);
+        console.log(`[Assista X] API response preview (#${__assistaApiCallSeq}):\n${preview}`);
+    } catch {}
+    return out;
 }
 
 // Odoo-specific high-level functions
@@ -60,6 +87,13 @@ export async function generateOdooModule(
     progressCb?: (event: { type: string; payload?: any }) => void,
     cancelRequested?: () => boolean
 ): Promise<{ files: Record<string, string>, progressInfo: any }> {
+    // Track API calls for this generation operation
+    let apiCalls = 0;
+    const callAI = async (p: any) => {
+        apiCalls++;
+        try { console.log(`[Assista X] API call (module-gen) #${apiCalls}`); } catch {}
+        return await generateContent(p, context);
+    };
     // Advanced multi-step chained generation inspired by Assista-x-Dev-main
     // Step 1: Validate Odoo request with enhanced error handling and fallback
 
@@ -81,7 +115,7 @@ export async function generateOdooModule(
     if (!options?.skipValidation) {
         const validationPrompt = { contents: prompts.createOdooValidationPrompt(userPrompt), config: { responseMimeType: 'application/json' } };
         if (cancelRequested?.()) { throw new Error('Cancelled'); }
-        rawValidation = await generateContent(validationPrompt, context);
+        rawValidation = await callAI(validationPrompt);
         validationData = { is_odoo_request: false, reason: 'Unable to parse validation response' } as { is_odoo_request: boolean; reason: string };
     }
     let jsonText = ''; // Declare at function scope for logging access
@@ -214,7 +248,7 @@ export async function generateOdooModule(
     // Step 2: Generate detailed functional specifications
     const specsPrompt = { contents: prompts.createDetailedSpecsPrompt(userPrompt, version, validationData) };
     if (cancelRequested?.()) { throw new Error('Cancelled'); }
-    const specifications = await generateContent(specsPrompt, context);
+    const specifications = await callAI(specsPrompt);
     console.log('Specifications generated:', specifications.substring(0, 100));
     progressCb?.({ type: 'specs.ready', payload: { preview: specifications.substring(0, 600) } });
 
@@ -236,7 +270,7 @@ export async function generateOdooModule(
                 config: {}
             };
             try {
-                const fileContent = await generateContent(filePrompt, context);
+                const fileContent = await callAI(filePrompt);
                 const cleanContent = cleanFileContent(fileContent);
                 if (cleanContent) {
                     allFiles[filePath] = cleanContent;
@@ -250,18 +284,18 @@ export async function generateOdooModule(
         // Step 3: Technical tasks breakdown (strict format to ensure file-path checklist items)
         const tasksPrompt = { contents: prompts.createStrictTasksPrompt(specifications, version, moduleName) };
         if (cancelRequested?.()) { throw new Error('Cancelled'); }
-        tasks = await generateContent(tasksPrompt, context);
+        tasks = await callAI(tasksPrompt);
         console.log('Tasks generated:', tasks.substring(0, 100));
         progressCb?.({ type: 'tasks.ready', payload: { preview: tasks.substring(0, 600) } });
 
         // Step 4: Menu and UI structure
         const menuPrompt = { contents: prompts.createAdvancedMenuPrompt(tasks, specifications, version) };
         if (cancelRequested?.()) { throw new Error('Cancelled'); }
-        menuStructure = await generateContent(menuPrompt, context);
+        menuStructure = await callAI(menuPrompt);
         console.log('Menu structure generated:', menuStructure.substring(0, 100));
         progressCb?.({ type: 'menu.ready', payload: { preview: menuStructure.substring(0, 600) } });
 
-        // Step 5: Generate core files individually to avoid JSON parsing issues
+        // Step 5: Generate files in folder-wise batches
         // Detect checklist lines that contain a backticked file path with a slash and an extension
         const taskLineRegex = /^\s*- \[ \] .*`[^`\n]*\/[\w\-./]+\.[a-zA-Z0-9]+`/;
         const taskLines = tasks.split('\n').filter(line => taskLineRegex.test(line));
@@ -271,61 +305,108 @@ export async function generateOdooModule(
 
         // Use centralized path normalization utility
         const { enforcePathPolicy } = await import('../utils/pathUtils.js');
-        
+
+        // Build folder -> [{path, line}] map
+        const folderMap = new Map<string, Array<{ path: string; taskLine: string }>>();
+        for (const taskLine of taskLines) {
+            const fileMatch = taskLine.match(/`([^`]+)`/);
+            if (!fileMatch) continue;
+            const rawPath = fileMatch[1];
+            const safePath = enforcePathPolicy(rawPath, moduleName);
+            if (!safePath) {
+                console.warn(`Skipped invalid or out-of-structure path from task: ${rawPath}`);
+                progressCb?.({ type: 'file.skipped', payload: { path: rawPath, reason: 'invalid_path' } });
+                continue;
+            }
+            const tail = safePath.slice(moduleName.length + 1);
+            const top = tail.split('/')[0] || '';
+            const key = top || 'root';
+            if (!folderMap.has(key)) folderMap.set(key, []);
+            folderMap.get(key)!.push({ path: safePath, taskLine });
+        }
+
+        // Helper: create batch prompt asking for JSON mapping path->content
+        const makeBatchPrompt = (entries: Array<{ path: string; taskLine: string }>) => {
+            const list = entries.map(e => `- ${e.path}\n  From task: ${e.taskLine}`).join('\n');
+            const jsonExample = `{"${moduleName}/models/example.py": "<file content>"}`;
+            const contents = `Generate multiple files for Odoo ${version}.\n\nReturn a JSON object mapping each file path to its complete raw content.\n- Keys: exact file paths.\n- Values: the full file content as a string.\n- Do NOT include markdown code fences.\n- Do NOT include explanations.\n- Ensure content type matches file extension (py/xml/csv).\n\nModule: ${moduleName}\nSpecifications (summary, may be truncated in logging):\n${specifications.substring(0, 2000)}\n\nTasks context (excerpt):\n${tasks.substring(0, 2000)}\n\nMenu (excerpt):\n${menuStructure.substring(0, 2000)}\n\nFiles to generate in this batch:\n${list}\n\nRespond ONLY with JSON like ${jsonExample}.`;
+            return { contents, config: { responseMimeType: 'application/json' } };
+        };
+
+        // Parse possibly fenced JSON
+        const parseJson = (text: string) => {
+            try {
+                let t = typeof text === 'string' ? text : String(text || '');
+                t = t.trim();
+                t = t.replace(/^```[a-zA-Z]*\n([\s\S]*?)\n```$/m, '$1');
+                return JSON.parse(t);
+            } catch (e) {
+                console.error('Batch JSON parse failed', e);
+                return null;
+            }
+        };
+
         // Track generated files to prevent duplicates
         const generatedPaths = new Set<string>();
 
-        for (const taskLine of taskLines) {
-            if (cancelRequested?.()) { throw new Error('Cancelled'); }
-            const fileMatch = taskLine.match(/`([^`]+)`/);
-            if (fileMatch) {
-                const rawPath = fileMatch[1];
-                const safePath = enforcePathPolicy(rawPath, moduleName);
-                if (!safePath) {
-                    console.warn(`Skipped invalid or out-of-structure path from task: ${rawPath}`);
-                    progressCb?.({ type: 'file.skipped', payload: { path: rawPath, reason: 'invalid_path' } });
-                    continue;
+        // Process each folder in batches to avoid token limits
+        for (const [folder, items] of folderMap.entries()) {
+            // Simple batching: up to 8 files per call
+            const batchSize = 8;
+            for (let i = 0; i < items.length; i += batchSize) {
+                if (cancelRequested?.()) { throw new Error('Cancelled'); }
+                const batch = items.slice(i, i + batchSize);
+                // Announce start for each file
+                for (const it of batch) {
+                    if (generatedPaths.has(it.path)) continue;
+                    progressCb?.({ type: 'file.started', payload: { path: it.path } });
                 }
-                
-                // Skip if already generated (deduplication)
-                if (generatedPaths.has(safePath)) {
-                    console.log(`Skipping duplicate file generation: ${safePath}`);
-                    progressCb?.({ type: 'file.skipped', payload: { path: safePath, reason: 'duplicate' } });
-                    continue;
-                }
-                
-                progressCb?.({ type: 'file.started', payload: { path: safePath } });
-                const filePrompt = {
-                    contents: prompts.createSingleFilePrompt(tasks, menuStructure, specifications, version, moduleName, safePath, taskLine),
-                    config: {}
-                };
+                const prompt = makeBatchPrompt(batch);
+                let raw = '';
                 try {
-                    if (cancelRequested?.()) { throw new Error('Cancelled'); }
-                    const fileContent = await generateContent(filePrompt, context);
-                    const beforeLen = typeof fileContent === 'string' ? fileContent.length : String(fileContent).length;
-                    const cleanContent = cleanFileContent(fileContent);
-                    if (cleanContent) {
-                        // Use the already-normalized safePath (no need to normalize again)
-                        allFiles[safePath] = cleanContent;
-                        generatedPaths.add(safePath);
-                        try { progressCb?.({ type: 'file.ready', payload: { path: safePath, content: cleanContent } }); } catch {}
-                        fileCount++;
-                        try {
-                            const ext = (safePath.split('.').pop() || '').toLowerCase();
-                            progressCb?.({ type: 'file.cleaned', payload: { path: safePath, before: beforeLen, after: cleanContent.length, ext } });
-                        } catch {}
-                        progressCb?.({ type: 'file.done', payload: { path: safePath, size: cleanContent.length } });
-                    } else {
-                        console.warn(`cleanFileContent returned empty for ${safePath}, skipping`);
-                        progressCb?.({ type: 'file.empty', payload: { path: safePath } });
+                    raw = await callAI(prompt);
+                } catch (e) {
+                    console.error(`Batch generation failed for folder ${folder} [${i}-${i + batch.length - 1}]`, e);
+                    for (const it of batch) {
+                        progressCb?.({ type: 'file.error', payload: { path: it.path, error: String(e) } });
                     }
+                    continue;
+                }
+                const obj = parseJson(raw);
+                if (!obj || typeof obj !== 'object') {
+                    console.warn(`Batch returned invalid JSON for folder ${folder}`);
+                    for (const it of batch) {
+                        progressCb?.({ type: 'file.error', payload: { path: it.path, error: 'invalid_batch_json' } });
+                    }
+                    continue;
+                }
+                for (const it of batch) {
+                    const content = obj[it.path];
+                    if (generatedPaths.has(it.path)) { continue; }
+                    if (typeof content !== 'string' || !content.trim()) {
+                        console.warn(`Empty or missing content for ${it.path} in batch response`);
+                        progressCb?.({ type: 'file.empty', payload: { path: it.path } });
+                        continue;
+                    }
+                    const beforeLen = content.length;
+                    const cleanContent = cleanFileContent(content);
+                    if (!cleanContent) {
+                        console.warn(`cleanFileContent returned empty for ${it.path}, skipping`);
+                        progressCb?.({ type: 'file.empty', payload: { path: it.path } });
+                        continue;
+                    }
+                    allFiles[it.path] = cleanContent;
+                    generatedPaths.add(it.path);
+                    try { progressCb?.({ type: 'file.ready', payload: { path: it.path, content: cleanContent } }); } catch {}
+                    fileCount++;
+                    try {
+                        const ext = (it.path.split('.').pop() || '').toLowerCase();
+                        progressCb?.({ type: 'file.cleaned', payload: { path: it.path, before: beforeLen, after: cleanContent.length, ext } });
+                    } catch {}
+                    progressCb?.({ type: 'file.done', payload: { path: it.path, size: cleanContent.length } });
                     // Mark the generated task as completed locally in the markdown
-                    const completedLine = taskLine.replace('- [ ]', '- [x]');
-                    updatedTasks = updatedTasks.replace(taskLine, completedLine);
-                } catch (fileError) {
-                    console.error(`File generation failed for ${safePath}:`, fileError);
-                    progressCb?.({ type: 'file.error', payload: { path: safePath, error: String(fileError) } });
-                    if (String(fileError || '').includes('Cancelled')) { throw fileError; }
+                    const completedLine = it.taskLine.replace('- [ ]', '- [x]');
+                    updatedTasks = updatedTasks.replace(it.taskLine, completedLine);
                 }
             }
         }
@@ -391,7 +472,7 @@ export async function generateOdooModule(
                 contents: `Generate a basic ${essential.endsWith('/__manifest__.py') ? '__manifest__.py' : '__init__.py'} file for Odoo module "${moduleName}" version ${version}. Just the raw file content, no explanations.`
             };
             try {
-                const fallbackContent = await generateContent(fallbackPrompt, context);
+                const fallbackContent = await callAI(fallbackPrompt);
                 const cleanFallback = fallbackContent.replace(/^```(?:python)?\s*\n?([\s\S]*?)\n?```$/g, '$1').trim();
                 if (cleanFallback) {
                     allFiles[essential] = cleanFallback;
@@ -455,6 +536,7 @@ export async function generateOdooModule(
     // Combine all files
     const finalFiles = { ...filteredFiles, ...testFiles };
 
+    try { console.log(`[Assista X] Module generation API calls total: ${apiCalls}`); } catch {}
     return {
         files: finalFiles,
         progressInfo: {
@@ -466,7 +548,8 @@ export async function generateOdooModule(
             fileCount: fileCount,
             testCount: Object.keys(testFiles).length,
             hasTests: Object.keys(testFiles).length > 0,
-            generationSuccess: true
+            generationSuccess: true,
+            apiCallCount: apiCalls
         }
     };
 }

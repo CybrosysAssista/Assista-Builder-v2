@@ -79,6 +79,12 @@ export function registerApplyEditsCommand(
             // Build candidate files: open editors first, then entire module
             const rel = new vscode.RelativePattern(moduleRoot, '**/*');
             const all = await vscode.workspace.findFiles(rel, exclude, 5000);
+            if (!all || all.length === 0) {
+                // No files discovered — inform user and stop analyzing state
+                provider.sendMessage({ command: 'aiReply', text: 'Assista X: No files were found under the detected module. Ensure the module is in your workspace and contains files.' });
+                provider.sendMessage({ command: 'statusBubble', action: 'hide' });
+                return;
+            }
             // Use module-relative identifiers like `${moduleName}/path/inside` so it works outside workspace
             const moduleName = path.basename(moduleRoot.fsPath);
             const { toModuleRelativePath } = await import('../services/moduleService.js');
@@ -120,7 +126,8 @@ export function registerApplyEditsCommand(
                 if (activeRel && allRel.has(activeRel)) {
                     selected = [activeRel];
                 } else {
-                    provider.sendMessage({ command: 'aiReply', text: 'No existing files were selected. Tip: open the target file(s) and retry the edit.' });
+                    provider.sendMessage({ command: 'aiReply', text: 'Assista X: No existing files were selected for editing. Open the target file or use /file <path> to target a file, then try again.' });
+                    provider.sendMessage({ command: 'statusBubble', action: 'hide' });
                     return;
                 }
             }
@@ -281,7 +288,7 @@ export function registerApplyEditsCommand(
             let approved = false;
             let allowCreate = false;
             try {
-                const decision = await provider.waitForPlanConfirmation(45_000); // 45s timeout
+                const decision = await provider.waitForPlanConfirmation(0); // no timeout; wait indefinitely
                 approved = !!decision?.approved;
                 allowCreate = !!decision?.allowCreate;
             } catch {
