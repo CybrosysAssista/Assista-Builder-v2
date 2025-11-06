@@ -304,6 +304,11 @@ const chatInput = document.getElementById('chatInput');
         let shouldAutoScroll = true;
         let isGenerating = false;
         const stopBtn = document.getElementById('stopBtn');
+        if (stopBtn) {
+            try { stopBtn.setAttribute('aria-hidden', 'true'); } catch {}
+            try { stopBtn.setAttribute('tabindex', '-1'); } catch {}
+            try { stopBtn.disabled = true; } catch {}
+        }
         const sendBtnEl = document.getElementById('sendBtn');
         const sendBtnMirrorEl = document.getElementById('sendBtnMirror');
         const addContextBtn = document.getElementById('addContextBtn');
@@ -393,6 +398,96 @@ function parseDevMainHtml(html){
   });
   return groups;
 }
+function extractTextFromHtml(html){
+  try {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return (div.textContent || div.innerText || '').trim();
+  } catch {
+    return String(html || '').replace(/<[^>]+>/g, '').trim();
+  }
+}
+function normalizeFilePaths(items){
+  const paths = [];
+  (items || []).forEach(it=>{
+    let raw = '';
+    if (typeof it === 'string') raw = it;
+    else if (it && typeof it.text === 'string') raw = it.text;
+    else if (it && typeof it.html === 'string') raw = extractTextFromHtml(it.html);
+    const split = String(raw || '')
+      .split(/<br\s*\/?>/i)
+      .map(s=>s.replace(/^[\-*\d\.\s]+/, '').trim())
+      .filter(Boolean);
+    split.forEach(seg=>{
+      const cleaned = seg.replace(/\\/g, '/').replace(/^\/*/, '').replace(/\/*$/, '');
+      if (cleaned) paths.push(cleaned);
+    });
+  });
+  const seen = new Set();
+  return paths.filter(p=>{
+    if (seen.has(p)) return false;
+    seen.add(p);
+    return true;
+  });
+}
+function buildFileTree(paths){
+  const root = { name: '', children: new Map(), isFile: false };
+  let segmentsList = paths.map(p=>p.split('/').filter(Boolean));
+  if (segmentsList.length) {
+    const first = segmentsList[0][0];
+    const allSame = first && segmentsList.every(parts => parts[0] === first);
+    if (allSame) {
+      segmentsList = segmentsList.map(parts => parts.slice(1));
+    }
+  }
+  segmentsList.forEach(parts=>{
+    if (!parts.length) return;
+    let node = root;
+    parts.forEach((part, idx)=>{
+      if (!node.children.has(part)) {
+        node.children.set(part, { name: part, children: new Map(), isFile: false });
+      }
+      const child = node.children.get(part);
+      if (idx === parts.length - 1) child.isFile = true;
+      node = child;
+    });
+  });
+  return root;
+}
+function formatFileTreeLines(node, prefix=''){
+  const entries = Array.from(node.children.values());
+  entries.sort((a, b)=>{
+    const aDir = a.children.size > 0 && !a.isFile;
+    const bDir = b.children.size > 0 && !b.isFile;
+    if (aDir !== bDir) return aDir ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+  const lines = [];
+  entries.forEach((entry, idx)=>{
+    const isLast = idx === entries.length - 1;
+    const connector = isLast ? '└── ' : '├── ';
+    lines.push(prefix + connector + entry.name);
+    if (entry.children.size) {
+      const nextPrefix = prefix + (isLast ? '    ' : '│   ');
+      lines.push(...formatFileTreeLines(entry, nextPrefix));
+    }
+  });
+  return lines;
+}
+function renderFileTree(items){
+  const paths = normalizeFilePaths(items);
+  if (!paths.length) {
+    return '<div class="empty-tree">No files detected.</div>';
+  }
+  const tree = buildFileTree(paths);
+  const lines = formatFileTreeLines(tree);
+  const escaped = lines.map(line=>line
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;'))
+    .join('\n');
+  return `<pre class="file-tree" role="presentation">${escaped}</pre>`;
+}
 function parseTasks(md){
   const lines = String(md||'').split(/\r?\n/);
   const groups = [];
@@ -441,7 +536,8 @@ function renderPlan(){
       const groupInner = `<div class="task-group"><h4>${sanitize(g.title||'')}</h4><ul class="task-list">${items}</ul></div>`;
       // If this is the files list group, wrap it with a bordered box
       if (/^\s*files\s+to\s+be\s+created\s*$/i.test(String(g.title||''))) {
-        return `<div class="files-box">${groupInner}</div>`;
+        const treeHtml = renderFileTree(g.items || []);
+        return `<div class="files-box file-tree-box"><div class="task-group file-tree-group"><h4>${sanitize(g.title||'')}</h4>${treeHtml}</div></div>`;
       }
       return groupInner;
     }).join('');
@@ -943,22 +1039,36 @@ function renderPlan(){
                 vscode.postMessage({ command: 'cancelEditClick' });
             });
         }
+        function requestStop(source) {
+            try { hideConfirm(); } catch {}
+            try { hideStatusBubble(); } catch {}
+            try { setGenerating(false); } catch {}
+            try { pendingGenPayload = null; } catch {}
+            try { vscode.postMessage({ command: 'cancelCurrent', source: source || 'user-stop' }); } catch {}
+            try { vscode.postMessage({ command: 'stop', source: source || 'user-stop' }); } catch {}
+        }
         // Stop button cancels the current validation/plan/generation phase
         if (stopBtn && 'addEventListener' in stopBtn) {
             stopBtn.addEventListener('click', () => {
-                try { hideStatusBubble(); } catch {}
-                try { setGenerating(false); } catch {}
-                // Clear any pending payload so Proceed won't start anything stale
-                try { pendingGenPayload = null; } catch {}
-                try { vscode.postMessage({ command: 'cancelCurrent' }); } catch {}
+                requestStop('user-stop');
             });
         }
         function setGenerating(on) {
             isGenerating = !!on;
             if (stopBtn) {
-                if (on) stopBtn.classList.add('visible');
-                else stopBtn.classList.remove('visible');
+                const active = !!on;
+                try { stopBtn.classList.toggle('visible', active); } catch {}
+                try { stopBtn.disabled = !active; } catch {}
+                try { stopBtn.setAttribute('aria-hidden', active ? 'false' : 'true'); } catch {}
+                try {
+                    if (active) stopBtn.setAttribute('tabindex', '0');
+                    else stopBtn.setAttribute('tabindex', '-1');
+                } catch {}
+                if (!active) {
+                    try { stopBtn.blur(); } catch {}
+                }
             }
+            try { chatWrapper && chatWrapper.classList.toggle('is-generating', !!on); } catch {}
             // Toggle Send button visibility while generating
             try {
                 if (sendBtnEl) {
@@ -1339,14 +1449,7 @@ function renderPlan(){
         if (sendBtn && 'addEventListener' in sendBtn) {
             sendBtn.addEventListener('click', () => { hideConfirm(); sendMessage(); });
         }
-        // Wire Stop button to cancel generation
-        if (stopBtn && 'addEventListener' in stopBtn) {
-            stopBtn.addEventListener('click', () => {
-                try { setGenerating(false); } catch {}
-                try { vscode.postMessage({ command: 'stop' }); } catch {}
-                addMessage('Stopping…', 'ai');
-            });
-        }
+        // Stop button wiring handled earlier via requestStop()
 
         // Global click delegation to keep buttons working even if DOM is recreated
         document.addEventListener('click', (e) => {
