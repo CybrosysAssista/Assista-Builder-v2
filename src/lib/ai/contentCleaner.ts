@@ -55,8 +55,6 @@ export function cleanFileContent(content: string): string {
         if (!cleaned.trim().startsWith('# -*-')) {
             cleaned = `# -*- coding: utf-8 -*-\n${cleaned}`;
         }
-        ctx.artifacts.menu = menuStructure;
-        ctx.generated = allFiles;
     }
     
     // Enhanced control character removal - comprehensive Unicode cleanup
