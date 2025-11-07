@@ -46,7 +46,6 @@ export class SettingsHandler implements MessageHandler {
             
             const config = vscode.workspace.getConfiguration('assistaX');
             try {
-                console.log('Saving activeProvider:', activeProvider);
                 const providerKeys = ['google', 'openai', 'anthropic', 'openrouter', 'custom'];
                 const toSave: any = {};
                 
@@ -67,7 +66,6 @@ export class SettingsHandler implements MessageHandler {
 
                 await config.update('activeProvider', activeProvider, vscode.ConfigurationTarget.Global);
                 await config.update('providers', toSave, vscode.ConfigurationTarget.Global);
-                console.log('Config updated successfully');
                 provider._view?.webview.postMessage({ command: 'saveSuccess' });
             } catch (e) {
                 console.error('Save settings error:', e);

@@ -4,7 +4,6 @@ import { createActiveFileBroadcaster } from './lib/services/activeFile';
 import { AssistaXProvider } from './lib/webview/AssistaXProvider.js';
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Assista X extension is being activated');
 
     const provider = new AssistaXProvider(context.extensionUri, context);
 
@@ -45,14 +44,10 @@ export function activate(context: vscode.ExtensionContext) {
                 context.workspaceState.update('assistaX.odooVersion', info.version || '');
                 context.workspaceState.update('assistaX.releasePyPath', info.file?.fsPath || '');
                 context.workspaceState.update('assistaX.isOdooProject', !!info.version);
-                if (info.version) {
-                    console.log(`[Assista X] Detected Odoo version: ${info.version} via ${info.file?.fsPath}`);
-                }
             }
         })
         .catch((err: unknown) => console.warn('[Assista X] Odoo detection failed:', err));
 
-    console.log('Assista X extension activated successfully');
 }
 
 export function deactivate() { }

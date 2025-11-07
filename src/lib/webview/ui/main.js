@@ -599,7 +599,6 @@ function renderPlan(){
         // Use VS Code native QuickPick flow via extension
         if (addContextBtn && 'addEventListener' in addContextBtn){
             addContextBtn.addEventListener('click', ()=>{
-                try { console.log('[Assista X] Add Context clicked'); } catch {}
                 try { vscode.postMessage({ command: 'openContextPicker' }); } catch {}
             });
         }
@@ -609,7 +608,6 @@ function renderPlan(){
             try {
                 const msg = event.data || {};
                 if (msg.command === 'contextAdded' && Array.isArray(msg.items)){
-                    try { console.log('[Assista X] contextAdded received', msg.items); } catch {}
                     const items = msg.items.map(x=>({ type: x.type, name: x.name, path: x.path }));
                     // de-dup by path
                     const seen = new Set(contextItems.map(i=>i.path));
@@ -1655,7 +1653,6 @@ function renderPlan(){
             } catch {}
             // Sidebar confirm bar: post-generation actions
             if (msg && msg.command === 'postGenActions') {
-                try { console.log('[Assista X] Webview received postGenActions'); } catch {}
                 try {
                     if (confirmBar) {
                         confirmBar.dataset.mode = 'postgen';
@@ -2178,7 +2175,6 @@ function renderPlan(){
                 return;
             }
             if (msg.command === 'openHistory') {
-                console.log('[Assista X Webview] openHistory received');
                 // Show history overlay and render external UI
                 try { if (mainContent) mainContent.style.display = 'flex'; } catch {}
                 try { if (messages) messages.classList.remove('active'); } catch {}
@@ -2186,7 +2182,6 @@ function renderPlan(){
                 openHistory();
             }
             if (msg.command === 'openSettings') {
-                console.log('[Assista X Webview] openSettings received');
                 // Make sure the container that holds the overlay is visible
                 try { if (mainContent) mainContent.style.display = 'flex'; } catch {}
                 try { if (messages) messages.classList.remove('active'); } catch {}
@@ -2197,7 +2192,6 @@ function renderPlan(){
                 let overlay = settingsOverlay || ensureSettingsOverlay();
                 if (overlay) {
                     overlay.classList.add('active');
-                    console.log('[Assista X Webview] settingsOverlay activated');
                 } else {
                     console.warn('[Assista X Webview] settingsOverlay element not found');
                 }
@@ -2233,7 +2227,6 @@ function renderPlan(){
                     }
                 }
             };
-            console.log('Saving settings:', settings); // Debug log
             vscode.postMessage({ command: 'saveSettings', settings });
             settingsOverlay.classList.remove('active');
             // No chat message on successful save (suppressed)

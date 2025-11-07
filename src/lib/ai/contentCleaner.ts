@@ -55,6 +55,8 @@ export function cleanFileContent(content: string): string {
         if (!cleaned.trim().startsWith('# -*-')) {
             cleaned = `# -*- coding: utf-8 -*-\n${cleaned}`;
         }
+        ctx.artifacts.menu = menuStructure;
+        ctx.generated = allFiles;
     }
     
     // Enhanced control character removal - comprehensive Unicode cleanup
@@ -134,10 +136,6 @@ export function cleanFileContent(content: string): string {
     
     // Log if control characters were detected and removed
     const removedControls = content.length - cleaned.length;
-    if (removedControls > 0) {
-        const detectedType = cleaned.includes('<odoo') ? 'XML' : cleaned.includes('from odoo') ? 'Python' : 'Other';
-        console.log(`cleanFileContent: Processed ${content.length} -> ${cleaned.length} chars (removed ${removedControls} control/invisible chars, type: ${detectedType})`);
-    }
     return cleaned;
 }
 

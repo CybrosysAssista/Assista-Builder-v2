@@ -11,9 +11,6 @@ import { cleanFileContent } from './contentCleaner.js';
 import { extractJsonFromText, repairJsonForValidation } from './jsonRepair.js';
 import { getActiveProviderConfig } from '../services/configService.js';
 
-// Global-ish counter for API calls in this extension host session
-let __assistaApiCallSeq = 0;
-
 export interface ProviderConfig {
     apiKey: string;
     model: string;
@@ -46,34 +43,12 @@ export async function generateContent(params: any, context: vscode.ExtensionCont
 
     const { provider, config } = await getActiveProviderConfig(context);
 
-    // Debug: centralized API call logging
-    try {
-        const seq = (++__assistaApiCallSeq);
-        const mode = (params?.config?.mode as any) || 'general';
-        const respType = params?.config?.responseMimeType || 'text/plain';
-        // Safe prompt preview (truncated)
-        const rawContents: any = (params as any)?.contents;
-        const contentStr = typeof rawContents === 'string' ? rawContents : JSON.stringify(rawContents ?? '');
-        const contentLen = contentStr.length;
-        const contentPreview = contentStr.substring(0, Math.min(1200, contentLen));
-        const sysLen = ((params?.config as any)?.systemInstruction || '').length;
-        console.log(`[Assista X] API called #${seq} -> provider=${provider}, model=${config?.model || ''}, mode=${mode}, responseMimeType=${respType}`);
-        console.log(`[Assista X] API request #${seq} meta: contentsLen=${contentLen}, systemInstructionLen=${sysLen}`);
-        console.log(`[Assista X] API request #${seq} contents preview:\n${contentPreview}`);
-    } catch {}
-
     let out: string;
     if (provider === 'google') {
         out = await generateWithGoogle(params, config, context);
     } else {
         out = await generateWithOpenAICompat(params, config, provider, context);
     }
-    try {
-        const bytes = typeof out === 'string' ? out.length : String(out||'').length;
-        const preview = typeof out === 'string' ? out.substring(0, Math.min(800, out.length)) : String(out||'').substring(0,800);
-        console.log(`[Assista X] API call complete (#${__assistaApiCallSeq}), bytes=${bytes}`);
-        console.log(`[Assista X] API response preview (#${__assistaApiCallSeq}):\n${preview}`);
-    } catch {}
     return out;
 }
 
@@ -91,7 +66,6 @@ export async function generateOdooModule(
     let apiCalls = 0;
     const callAI = async (p: any) => {
         apiCalls++;
-        try { console.log(`[Assista X] API call (module-gen) #${apiCalls}`); } catch {}
         return await generateContent(p, context);
     };
     // Advanced multi-step chained generation inspired by Assista-x-Dev-main
@@ -129,8 +103,6 @@ export async function generateOdooModule(
         // Apply comprehensive repair specifically for validation responses
         jsonText = repairJsonForValidation(jsonText);
 
-        console.log('Enhanced validation JSON processing complete. Length:', jsonText.length, 'Preview:', jsonText.substring(0, 200) + (jsonText.length > 200 ? '...' : ''));
-
         // Parse with comprehensive error handling
         validationData = JSON.parse(jsonText);
 
@@ -152,17 +124,10 @@ export async function generateOdooModule(
             validationData.reason = validationData.reason.substring(0, 500) + '... (truncated)';
         }
 
-        console.log('✅ Enhanced JSON validation parsing successful:', {
-            is_odoo_request: validationData.is_odoo_request,
-            reason_preview: validationData.reason.substring(0, 100)
-        });
         progressCb?.({ type: 'validation.success', payload: validationData });
 
     } catch (parseError) {
         console.error('❌ Enhanced JSON.parse failed for validation response:', parseError);
-        console.log('Raw validation response (first 400 chars):',
-            typeof rawValidation === 'string' ? rawValidation.substring(0, 400) : JSON.stringify(rawValidation).substring(0, 400));
-
         // Advanced fallback validation with multiple strategies
         const responseText = typeof rawValidation === 'string' ? rawValidation.toLowerCase() : '';
 
@@ -179,9 +144,6 @@ export async function generateOdooModule(
         const semanticScore = positiveScore - negativeScore;
         const totalConfidence = keywordScore + semanticScore;
 
-        console.log(`Validation fallback analysis: keywordScore=${keywordScore}, semanticScore=${semanticScore}, totalConfidence=${totalConfidence}`);
-        console.log(`Odoo matches: ${odooMatches}, Non-Odoo matches: ${nonOdooMatches}`);
-
         // Determine validation result
         let isOdooRequest = false;
         let fallbackReason = '';
@@ -189,12 +151,10 @@ export async function generateOdooModule(
         if (totalConfidence >= 2 || (odooMatches >= 2 && positiveScore > negativeScore)) {
             isOdooRequest = true;
             fallbackReason = `Advanced fallback validation succeeded (confidence: ${totalConfidence}). Detected ${odooMatches} Odoo terms vs ${nonOdooMatches} general terms. Positive indicators: ${positiveScore}, Negative: ${negativeScore}. Original parsing error: ${(parseError as Error).message}`;
-            console.log('🔄 Enhanced fallback validation - SUCCESS:', { isOdooRequest, confidence: totalConfidence });
         } else if (totalConfidence >= -1 && odooMatches >= 1) {
             // Borderline case - be conservative
             isOdooRequest = true;
             fallbackReason = `Conservative fallback validation (confidence: ${totalConfidence}). Detected Odoo context but parsing failed: ${(parseError as Error).message}. Recommendation: Review requirements manually.`;
-            console.log('🔄 Conservative fallback validation activated:', { isOdooRequest, confidence: totalConfidence });
         } else {
             isOdooRequest = false;
             fallbackReason = `Fallback validation inconclusive (confidence: ${totalConfidence}). Detected ${odooMatches} Odoo terms vs ${nonOdooMatches} general terms. JSON parsing failed: ${(parseError as Error).message}. Recommendation: Refine prompt or switch to OpenRouter provider for more reliable JSON responses.`;
@@ -223,33 +183,15 @@ export async function generateOdooModule(
     if (!validationData.is_odoo_request) {
         const errorMsg = `Odoo validation failed: ${validationData.reason}`;
         console.error(errorMsg);
-        console.log('Validation failure details:', {
-            raw_response_length: typeof rawValidation === 'string' ? rawValidation.length : 'non-string',
-            processed_json_length: jsonText.length,
-            final_decision: validationData,
-            odoo_matches_detected: odooIndicators.filter((ind: string) =>
-                (typeof rawValidation === 'string' ? rawValidation.toLowerCase() : '').includes(ind)
-            ).join(', ')
-        });
         throw new Error(errorMsg);
     }
 
-    console.log('🎉 Enhanced Odoo validation PASSED:', {
-        is_odoo_request: validationData.is_odoo_request,
-        reason_summary: validationData.reason.substring(0, 100),
-        confidence_indicators: {
-            odoo_matches: odooIndicators.filter((ind: string) =>
-                (typeof rawValidation === 'string' ? rawValidation.toLowerCase() : '').includes(ind)
-            ).join(', ')
-        }
-    });
     progressCb?.({ type: 'validation.passed', payload: validationData });
 
     // Step 2: Generate detailed functional specifications
     const specsPrompt = { contents: prompts.createDetailedSpecsPrompt(userPrompt, version, validationData) };
     if (cancelRequested?.()) { throw new Error('Cancelled'); }
     const specifications = await callAI(specsPrompt);
-    console.log('Specifications generated:', specifications.substring(0, 100));
     progressCb?.({ type: 'specs.ready', payload: { preview: specifications.substring(0, 600) } });
 
     let tasks = '';
@@ -260,11 +202,8 @@ export async function generateOdooModule(
 
     const targetFiles = options?.targetFiles && options.targetFiles.length ? options.targetFiles : null;
     if (targetFiles) {
-        console.log(`Targeted generation mode: ${targetFiles.length} file(s)`);
-
         // Generate only requested files using minimal context (use specifications; omit tasks/menu)
         for (const filePath of targetFiles) {
-            console.log(`Generating targeted file: ${filePath}`);
             const filePrompt = {
                 contents: prompts.createSingleFilePrompt('', '', specifications, version, moduleName, filePath, `Generate ${filePath}`),
                 config: {}
@@ -285,14 +224,12 @@ export async function generateOdooModule(
         const tasksPrompt = { contents: prompts.createStrictTasksPrompt(specifications, version, moduleName) };
         if (cancelRequested?.()) { throw new Error('Cancelled'); }
         tasks = await callAI(tasksPrompt);
-        console.log('Tasks generated:', tasks.substring(0, 100));
         progressCb?.({ type: 'tasks.ready', payload: { preview: tasks.substring(0, 600) } });
 
         // Step 4: Menu and UI structure
         const menuPrompt = { contents: prompts.createAdvancedMenuPrompt(tasks, specifications, version) };
         if (cancelRequested?.()) { throw new Error('Cancelled'); }
         menuStructure = await callAI(menuPrompt);
-        console.log('Menu structure generated:', menuStructure.substring(0, 100));
         progressCb?.({ type: 'menu.ready', payload: { preview: menuStructure.substring(0, 600) } });
 
         // Step 5: Generate files in folder-wise batches
@@ -300,7 +237,6 @@ export async function generateOdooModule(
         const taskLineRegex = /^\s*- \[ \] .*`[^`\n]*\/[\w\-./]+\.[a-zA-Z0-9]+`/;
         const taskLines = tasks.split('\n').filter(line => taskLineRegex.test(line));
         updatedTasks = tasks;
-        console.log(`Found ${taskLines.length} file generation tasks`);
         try { progressCb?.({ type: 'files.count', payload: { count: taskLines.length } }); } catch {}
 
         // Use centralized path normalization utility
@@ -467,7 +403,6 @@ export async function generateOdooModule(
     const essentialFiles = targetFiles ? [] : [`${moduleName}/__manifest__.py`, `${moduleName}/__init__.py`];
     for (const essential of essentialFiles) {
         if (!allFiles[essential]) {
-            console.log(`Generating fallback for essential file: ${essential}`);
             const fallbackPrompt = {
                 contents: `Generate a basic ${essential.endsWith('/__manifest__.py') ? '__manifest__.py' : '__init__.py'} file for Odoo module "${moduleName}" version ${version}. Just the raw file content, no explanations.`
             };
@@ -536,7 +471,6 @@ export async function generateOdooModule(
     // Combine all files
     const finalFiles = { ...filteredFiles, ...testFiles };
 
-    try { console.log(`[Assista X] Module generation API calls total: ${apiCalls}`); } catch {}
     return {
         files: finalFiles,
         progressInfo: {

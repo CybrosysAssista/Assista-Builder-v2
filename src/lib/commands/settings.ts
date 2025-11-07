@@ -81,12 +81,11 @@ export function registerSettingsCommands(
         // Focus the main view and request it to open the in-webview settings overlay
         await vscode.commands.executeCommand('assistaXView.focus');
         vscode.window.showInformationMessage('Assista X: Opening settings…');
-        console.log('[Assista X] Settings command invoked: posting openSettings');
         provider.openSettings();
         // Additional fallbacks in case of race conditions
-        setTimeout(() => { console.log('[Assista X] Retry openSettings @200ms'); provider.openSettings(); }, 200);
-        setTimeout(() => { console.log('[Assista X] Retry openSettings @600ms'); provider.openSettings(); }, 600);
-        setTimeout(() => { console.log('[Assista X] Retry openSettings @1000ms'); provider.openSettings(); }, 1000);
+        setTimeout(() => { provider.openSettings(); }, 200);
+        setTimeout(() => { provider.openSettings(); }, 600);
+        setTimeout(() => { provider.openSettings(); }, 1000);
     }));
 
     // New: Show detected Odoo version (on-demand detection if missing)

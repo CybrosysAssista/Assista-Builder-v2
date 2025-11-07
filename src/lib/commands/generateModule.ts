@@ -196,11 +196,9 @@ export function registerGenerateModuleCommand(
             // Small delay to avoid being swallowed by focus changes after file opens
             await new Promise(res => setTimeout(res, 1000));
             try {
-                console.log('[Assista X] Showing post-generation choice prompt…');
                 provider.sendMessage({ command: 'generationMessage', sender: 'system', text: 'Next step: Edit existing module or generate another?', timestamp: Date.now() });
             } catch { }
             // Prefer QuickPick first (most visible and sticky)
-            console.log('[Assista X] Showing QuickPick choice…');
             const firstPick = await vscode.window.showQuickPick([
                 { label: 'Edit Existing Module', description: 'Switch this session to Edit mode for the generated module' },
                 { label: 'Generate Another', description: 'Start a new generation workflow' },
@@ -212,7 +210,6 @@ export function registerGenerateModuleCommand(
 
             // Non-modal notification next
             if (!nextAction) {
-                console.log('[Assista X] QuickPick returned undefined, showing non-modal choice notification…');
                 nextAction = await vscode.window.showInformationMessage(
                     'Module generated. Choose next action:',
                     'Edit Existing Module',
@@ -221,7 +218,6 @@ export function registerGenerateModuleCommand(
             }
             // Backup: show modal if non-modal returned undefined
             if (!nextAction) {
-                console.log('[Assista X] Non-modal returned undefined, showing modal…');
                 nextAction = await vscode.window.showInformationMessage(
                     'Module generated. What would you like to do next?',
                     { modal: true, detail: `Module: ${moduleName} (Odoo ${version})\nLocation: ${moduleRootUri.fsPath}` },
@@ -252,7 +248,6 @@ export function registerGenerateModuleCommand(
             if (!nextAction) {
                 for (let attempt = 1; attempt <= 2 && !nextAction; attempt++) {
                     try {
-                        console.log(`[Assista X] Re-prompt attempt #${attempt} (non-modal notification)…`);
                         await new Promise(r => setTimeout(r, 1200));
                         nextAction = await vscode.window.showInformationMessage(
                             'Module generated. Choose next action:',
@@ -264,7 +259,6 @@ export function registerGenerateModuleCommand(
             }
 
             if (nextAction === 'Edit Existing Module') {
-                console.log('[Assista X] User chose: Edit Existing Module');
                 // If generated folder is not in workspace, offer to add it so edit scanners can find it
                 try {
                     const inWs = (vscode.workspace.workspaceFolders || []).some(f => moduleRootUri.fsPath.startsWith(f.uri.fsPath + require('path').sep));
@@ -288,11 +282,8 @@ export function registerGenerateModuleCommand(
                 // Ensure active file context is pushed (in case newly opened files need to be reflected)
                 try { await pushActiveFile(); } catch { }
             } else if (nextAction === 'Generate Another') {
-                console.log('[Assista X] User chose: Generate Another');
                 // Loop back into the same workflow to create another module
                 try { await vscode.commands.executeCommand('assistaX.generateOdooModule'); } catch { }
-            } else {
-                console.log('[Assista X] Post-generation choice dismissed or no selection. Staying on current view.');
             }
         } catch (error) {
             if ((error as Error).message.includes('cancelled')) {

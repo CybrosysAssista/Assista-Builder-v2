@@ -44,9 +44,6 @@ export function extractJsonFromText(text: string): string {
     if (cleaned.startsWith('```') && cleaned.endsWith('```')) {
         cleaned = cleaned.slice(3, -3).trim();
     }
-
-    console.log('After markdown removal (first 200 chars):', cleaned.substring(0, 200));
-
     // Step 5: Advanced brace/bracket balancing for JSON extraction
     // Handle both { } and [ ] wrapped content
     const jsonStartMarkers = ['{', '['];
@@ -118,9 +115,6 @@ export function extractJsonFromText(text: string): string {
         
         jsonStr = cleaned.substring(finalStart, finalEnd + 1);
         
-        console.log(`Extracted JSON structure: ${contentType} (${jsonStr.length} chars)`);
-        console.log('Extracted JSON preview:', jsonStr.substring(0, 150) + (jsonStr.length > 150 ? '...' : ''));
-        
         // Apply comprehensive JSON repair
         jsonStr = repairJsonStrings(jsonStr);
         jsonStr = fixCommonJsonIssues(jsonStr);
@@ -129,8 +123,6 @@ export function extractJsonFromText(text: string): string {
     }
 
     // Final fallback: return cleaned text if no JSON structure found
-    console.log('No valid JSON structure found, returning cleaned text (', cleaned.length, 'chars)');
-    console.log('Fallback content preview:', cleaned.substring(0, 150));
     return cleaned;
 }
 
@@ -245,7 +237,6 @@ export function repairJsonForValidation(jsonStr: string): string {
             parsed.reason = 'Validation structure repaired automatically';
             repaired = JSON.stringify(parsed);
         }
-        console.log('✅ JSON validation repair successful:', { is_odoo_request: parsed.is_odoo_request, reason: parsed.reason.substring(0, 100) });
         return repaired;
     } catch (e) {
         console.warn('Final JSON repair failed, using fallback structure:', e);

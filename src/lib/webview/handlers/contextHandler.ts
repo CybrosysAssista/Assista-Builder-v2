@@ -63,7 +63,6 @@ export class ContextHandler implements MessageHandler {
                     path: u.fsPath,
                 }));
                 provider.sendMessage({ command: 'contextAdded', items });
-                try { console.log(`[Assista X] contextAdded -> ${items.length} item(s)`); } catch {}
                 try { vscode.window.setStatusBarMessage(`Assista X: Added ${items.length} context item(s)`, 2500); } catch {}
             } catch (e) {
                 try { console.warn('[Assista X] openContextPicker failed:', e); } catch {}

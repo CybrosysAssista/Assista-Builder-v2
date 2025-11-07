@@ -31,13 +31,7 @@ export async function getActiveFileInfo(): Promise<ActiveFileInfo> {
         const fileName = require('path').basename(uri.fsPath);
         const languageId = ed.document.languageId || '';
         const moduleRoot = await findModuleRootFromService(uri);
-        
-        if (moduleRoot) {
-            console.log('[Assista X] Active module root:', moduleRoot);
-        } else {
-            console.log('[Assista X] Active module root: not found (no __manifest__.py above active file)');
-        }
-        
+
         return {
             fileName,
             fullPath: uri.fsPath,
