@@ -155,7 +155,7 @@ const chatInput = document.getElementById('chatInput');
         const restoreSessionBtn = document.getElementById('restoreSessionBtn');
         const historySessions = document.getElementById('historySessions');
         const historyMessages = document.getElementById('historyMessages');
-        // History assets loader and renderer (media/history.css + media/history.js)
+        // History assets loader and renderer (lib/webview/ui/history.css + lib/webview/ui/history.js)
         const historyAssetsMeta = document.getElementById('historyAssets');
         let historyAssetsLoaded = false;
         // Inline status bubble (Analyzing… / Generating…) rendered as a normal AI chat bubble
@@ -304,6 +304,11 @@ const chatInput = document.getElementById('chatInput');
         let shouldAutoScroll = true;
         let isGenerating = false;
         const stopBtn = document.getElementById('stopBtn');
+        if (stopBtn) {
+            try { stopBtn.setAttribute('aria-hidden', 'true'); } catch {}
+            try { stopBtn.setAttribute('tabindex', '-1'); } catch {}
+            try { stopBtn.disabled = true; } catch {}
+        }
         const sendBtnEl = document.getElementById('sendBtn');
         const sendBtnMirrorEl = document.getElementById('sendBtnMirror');
         const addContextBtn = document.getElementById('addContextBtn');
@@ -393,6 +398,96 @@ function parseDevMainHtml(html){
   });
   return groups;
 }
+function extractTextFromHtml(html){
+  try {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return (div.textContent || div.innerText || '').trim();
+  } catch {
+    return String(html || '').replace(/<[^>]+>/g, '').trim();
+  }
+}
+function normalizeFilePaths(items){
+  const paths = [];
+  (items || []).forEach(it=>{
+    let raw = '';
+    if (typeof it === 'string') raw = it;
+    else if (it && typeof it.text === 'string') raw = it.text;
+    else if (it && typeof it.html === 'string') raw = extractTextFromHtml(it.html);
+    const split = String(raw || '')
+      .split(/<br\s*\/?>/i)
+      .map(s=>s.replace(/^[\-*\d\.\s]+/, '').trim())
+      .filter(Boolean);
+    split.forEach(seg=>{
+      const cleaned = seg.replace(/\\/g, '/').replace(/^\/*/, '').replace(/\/*$/, '');
+      if (cleaned) paths.push(cleaned);
+    });
+  });
+  const seen = new Set();
+  return paths.filter(p=>{
+    if (seen.has(p)) return false;
+    seen.add(p);
+    return true;
+  });
+}
+function buildFileTree(paths){
+  const root = { name: '', children: new Map(), isFile: false };
+  let segmentsList = paths.map(p=>p.split('/').filter(Boolean));
+  if (segmentsList.length) {
+    const first = segmentsList[0][0];
+    const allSame = first && segmentsList.every(parts => parts[0] === first);
+    if (allSame) {
+      segmentsList = segmentsList.map(parts => parts.slice(1));
+    }
+  }
+  segmentsList.forEach(parts=>{
+    if (!parts.length) return;
+    let node = root;
+    parts.forEach((part, idx)=>{
+      if (!node.children.has(part)) {
+        node.children.set(part, { name: part, children: new Map(), isFile: false });
+      }
+      const child = node.children.get(part);
+      if (idx === parts.length - 1) child.isFile = true;
+      node = child;
+    });
+  });
+  return root;
+}
+function formatFileTreeLines(node, prefix=''){
+  const entries = Array.from(node.children.values());
+  entries.sort((a, b)=>{
+    const aDir = a.children.size > 0 && !a.isFile;
+    const bDir = b.children.size > 0 && !b.isFile;
+    if (aDir !== bDir) return aDir ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+  const lines = [];
+  entries.forEach((entry, idx)=>{
+    const isLast = idx === entries.length - 1;
+    const connector = isLast ? '└── ' : '├── ';
+    lines.push(prefix + connector + entry.name);
+    if (entry.children.size) {
+      const nextPrefix = prefix + (isLast ? '    ' : '│   ');
+      lines.push(...formatFileTreeLines(entry, nextPrefix));
+    }
+  });
+  return lines;
+}
+function renderFileTree(items){
+  const paths = normalizeFilePaths(items);
+  if (!paths.length) {
+    return '<div class="empty-tree">No files detected.</div>';
+  }
+  const tree = buildFileTree(paths);
+  const lines = formatFileTreeLines(tree);
+  const escaped = lines.map(line=>line
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;'))
+    .join('\n');
+  return `<pre class="file-tree" role="presentation">${escaped}</pre>`;
+}
 function parseTasks(md){
   const lines = String(md||'').split(/\r?\n/);
   const groups = [];
@@ -441,7 +536,8 @@ function renderPlan(){
       const groupInner = `<div class="task-group"><h4>${sanitize(g.title||'')}</h4><ul class="task-list">${items}</ul></div>`;
       // If this is the files list group, wrap it with a bordered box
       if (/^\s*files\s+to\s+be\s+created\s*$/i.test(String(g.title||''))) {
-        return `<div class="files-box">${groupInner}</div>`;
+        const treeHtml = renderFileTree(g.items || []);
+        return `<div class="files-box file-tree-box"><div class="task-group file-tree-group"><h4>${sanitize(g.title||'')}</h4>${treeHtml}</div></div>`;
       }
       return groupInner;
     }).join('');
@@ -503,7 +599,6 @@ function renderPlan(){
         // Use VS Code native QuickPick flow via extension
         if (addContextBtn && 'addEventListener' in addContextBtn){
             addContextBtn.addEventListener('click', ()=>{
-                try { console.log('[Assista X] Add Context clicked'); } catch {}
                 try { vscode.postMessage({ command: 'openContextPicker' }); } catch {}
             });
         }
@@ -513,7 +608,6 @@ function renderPlan(){
             try {
                 const msg = event.data || {};
                 if (msg.command === 'contextAdded' && Array.isArray(msg.items)){
-                    try { console.log('[Assista X] contextAdded received', msg.items); } catch {}
                     const items = msg.items.map(x=>({ type: x.type, name: x.name, path: x.path }));
                     // de-dup by path
                     const seen = new Set(contextItems.map(i=>i.path));
@@ -943,22 +1037,36 @@ function renderPlan(){
                 vscode.postMessage({ command: 'cancelEditClick' });
             });
         }
+        function requestStop(source) {
+            try { hideConfirm(); } catch {}
+            try { hideStatusBubble(); } catch {}
+            try { setGenerating(false); } catch {}
+            try { pendingGenPayload = null; } catch {}
+            try { vscode.postMessage({ command: 'cancelCurrent', source: source || 'user-stop' }); } catch {}
+            try { vscode.postMessage({ command: 'stop', source: source || 'user-stop' }); } catch {}
+        }
         // Stop button cancels the current validation/plan/generation phase
         if (stopBtn && 'addEventListener' in stopBtn) {
             stopBtn.addEventListener('click', () => {
-                try { hideStatusBubble(); } catch {}
-                try { setGenerating(false); } catch {}
-                // Clear any pending payload so Proceed won't start anything stale
-                try { pendingGenPayload = null; } catch {}
-                try { vscode.postMessage({ command: 'cancelCurrent' }); } catch {}
+                requestStop('user-stop');
             });
         }
         function setGenerating(on) {
             isGenerating = !!on;
             if (stopBtn) {
-                if (on) stopBtn.classList.add('visible');
-                else stopBtn.classList.remove('visible');
+                const active = !!on;
+                try { stopBtn.classList.toggle('visible', active); } catch {}
+                try { stopBtn.disabled = !active; } catch {}
+                try { stopBtn.setAttribute('aria-hidden', active ? 'false' : 'true'); } catch {}
+                try {
+                    if (active) stopBtn.setAttribute('tabindex', '0');
+                    else stopBtn.setAttribute('tabindex', '-1');
+                } catch {}
+                if (!active) {
+                    try { stopBtn.blur(); } catch {}
+                }
             }
+            try { chatWrapper && chatWrapper.classList.toggle('is-generating', !!on); } catch {}
             // Toggle Send button visibility while generating
             try {
                 if (sendBtnEl) {
@@ -1040,12 +1148,9 @@ function renderPlan(){
         const progressCancelBtn = document.getElementById('progressCancelBtn');
         // Keep a handle to (legacy) generation overlay element if present, so code paths that hide it don't throw
         const generateOverlay = document.getElementById('generateOverlay');
-        // Inline version selection will be rendered as message actions
+        // Track pending prompt/module name while validation and planning run
         let pendingPrompt = '';
-        // Version selection state
-        let awaitingVersion = false;    // waiting for user to type version in chat (custom mode)
         let pendingModuleName = '';
-        let customVersionTyped = '';
         const providerDisplayNames = {
             google: 'Google',
             openai: 'OpenAI',
@@ -1271,7 +1376,7 @@ function renderPlan(){
                     try { renderPlan(); } catch {}
                     hideConfirm();
                 } catch {}
-                try { vscode.postMessage({ command: 'editRequest', text, context: Array.isArray(contextItems) ? contextItems : [] }); } catch {}
+                try { vscode.postMessage({ command: 'editRequest', text, context: Array.isArray(contextItems) ? contextItems : [], flowId: currentFlowId }); } catch {}
                 // Clear input and return
                 if (ti && 'value' in ti) { 
                     try { 
@@ -1284,38 +1389,11 @@ function renderPlan(){
                 return;
             }
             // Generate mode flow
-            if (awaitingVersion) {
-                // Treat this message as the custom version input
-                const v = text;
-                // Basic validation: numbers with optional dot (e.g., 15 or 15.0)
-                if (!/^\d+(?:\.\d+)?$/.test(v)) {
-                    addMessage('Please enter a valid version number like 15 or 15.0', 'ai');
-                    return;
-                }
-                customVersionTyped = v;
-                awaitingVersion = false;
-                // Proceed with generation now that we have the version
-                const nameVal = pendingModuleName;
-                if (!/^([a-z0-9_]+)$/.test(nameVal)) {
-                    addMessage('Module name is invalid. Please try again.', 'ai');
-                    return;
-                }
-                // After version is provided, first request a build plan preview (no generating yet)
-                // Hide the version selection bubble from chat
-                try {
-                    const verMsg = document.querySelector('.seg-group [data-version-choice]')?.closest('.message');
-                    if (verMsg && verMsg.parentElement) verMsg.parentElement.removeChild(verMsg);
-                } catch {}
-                try { showStatusBubble('Processing'); } catch {}
-                vscode.postMessage({ command: 'requestPlan', prompt: pendingPrompt, version: customVersionTyped, moduleName: nameVal, context: Array.isArray(contextItems) ? contextItems : [] });
-            } else {
-                // Store prompt, validate first before asking for version
-                pendingPrompt = text;
-                pendingModuleName = suggestModuleName(text).slice(0,64);
-                // Show a lightweight Validating bubble while we validate before asking for version
-                try { showStatusBubble('Validating'); } catch {}
-                try { vscode.postMessage({ command: 'validatePrompt', prompt: pendingPrompt, context: Array.isArray(contextItems) ? contextItems : [] }); } catch {}
-            }
+            // Store prompt, validate first
+            pendingPrompt = text;
+            pendingModuleName = suggestModuleName(text).slice(0,64);
+            try { showStatusBubble('Validating'); } catch {}
+            try { vscode.postMessage({ command: 'validatePrompt', prompt: pendingPrompt, context: Array.isArray(contextItems) ? contextItems : [], flowId: currentFlowId }); } catch {}
             if (ti && 'value' in ti) { 
                 try { 
                     (ti).value = ''; 
@@ -1339,14 +1417,7 @@ function renderPlan(){
         if (sendBtn && 'addEventListener' in sendBtn) {
             sendBtn.addEventListener('click', () => { hideConfirm(); sendMessage(); });
         }
-        // Wire Stop button to cancel generation
-        if (stopBtn && 'addEventListener' in stopBtn) {
-            stopBtn.addEventListener('click', () => {
-                try { setGenerating(false); } catch {}
-                try { vscode.postMessage({ command: 'stop' }); } catch {}
-                addMessage('Stopping…', 'ai');
-            });
-        }
+        // Stop button wiring handled earlier via requestStop()
 
         // Global click delegation to keep buttons working even if DOM is recreated
         document.addEventListener('click', (e) => {
@@ -1457,10 +1528,10 @@ function renderPlan(){
                     }
                 } catch {}
                 // If we have a pending plan for generation, start it now
-                if (pendingGenPayload && pendingGenPayload.version && pendingGenPayload.moduleName && pendingGenPayload.prompt) {
+                if (pendingGenPayload && pendingGenPayload.moduleName && pendingGenPayload.prompt) {
                     try { setGenerating(true); } catch {}
                     try { showStatusBubble('Analyzing'); } catch {}
-                    try { vscode.postMessage({ command: 'beginGenerateModule', prompt: pendingGenPayload.prompt, version: pendingGenPayload.version, moduleName: pendingGenPayload.moduleName, context: Array.isArray(contextItems) ? contextItems : [] }); } catch {}
+                    try { vscode.postMessage({ command: 'beginGenerateModule', prompt: pendingGenPayload.prompt, moduleName: pendingGenPayload.moduleName, context: Array.isArray(contextItems) ? contextItems : [], flowId: currentFlowId }); } catch {}
                     pendingGenPayload = null;
                 } else {
                     // Edit flow: user approved applying the plan
@@ -1552,7 +1623,6 @@ function renderPlan(){
             } catch {}
             // Sidebar confirm bar: post-generation actions
             if (msg && msg.command === 'postGenActions') {
-                try { console.log('[Assista X] Webview received postGenActions'); } catch {}
                 try {
                     if (confirmBar) {
                         confirmBar.dataset.mode = 'postgen';
@@ -1722,7 +1792,6 @@ function renderPlan(){
                     try {
                         pendingGenPayload = {
                             prompt: String(msg.promptText || ''),
-                            version: String(msg.version || ''),
                             moduleName: String(msg.moduleName || '')
                         };
                     } catch {}
@@ -1738,7 +1807,7 @@ function renderPlan(){
                     } catch {}
                     if (!canShow) {
                         hideConfirm();
-                        try { vscode.postMessage({ command: 'requestPlanResend' }); } catch {}
+                        try { vscode.postMessage({ command: 'requestPlanResend', flowId: currentFlowId }); } catch {}
                         return;
                     }
                     // Show the confirm bar now that plan is present
@@ -1805,25 +1874,14 @@ function renderPlan(){
                 try { hideStatusBubble(); } catch {}
                 return;
             }
-            // Handle validation result prior to version selection in Generate mode
+            // Handle validation result (auto-detect environment; no manual version selection)
             if (msg.command === 'validationResult') {
                 try {
                     const ok = !!msg.ok || !!msg.is_odoo_request;
                     if (ok) {
-                        // Hide the validating bubble before showing version choices
                         try { hideStatusBubble(); } catch {}
-                        // Render the same inline version choices as before
-                        addMessageHTML(
-                            '<div>Choose Odoo version:</div>' +
-                            '<div class="msg-actions"><div class="seg-group" role="radiogroup" aria-label="Odoo Version">' +
-                            '<button type="button" class="seg-btn" data-version-choice="18.0">18</button>' +
-                            '<button type="button" class="seg-btn" data-version-choice="17.0">17</button>' +
-                            '<button type="button" class="seg-btn" data-version-choice="16.0">16</button>' +
-                            '<button type="button" class="seg-btn" data-version-custom="1">Custom</button>' +
-                            '</div></div>',
-                            'ai'
-                        );
-                        // Do not show status bubble yet; wait until version is selected
+                        addMessage('Validation passed. Detecting environment and preparing a build plan…', 'ai');
+                        triggerPlanRequest();
                     } else {
                         const reason = String(msg.reason || 'This does not look like an Odoo module request.');
                         addMessage(reason, 'ai');
@@ -2075,7 +2133,6 @@ function renderPlan(){
                 return;
             }
             if (msg.command === 'openHistory') {
-                console.log('[Assista X Webview] openHistory received');
                 // Show history overlay and render external UI
                 try { if (mainContent) mainContent.style.display = 'flex'; } catch {}
                 try { if (messages) messages.classList.remove('active'); } catch {}
@@ -2083,7 +2140,6 @@ function renderPlan(){
                 openHistory();
             }
             if (msg.command === 'openSettings') {
-                console.log('[Assista X Webview] openSettings received');
                 // Make sure the container that holds the overlay is visible
                 try { if (mainContent) mainContent.style.display = 'flex'; } catch {}
                 try { if (messages) messages.classList.remove('active'); } catch {}
@@ -2094,7 +2150,6 @@ function renderPlan(){
                 let overlay = settingsOverlay || ensureSettingsOverlay();
                 if (overlay) {
                     overlay.classList.add('active');
-                    console.log('[Assista X Webview] settingsOverlay activated');
                 } else {
                     console.warn('[Assista X Webview] settingsOverlay element not found');
                 }
@@ -2130,50 +2185,34 @@ function renderPlan(){
                     }
                 }
             };
-            console.log('Saving settings:', settings); // Debug log
             vscode.postMessage({ command: 'saveSettings', settings });
             settingsOverlay.classList.remove('active');
             // No chat message on successful save (suppressed)
         });
 
-        // Version buttons inside chat message
-        function startWithVersion(ver) {
+        function triggerPlanRequest() {
             if (!pendingPrompt) {
-                addMessage('Please describe your module first, then pick a version.', 'ai');
+                addMessage('Please describe your module first.', 'ai');
+                try { setGenerating(false); } catch {}
+                try { hideStatusBubble(); } catch {}
                 return;
             }
             const nameVal = pendingModuleName || suggestModuleName(pendingPrompt).slice(0,64);
             if (!/^([a-z0-9_]+)$/.test(nameVal)) {
                 addMessage('Module name is invalid. Please try again.', 'ai');
+                try { setGenerating(false); } catch {}
+                try { hideStatusBubble(); } catch {}
                 return;
             }
-            // Request a plan preview before starting generation
-            // Hide the version selection bubble from chat
-            try {
-                const verMsg = document.querySelector('.seg-group [data-version-choice]')?.closest('.message');
-                if (verMsg && verMsg.parentElement) verMsg.parentElement.removeChild(verMsg);
-            } catch {}
             try { showStatusBubble('Processing'); } catch {}
-            vscode.postMessage({ command: 'requestPlan', prompt: pendingPrompt, version: ver, moduleName: nameVal });
+            vscode.postMessage({
+                command: 'requestPlan',
+                prompt: pendingPrompt,
+                moduleName: nameVal,
+                context: Array.isArray(contextItems) ? contextItems : [],
+                flowId: currentFlowId
+            });
         }
-        // Delegate clicks from inline buttons
-        document.addEventListener('click', (e) => {
-            const t = e.target;
-            if (!t || !(t instanceof Element)) return;
-            const ver = t.getAttribute('data-version-choice');
-            const isCustom = t.getAttribute('data-version-custom');
-            if (ver) {
-                startWithVersion(ver);
-            } else if (isCustom) {
-                if (!pendingPrompt) {
-                    addMessage('Please describe your module first, then choose Custom.', 'ai');
-                    return;
-                }
-                pendingModuleName = suggestModuleName(pendingPrompt).slice(0,64);
-                awaitingVersion = true;
-                addMessage('Type the Odoo version in the chat and press Enter (e.g., 15.0).', 'ai');
-            }
-        });
         // Progress cancel button disabled (use Stop in chat instead). Still cancels if triggered programmatically.
         progressCancelBtn?.addEventListener('click', () => {
             vscode.postMessage({ command: 'cancelGeneration' });

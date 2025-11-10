@@ -43,8 +43,8 @@ async function readWorkspaceOverride(mode: PromptMode): Promise<string | null> {
         try {
           const stat = await vscode.workspace.fs.stat(uri);
           if (stat) {
-            const buf = await vscode.workspace.fs.readFile(uri);
-            const text = Buffer.from(buf).toString('utf8');
+            const { readFileContent } = await import('./services/fileService.js');
+            const text = await readFileContent(uri);
             if (text && text.trim().length > 0) return text;
           }
         } catch {/* continue */}

@@ -223,8 +223,13 @@
         },
         "assistaX.customAddonsNames": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": ["custom_addons", "custom_addon"],
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "custom_addons",
+            "custom_addon"
+          ],
           "description": "Folder names to treat as Odoo custom addons directories when scanning the workspace."
         },
         "assistaX.openrouterHeaders.referer": {
@@ -239,7 +244,12 @@
         },
         "assistaX.editScope": {
           "type": "string",
-          "enum": ["openEditors", "visibleEditors", "moduleDirectory", "workspace"],
+          "enum": [
+            "openEditors",
+            "visibleEditors",
+            "moduleDirectory",
+            "workspace"
+          ],
           "default": "openEditors",
           "description": "Scope for quick edit operations (e.g., label changes)."
         },
@@ -272,9 +282,12 @@
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.34.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.20.0"
+    "@google/generative-ai": "^0.20.0",
+    "@xmldom/xmldom": "^0.8.11",
+    "ts-node": "^10.9.2"
   }
 }
