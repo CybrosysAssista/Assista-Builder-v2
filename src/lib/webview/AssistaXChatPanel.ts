@@ -2,6 +2,7 @@
  * Chat panel webview for streaming generation updates
  */
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 export class AssistaXChatPanel {
     public static currentPanel: AssistaXChatPanel | undefined;
@@ -97,7 +98,7 @@ export class AssistaXChatPanel {
         try {
             this.appendAssistant('Starting validation and specification generation...');
             // Import AI module
-            const { generateOdooModule } = await import('../ai/index.js');
+            const { generateContent, generateOdooModule } = await import('../ai/index.js');
             const result = await generateOdooModule(
                 text,
                 version,
@@ -112,8 +113,27 @@ export class AssistaXChatPanel {
             const progressInfo = result.progressInfo || {};
 
             // Ensure destination folder exists
-            const { ensureDirectory, writeFileContent } = await import('../services/fileService.js');
-            try { await ensureDirectory(folderUri); } catch { }
+            const fileService = await import('../services/fileService.js');
+            try { await fileService.ensureDirectory(folderUri); } catch { }
+
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+            const writeWithTool = async (targetUri: vscode.Uri, content: string): Promise<boolean> => {
+                const absolutePath = targetUri.fsPath;
+                const relativePath = path.relative(workspaceRoot, absolutePath);
+                const args = [relativePath, String(content)];
+                try {
+                    const result = await generateContent({ toolCall: { name: 'writeFileContent', args } }, this.context);
+                    if (result?.success) {
+                        return true;
+                    }
+                    if (result && typeof result === 'object' && 'error' in result) {
+                        console.warn(`[AssistaXChatPanel] writeFileContent tool error for ${relativePath}: ${(result as any).error}`);
+                    }
+                } catch (err) {
+                    console.warn(`[AssistaXChatPanel] writeFileContent tool call failed for ${relativePath}:`, err);
+                }
+                return false;
+            };
 
             // Write files
             for (const [relPath, content] of Object.entries(files)) {
@@ -122,10 +142,13 @@ export class AssistaXChatPanel {
                 const parts = relPath.split('/');
                 if (parts.length > 1) {
                     const dir = vscode.Uri.joinPath(folderUri, ...parts.slice(0, -1));
-                    try { await ensureDirectory(dir); } catch { }
+                    try { await fileService.ensureDirectory(dir); } catch { }
                 }
                 const fileStr = typeof content === 'string' ? content : String(content);
-                await writeFileContent(dest, fileStr);
+                const wroteViaTool = await writeWithTool(dest, fileStr);
+                if (!wroteViaTool) {
+                    await fileService.writeFileContent(dest, fileStr);
+                }
                 this.appendEvent({ type: 'file.written', payload: { path: relPath } });
                 // Open the file immediately after generation (non-preview, do not steal focus)
                 try {

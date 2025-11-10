@@ -2,6 +2,7 @@
  * Handler for module generation operations
  */
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { MessageHandler } from './contextHandler.js';
 import { normalizeGeneratedPath } from '../utils/webviewUtils.js';
 
@@ -76,13 +77,32 @@ export class GenerationHandler implements MessageHandler {
             });
 
             try {
-                const { ensureDirectory } = await import('../../services/fileService.js');
-                await ensureDirectory(folderUri);
+                const fileService = await import('../../services/fileService.js');
+                await fileService.ensureDirectory(folderUri);
                 send({ command: 'generationMessage', sender: 'ai', text: '⚙️ Starting generation…', timestamp: Date.now() });
 
                 const streamed = new Set<string>();
                 let firstRevealDone = false;
                 const openedDocs = new Set<string>();
+                const { generateContent, generateOdooModule } = await import('../../ai/index.js');
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+
+                const writeWithTool = async (absolutePath: string, content: string): Promise<boolean> => {
+                    const relativePath = path.relative(workspaceRoot, absolutePath);
+                    const args = [relativePath, String(content)];
+                    try {
+                        const toolResult = await generateContent({ toolCall: { name: 'writeFileContent', args } }, this.context);
+                        if (toolResult?.success) {
+                            return true;
+                        }
+                        if (toolResult && typeof toolResult === 'object' && 'error' in toolResult) {
+                            console.warn(`[GenerationHandler] writeFileContent tool error for ${relativePath}: ${(toolResult as any).error}`);
+                        }
+                    } catch (err) {
+                        console.warn(`[GenerationHandler] writeFileContent tool call failed for ${relativePath}:`, err);
+                    }
+                    return false;
+                };
 
                 const writeNow = async (odooRelPath: string, content: string) => {
                     const relative = String(odooRelPath || '').replace(/^\/+/, '').replace(/^\.[/]/, '');
@@ -94,11 +114,14 @@ export class GenerationHandler implements MessageHandler {
                         else if (ext === 'xml') cleanDirs.push('views');
                         else if (ext === 'csv') cleanDirs.push('security');
                     }
-                    const { ensureDirectory, writeFileContent } = await import('../../services/fileService.js');
                     const dirUri = cleanDirs.length ? vscode.Uri.joinPath(folderUri, ...cleanDirs) : folderUri;
-                    await ensureDirectory(dirUri);
                     const fullPath = vscode.Uri.joinPath(dirUri, cleanFile);
-                    await writeFileContent(fullPath, String(content));
+                    let wrote = await writeWithTool(fullPath.fsPath, String(content));
+                    if (!wrote) {
+                        await fileService.ensureDirectory(dirUri);
+                        await fileService.writeFileContent(fullPath, String(content));
+                        wrote = true;
+                    }
                     try { await vscode.workspace.fs.stat(fullPath); } catch {}
                     const key = [...cleanDirs, cleanFile].join('/') || cleanFile;
                     streamed.add(key);
@@ -123,8 +146,6 @@ export class GenerationHandler implements MessageHandler {
                     }
                     if (!firstRevealDone) { firstRevealDone = true; }
                 };
-
-                const { generateOdooModule } = await import('../../ai/index.js');
                 const defaultVersion = String(this.context.workspaceState.get('assistaX.odooVersion') || '17.0');
                 const result = await generateOdooModule(
                     prompt, defaultVersion, moduleName, this.context,
@@ -207,20 +228,28 @@ export class GenerationHandler implements MessageHandler {
                             else if (ext === 'csv') cleanDirs.push('security');
                         }
                         
-                        const { ensureDirectory, writeFileContent } = await import('../../services/fileService.js');
                         const dirUri = cleanDirs.length ? vscode.Uri.joinPath(folderUri, ...cleanDirs) : folderUri;
                         const dirPathFs = dirUri.fsPath;
                         if (!announcedDirs.has(dirPathFs)) {
-                            await ensureDirectory(dirUri);
+                            await fileService.ensureDirectory(dirUri);
                             announcedDirs.add(dirPathFs);
                             send({ command: 'generationMessage', sender: 'ai', text: `📂 Ensured folder: \`${dirPathFs}\``, timestamp: Date.now() });
                         } else {
-                            await ensureDirectory(dirUri);
+                            await fileService.ensureDirectory(dirUri);
                         }
                         
                         const fullPath = vscode.Uri.joinPath(dirUri, cleanFile);
                         const fullFsPath = fullPath.fsPath;
-                        await writeFileContent(fullPath, String(content));
+                        let wrote = await writeWithTool(fullFsPath, String(content));
+                        if (!wrote) {
+                            try {
+                                await fileService.writeFileContent(fullPath, String(content));
+                                wrote = true;
+                            } catch (fallbackErr) {
+                                send({ command: 'generationWarning', sender: 'ai', text: `⚠️ Fallback write failed for: \`${fullFsPath}\` → ${(fallbackErr as Error).message}`, filePath: fullFsPath, timestamp: Date.now() });
+                                throw fallbackErr;
+                            }
+                        }
                         
                         try {
                             await vscode.workspace.fs.stat(fullPath);

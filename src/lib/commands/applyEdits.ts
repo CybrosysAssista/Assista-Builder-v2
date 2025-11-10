@@ -134,7 +134,8 @@ export function registerApplyEditsCommand(
 
             // Read selected files and derive requirements/tasks
             const filesContent: Record<string, string> = {};
-            const { readFileContent } = await import('../services/fileService.js');
+            const fileService = await import('../services/fileService.js');
+            const { readFileContent } = fileService;
             for (const relPath of selected) {
                 try {
                     let uri: vscode.Uri;
@@ -330,6 +331,23 @@ export function registerApplyEditsCommand(
             // For each selected file, generate updated content (always passing existing content)
             let applied = 0;
             const editedPaths: string[] = [];
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+            const writeWithTool = async (targetUri: vscode.Uri, content: string): Promise<boolean> => {
+                const relativePath = path.relative(workspaceRoot, targetUri.fsPath);
+                const args = [relativePath, String(content)];
+                try {
+                    const toolResult = await generateContent({ toolCall: { name: 'writeFileContent', args } }, context);
+                    if (toolResult?.success) {
+                        return true;
+                    }
+                    if (toolResult && typeof toolResult === 'object' && 'error' in toolResult) {
+                        console.warn(`[ApplyEdits] writeFileContent tool error for ${relativePath}: ${(toolResult as any).error}`);
+                    }
+                } catch (err) {
+                    console.warn(`[ApplyEdits] writeFileContent tool call failed for ${relativePath}:`, err);
+                }
+                return false;
+            };
             for (const relPath of finalPlanTargets) {
                 // Ensure we have current content even if it wasn't pre-read
                 let existing = filesContent[relPath] ?? '';
@@ -352,8 +370,10 @@ export function registerApplyEditsCommand(
                         targetUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, relPath);
                     }
                     await vscode.workspace.fs.stat(targetUri); // ensure exists
-                    const { writeFileContent } = await import('../services/fileService.js');
-                    await writeFileContent(targetUri, updated);
+                    const wroteViaTool = await writeWithTool(targetUri, updated);
+                    if (!wroteViaTool) {
+                        await fileService.writeFileContent(targetUri, updated);
+                    }
                     applied++;
                     editedPaths.push(relPath);
                     try { await vscode.window.showTextDocument(targetUri, { preview: false, preserveFocus: true }); } catch {}

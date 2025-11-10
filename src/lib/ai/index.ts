@@ -15,6 +15,7 @@ import { getActiveProviderConfig } from '../services/configService.js';
 import { detectOdooVersion, findOdooConf, parseAddonsPaths, chooseWritableAddonsPath, ensurePathInConf, scanExistingModules } from '../services/odooEnv.js';
 import { generateContextSummary, summarize } from './summarize.js';
 import { validatePython, validateXML } from '../validate/validators.js';
+import * as tools from '../services/toolService.js';
 
 export interface ProviderConfig {
     apiKey: string;
@@ -339,12 +340,36 @@ async function retryWithBackoff<T>(
 /**
  * Generate content using the active AI provider (OPTIMIZED)
  */
-export async function generateContent(params: any, context: vscode.ExtensionContext): Promise<string> {
+const TOOL_REGISTRY: Record<string, (...args: any[]) => Promise<any> | any> = {
+    list_files: tools.listFiles,
+    listFiles: tools.listFiles,
+    get_file_content: tools.getFileContent,
+    getFileContent: tools.getFileContent,
+    write_file: tools.writeFileContent,
+    writeFileContent: tools.writeFileContent,
+    search_in_project: tools.searchInProject,
+    searchInProject: tools.searchInProject,
+};
+
+export async function generateContent(params: any, context: vscode.ExtensionContext): Promise<any> {
     const extensionRequestStartTime = Date.now();
     const extensionRequestStartTimeISO = new Date().toISOString();
     
     const hasMessages = Array.isArray(params?.messages) && params.messages.length > 0;
     const hasContents = params?.contents && typeof params.contents === 'string';
+
+    if (params?.toolCall) {
+        const { name, args } = params.toolCall || {};
+        const toolFn = TOOL_REGISTRY?.[name as keyof typeof TOOL_REGISTRY];
+        if (typeof toolFn === 'function') {
+            const toolArgs = Array.isArray(args) ? args : [];
+            console.log(`[generateContent] Executing tool call "${name}" with args:`, toolArgs);
+            return await toolFn(...toolArgs);
+        }
+        const availableTools = Object.keys(TOOL_REGISTRY).join(', ');
+        console.warn(`[generateContent] Tool "${name}" not found in registry. Available tools: ${availableTools}`);
+        return null;
+    }
     
     // OPTIMIZATION: Use cached system prompt
     const sessCtx = getSessionContext(context);
@@ -523,6 +548,22 @@ export async function generateOdooModule(
     if (created && confPath) ensurePathInConf(confPath, targetAddonsPath);
     const existingModules = scanExistingModules([targetAddonsPath, ...addonsPaths]);
     ctx.project = { odooVersion, addonsPaths, targetAddonsPath, configPath: confPath, existingModules };
+
+    if (targetAddonsPath) {
+        try {
+            const listResult = await generateContent({ toolCall: { name: 'listFiles', args: [targetAddonsPath] } }, context);
+            const files = (listResult && typeof listResult === 'object') ? (listResult as any).data : undefined;
+            if (Array.isArray(files)) {
+                (ctx.project as any).workspaceFiles = files;
+                console.log(`[generateOdooModule] Workspace listing ready (${files.length} entries).`);
+            } else if (listResult && typeof listResult === 'object' && 'error' in (listResult as any)) {
+                console.warn('[generateOdooModule] listFiles tool returned error:', (listResult as any).error);
+            }
+        } catch (toolError) {
+            console.warn('[generateOdooModule] listFiles tool call failed:', toolError);
+        }
+    }
+
     progressCb?.({ type: 'env.ready', payload: ctx.project });
 
     const resolvedVersion = ctx.project?.odooVersion || version;
@@ -684,10 +725,15 @@ export async function generateOdooModule(
         const specsPrompt = { contents: prompts.createDetailedSpecsPrompt(userPrompt, resolvedVersion, validationData) };
         if (cancelRequested?.()) { throw new Error('Cancelled'); }
         specifications = await generateContent(specsPrompt, context);
-        setCachedSpec(moduleName, resolvedVersion, userPrompt, specifications);
+        setCachedSpec(moduleName, resolvedVersion, userPrompt, specifications as string);
     } else {
         console.log('Using cached specifications (from previous generation)');
     }
+
+    if (!specifications) {
+        throw new Error('Failed to obtain module specifications from AI provider.');
+    }
+
     console.log('Specifications generated:', specifications.substring(0, 100));
     progressCb?.({ type: 'specs.ready', payload: { preview: specifications.substring(0, 600) } });
 

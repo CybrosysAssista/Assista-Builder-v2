@@ -92,6 +92,8 @@ export class EditHandler implements MessageHandler {
         if (message.type === 'applySelected') {
             try {
                 const selected: string[] = Array.isArray(message.paths) ? message.paths : [];
+                const fileService = await import('../../services/fileService.js');
+                const { generateContent } = await import('../../ai/index.js');
                 const providerInstance = (provider as any)._providerInstance;
                 const map: Record<string, { uri: vscode.Uri; current: string; updated: string }> = (providerInstance as any)?._proposedChanges || {};
                 if (!selected.length || !map || !Object.keys(map).length) {
@@ -100,6 +102,23 @@ export class EditHandler implements MessageHandler {
                 }
                 const openedDocsApply = new Set<string>();
                 let applied = 0;
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+                const writeWithTool = async (targetUri: vscode.Uri, content: string): Promise<boolean> => {
+                    const relativePath = require('path').relative(workspaceRoot, targetUri.fsPath);
+                    const args = [relativePath, String(content)];
+                    try {
+                        const toolResult = await generateContent({ toolCall: { name: 'writeFileContent', args } }, ctx);
+                        if (toolResult?.success) {
+                            return true;
+                        }
+                        if (toolResult && typeof toolResult === 'object' && 'error' in toolResult) {
+                            console.warn(`[EditHandler] writeFileContent tool error for ${relativePath}: ${(toolResult as any).error}`);
+                        }
+                    } catch (err) {
+                        console.warn(`[EditHandler] writeFileContent tool call failed for ${relativePath}:`, err);
+                    }
+                    return false;
+                };
                 for (const rel of selected) {
                     const item = map[rel];
                     if (!item) continue;
@@ -110,8 +129,10 @@ export class EditHandler implements MessageHandler {
                             provider._view?.webview.postMessage({ type: 'progress', ev: { type: 'file.skipped', payload: { path: rel, reason: 'nonexistent' } } });
                             continue;
                         }
-                        const { writeFileContent } = await import('../../services/fileService.js');
-                        await writeFileContent(item.uri, item.updated);
+                        const wroteViaTool = await writeWithTool(item.uri, item.updated);
+                        if (!wroteViaTool) {
+                            await fileService.writeFileContent(item.uri, item.updated);
+                        }
                         provider._view?.webview.postMessage({ type: 'progress', ev: { type: 'file.written', payload: { path: rel } } });
                         applied++;
                         const key = item.uri.toString();

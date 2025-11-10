@@ -2,6 +2,7 @@
  * Command handler for generating Odoo modules
  */
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { AssistaXProvider } from '../webview/AssistaXProvider.js';
 import { createActiveFileBroadcaster } from '../services/activeFile.js';
 
@@ -52,7 +53,7 @@ export function registerGenerateModuleCommand(
             // Step 1: Validation (message only)
             provider.sendMessage({ command: 'generationMessage', sender: 'ai', text: '🔍 **Step 1/6: Validating request**', timestamp: Date.now() });
 
-            const { generateOdooModule } = await import('../ai/index.js');
+            const { generateContent, generateOdooModule } = await import('../ai/index.js');
             // Progress/cancel bridge: abort upstream generation when user presses Stop
             const progressCb = (event: { type: string; payload?: any }) => {
                 if (provider.isCancelRequested()) {
@@ -156,7 +157,26 @@ export function registerGenerateModuleCommand(
             const totalFiles = Object.keys(files).length;
             provider.sendMessage({ command: 'generationMessage', sender: 'ai', text: `💻 **Step 5/6: Code Generation** - Creating ${totalFiles} files...`, timestamp: Date.now(), fileCount: totalFiles });
             let written = 0;
-                for (const [filePath, content] of Object.entries(files)) {
+            const fileService = await import('../services/fileService.js');
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+            const writeWithTool = async (targetUri: vscode.Uri, content: string): Promise<boolean> => {
+                const absolutePath = targetUri.fsPath;
+                const relativePath = path.relative(workspaceRoot, absolutePath);
+                const args = [relativePath, String(content)];
+                try {
+                    const toolResult = await generateContent({ toolCall: { name: 'writeFileContent', args } }, context);
+                    if (toolResult?.success) {
+                        return true;
+                    }
+                    if (toolResult && typeof toolResult === 'object' && 'error' in toolResult) {
+                        console.warn(`[GenerateModuleCommand] writeFileContent tool error for ${relativePath}: ${(toolResult as any).error}`);
+                    }
+                } catch (err) {
+                    console.warn(`[GenerateModuleCommand] writeFileContent tool call failed for ${relativePath}:`, err);
+                }
+                return false;
+            };
+            for (const [filePath, content] of Object.entries(files)) {
                 if (provider.isCancelRequested()) {
                     provider.sendMessage({ command: 'generationMessage', sender: 'ai', text: '⏹️ Module generation cancelled by user.', timestamp: Date.now() });
                     break;
@@ -174,11 +194,13 @@ export function registerGenerateModuleCommand(
                     const { normalized, segments, fileName } = pathResult;
                     const relativePath = normalized.replace(`${moduleName}/`, '');
                     
-                    const { ensureDirectory, writeFileContent } = await import('../services/fileService.js');
                     const dirUri = segments.length ? vscode.Uri.joinPath(moduleRootUri, ...segments) : moduleRootUri;
-                    await ensureDirectory(dirUri);
+                    await fileService.ensureDirectory(dirUri);
                     const fullPath = vscode.Uri.joinPath(dirUri, fileName);
-                    await writeFileContent(fullPath, String(content));
+                    const wroteViaTool = await writeWithTool(fullPath, String(content));
+                    if (!wroteViaTool) {
+                        await fileService.writeFileContent(fullPath, String(content));
+                    }
                     written++;
                     provider.sendMessage({ command: 'fileGenerated', sender: 'ai', text: `✅ ${relativePath}`, filePath: relativePath, progress: written, total: totalFiles, timestamp: Date.now() });
                 } catch (writeError) {

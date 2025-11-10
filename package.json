@@ -282,10 +282,12 @@
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.34.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.2"
   },
   "dependencies": {
     "@google/generative-ai": "^0.20.0",
-    "@xmldom/xmldom": "^0.8.11"
+    "@xmldom/xmldom": "^0.8.11",
+    "ts-node": "^10.9.2"
   }
 }
