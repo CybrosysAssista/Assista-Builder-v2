@@ -99,10 +99,32 @@ MANDATORY TASKS ORDER:
 ONLY include development tasks (no testing/deployment/readme tasks). Keep tasks concise and implementable.
 `;
 
-export const createSingleFilePrompt = (tasks: string, menuStructure: string, specifications: string, version: string, moduleName: string, filePath: string, taskDescription: string) => {
-    const truncatedTasks = tasks.length > 1200 ? tasks.substring(0, 1200) + '\n\n... (Technical tasks truncated - full list contains all file creation and implementation details)' : tasks;
-    const truncatedSpecs = specifications.length > 1000 ? specifications.substring(0, 1000) + '\n\n... (Functional specifications truncated - complete requirements available in module documentation)' : specifications;
-    const truncatedMenu = menuStructure.length > 600 ? menuStructure.substring(0, 600) + '\n\n... (Menu structure truncated - full navigation hierarchy available)' : menuStructure;
+export const createSingleFilePrompt = (
+    tasks: string,
+    menuStructure: string | null | undefined,
+    specifications: string,
+    version: string,
+    moduleName: string,
+    filePath: string,
+    taskDescription: string,
+    useSummaries = false,
+    specsSummary?: string,
+    tasksSummary?: string,
+    menuSummary?: string
+) => {
+    const effectiveTasks = (useSummaries && tasksSummary?.trim()) ? tasksSummary! : tasks;
+    const effectiveSpecs = (useSummaries && specsSummary?.trim()) ? specsSummary! : specifications;
+    const effectiveMenu = (useSummaries && menuSummary?.trim()) ? menuSummary! : (menuStructure ?? '');
+
+    const truncatedTasks = effectiveTasks.length > 1200
+        ? effectiveTasks.substring(0, 1200) + '\n\n... (Technical tasks truncated - full list contains all file creation and implementation details)'
+        : effectiveTasks;
+    const truncatedSpecs = effectiveSpecs.length > 1000
+        ? effectiveSpecs.substring(0, 1000) + '\n\n... (Functional specifications truncated - complete requirements available in module documentation)'
+        : effectiveSpecs;
+    const truncatedMenu = effectiveMenu.length > 600
+        ? effectiveMenu.substring(0, 600) + '\n\n... (Menu structure truncated - full navigation hierarchy available)'
+        : effectiveMenu;
 
     // Enhanced file type detection - prioritize file extension over path
     const fileExt = (filePath.split('.').pop() || '').toLowerCase();

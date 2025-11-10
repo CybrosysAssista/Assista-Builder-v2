@@ -41,7 +41,6 @@ export class GenerationHandler implements MessageHandler {
         if (message.command === 'beginGenerateModule') {
             this.resetCancel();
             const prompt: string = (message.prompt || '').toString();
-            const version: string = (message.version || '17.0').toString();
             const moduleName: string = (message.moduleName || '').toString();
             
             if (!prompt || !moduleName) {
@@ -71,8 +70,9 @@ export class GenerationHandler implements MessageHandler {
             
             send({
                 command: 'generationStart',
-                message: `🚀 Starting module generation...\n\n**Module:** "${moduleName}"\n**Odoo Version:** ${version}\n**Request:** "${prompt}"`,
-                moduleName, version, timestamp: Date.now()
+                message: `🚀 Starting module generation...\n\n**Module:** "${moduleName}"\n**Environment:** Auto-detecting Odoo setup\n**Request:** "${prompt}"`,
+                moduleName,
+                timestamp: Date.now()
             });
 
             try {
@@ -125,8 +125,9 @@ export class GenerationHandler implements MessageHandler {
                 };
 
                 const { generateOdooModule } = await import('../../ai/index.js');
+                const defaultVersion = String(this.context.workspaceState.get('assistaX.odooVersion') || '17.0');
                 const result = await generateOdooModule(
-                    prompt, version, moduleName, this.context,
+                    prompt, defaultVersion, moduleName, this.context,
                     { skipValidation: true },
                     (ev: any) => {
                         if (this.cancelChecker()) return;
@@ -260,7 +261,8 @@ export class GenerationHandler implements MessageHandler {
                     }
                 }
 
-                const summaryMessage = `🎉 **Module Generation Complete!**\n\n**${moduleName}** module processed for Odoo ${version}.\n\n**Total Files Planned:** ${fileCount}\n**Successfully Created:** ${written}\n**📁 Base Folder:** \`${folderUri.fsPath}\``;
+                const detectedVersion = String(result?.progressInfo?.environment?.odooVersion || 'unknown');
+                const summaryMessage = `🎉 **Module Generation Complete!**\n\n**${moduleName}** module processed for Odoo ${detectedVersion}.\n\n**Total Files Planned:** ${fileCount}\n**Successfully Created:** ${written}\n**📁 Base Folder:** \`${folderUri.fsPath}\``;
                 send({ command: 'generationComplete', sender: 'ai', text: summaryMessage, modulePath: folderUri.fsPath, filesCreated: written, totalFiles: fileCount, timestamp: Date.now() });
                 try { await vscode.commands.executeCommand('revealInExplorer', folderUri); } catch { }
             } catch (error) {

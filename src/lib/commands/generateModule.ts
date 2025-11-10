@@ -18,14 +18,6 @@ export function registerGenerateModuleCommand(
 
         if (!prompt) { return; }
 
-        const detectedVer = String(context.workspaceState.get('assistaX.odooVersion') || '17.0');
-        const version = await vscode.window.showInputBox({
-            prompt: 'Odoo version (e.g., 17.0)',
-            value: detectedVer,
-            placeHolder: '17.0'
-        });
-        if (!version) { return; }
-
         const moduleName = await vscode.window.showInputBox({
             prompt: 'Module name (snake_case, e.g., real_estate_management)',
             placeHolder: 'module_name'
@@ -51,9 +43,8 @@ export function registerGenerateModuleCommand(
             provider.resetCancel();
             provider.sendMessage({
                 command: 'generationStart',
-                message: `🚀 Starting module generation...\n\n**Module:** "${moduleName}"\n**Odoo Version:** ${version}\n**Request:** "${prompt}"\n\nI'll keep you updated on each step:`,
+                message: `🚀 Starting module generation...\n\n**Module:** "${moduleName}"\n**Environment:** Auto-detecting Odoo setup\n**Request:** "${prompt}"\n\nI'll keep you updated on each step:`,
                 moduleName,
-                version,
                 timestamp: Date.now(),
                 inSidebar: true
             });
@@ -78,7 +69,9 @@ export function registerGenerateModuleCommand(
                     'file.started': 'Generating ' + (event.payload?.path || ''),
                     'file.done': 'Generated ' + (event.payload?.path || ''),
                     'file.empty': 'Skipped (empty) ' + (event.payload?.path || ''),
-                    'file.error': 'Failed ' + (event.payload?.path || '')
+                    'file.error': 'Failed ' + (event.payload?.path || ''),
+                    'file.fixed': 'Auto-fixed ' + (event.payload?.path || ''),
+                    'env.ready': 'Environment ready'
                 };
                 provider.sendMessage({ command: 'generationMessage', sender: 'ai', text: `<span class="chip">${map[event.type] || event.type}</span>`, timestamp: Date.now() });
 
@@ -99,9 +92,11 @@ export function registerGenerateModuleCommand(
                     }
                 } catch {}
             };
+            const defaultVersion = String(context.workspaceState.get('assistaX.odooVersion') || '17.0');
+
             const result = await generateOdooModule(
                 prompt,
-                version,
+                defaultVersion,
                 moduleName,
                 context,
                 undefined,
@@ -112,7 +107,14 @@ export function registerGenerateModuleCommand(
                     try {
                         const t = String(ev?.type || '');
                         let text = '';
-                        if (t === 'specs.ready') {
+                        if (t === 'env.ready') {
+                            const payload = ev?.payload as any;
+                            const versionInfo = payload?.odooVersion ? `Odoo ${payload.odooVersion}` : 'Odoo version unknown';
+                            const addonsList = Array.isArray(payload?.addonsPaths) && payload.addonsPaths.length
+                                ? payload.addonsPaths.join(', ')
+                                : 'none detected';
+                            text = `Environment ready: ${versionInfo}, writing to ${payload?.targetAddonsPath || 'unknown path'}, addons paths: ${addonsList}`;
+                        } else if (t === 'specs.ready') {
                             text = `Specifications generated: ${String(ev?.payload?.preview || '').substring(0, 300)}`;
                         } else if (t === 'tasks.ready') {
                             text = `Tasks generated: ${String(ev?.payload?.preview || '').substring(0, 300)}`;
@@ -129,6 +131,8 @@ export function registerGenerateModuleCommand(
                             text = `cleanFileContent: Successfully processed ${before} -> ${after} characters (type: ${ext})`;
                         } else if (t === 'file.error') {
                             text = `File generation failed: ${String(ev?.payload?.path || '')}: ${String(ev?.payload?.error || '')}`;
+                        } else if (t === 'file.fixed') {
+                            text = `Auto-fixed ${String(ev?.payload?.path || '')} (${String(ev?.payload?.error || 'validation issue')})`;
                         }
                         if (text) {
                             provider.sendMessage({ command: 'generationMessage', sender: 'ai', text, timestamp: Date.now() });
@@ -141,6 +145,7 @@ export function registerGenerateModuleCommand(
             );
             const files = result.files || {};
             const progressInfo = result.progressInfo || {};
+            const detectedVersion = (progressInfo?.environment?.odooVersion as string) || 'unknown';
 
             // Step 2-4: Messages only
             provider.sendMessage({ command: 'generationMessage', sender: 'ai', text: '📋 **Step 2/6: Requirements**', timestamp: Date.now() });
@@ -182,7 +187,7 @@ export function registerGenerateModuleCommand(
             }
 
             // Step 6: Completion
-            const summaryMessage = `🎉 **Module Generation Complete!**\n\n**${moduleName}** for Odoo ${version}.\n**Total Files:** ${totalFiles}\n**Created:** ${written}\n**📁 Location:** \`${moduleRootUri.fsPath}\``;
+            const summaryMessage = `🎉 **Module Generation Complete!**\n\n**${moduleName}** for Odoo ${detectedVersion}.\n**Total Files:** ${totalFiles}\n**Created:** ${written}\n**📁 Location:** \`${moduleRootUri.fsPath}\``;
             provider.sendMessage({ command: 'generationComplete', sender: 'ai', text: summaryMessage, modulePath: moduleRootUri.fsPath, filesCreated: written, totalFiles: totalFiles, timestamp: Date.now() });
             // Show the in-sidebar action bar only if generation started from Welcome → Generate New Project
             try {
@@ -220,7 +225,7 @@ export function registerGenerateModuleCommand(
             if (!nextAction) {
                 nextAction = await vscode.window.showInformationMessage(
                     'Module generated. What would you like to do next?',
-                    { modal: true, detail: `Module: ${moduleName} (Odoo ${version})\nLocation: ${moduleRootUri.fsPath}` },
+                    { modal: true, detail: `Module: ${moduleName} (Odoo ${detectedVersion})\nLocation: ${moduleRootUri.fsPath}` },
                     'Edit Existing Module',
                     'Generate Another'
                 );

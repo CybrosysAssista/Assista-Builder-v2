@@ -73,13 +73,12 @@ export class AssistaXChatPanel {
             if (backticked.length) targetFiles = backticked;
         }
 
-        // Ask for module name and version if not provided via quick inline flags
+        // Ask for module name (allow inline override) and optionally honor inline version hint
         const moduleMatch = text.match(/\bmodule[:=]\s*([\w_]+)/i);
         const versionMatch = text.match(/\bversion[:=]\s*([\d.]+)/i);
         const moduleName = moduleMatch?.[1] || await vscode.window.showInputBox({ prompt: 'Module Name (e.g., school_management)', ignoreFocusOut: true });
         if (!moduleName) { this.appendAssistant('Cancelled: module name required.'); return; }
-        const version = versionMatch?.[1] || await vscode.window.showInputBox({ prompt: 'Odoo Version (e.g., 17.0)', value: '17.0', ignoreFocusOut: true });
-        if (!version) { this.appendAssistant('Cancelled: version required.'); return; }
+        const version = versionMatch?.[1] || '17.0';
 
         // Prompt for parent directory, create subfolder moduleName
         const selected = await vscode.window.showOpenDialog({

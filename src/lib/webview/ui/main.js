@@ -1148,12 +1148,9 @@ function renderPlan(){
         const progressCancelBtn = document.getElementById('progressCancelBtn');
         // Keep a handle to (legacy) generation overlay element if present, so code paths that hide it don't throw
         const generateOverlay = document.getElementById('generateOverlay');
-        // Inline version selection will be rendered as message actions
+        // Track pending prompt/module name while validation and planning run
         let pendingPrompt = '';
-        // Version selection state
-        let awaitingVersion = false;    // waiting for user to type version in chat (custom mode)
         let pendingModuleName = '';
-        let customVersionTyped = '';
         const providerDisplayNames = {
             google: 'Google',
             openai: 'OpenAI',
@@ -1392,38 +1389,11 @@ function renderPlan(){
                 return;
             }
             // Generate mode flow
-            if (awaitingVersion) {
-                // Treat this message as the custom version input
-                const v = text;
-                // Basic validation: numbers with optional dot (e.g., 15 or 15.0)
-                if (!/^\d+(?:\.\d+)?$/.test(v)) {
-                    addMessage('Please enter a valid version number like 15 or 15.0', 'ai');
-                    return;
-                }
-                customVersionTyped = v;
-                awaitingVersion = false;
-                // Proceed with generation now that we have the version
-                const nameVal = pendingModuleName;
-                if (!/^([a-z0-9_]+)$/.test(nameVal)) {
-                    addMessage('Module name is invalid. Please try again.', 'ai');
-                    return;
-                }
-                // After version is provided, first request a build plan preview (no generating yet)
-                // Hide the version selection bubble from chat
-                try {
-                    const verMsg = document.querySelector('.seg-group [data-version-choice]')?.closest('.message');
-                    if (verMsg && verMsg.parentElement) verMsg.parentElement.removeChild(verMsg);
-                } catch {}
-                try { showStatusBubble('Processing'); } catch {}
-                vscode.postMessage({ command: 'requestPlan', prompt: pendingPrompt, version: customVersionTyped, moduleName: nameVal, context: Array.isArray(contextItems) ? contextItems : [] });
-            } else {
-                // Store prompt, validate first before asking for version
-                pendingPrompt = text;
-                pendingModuleName = suggestModuleName(text).slice(0,64);
-                // Show a lightweight Validating bubble while we validate before asking for version
-                try { showStatusBubble('Validating'); } catch {}
-                try { vscode.postMessage({ command: 'validatePrompt', prompt: pendingPrompt, context: Array.isArray(contextItems) ? contextItems : [], flowId: currentFlowId }); } catch {}
-            }
+            // Store prompt, validate first
+            pendingPrompt = text;
+            pendingModuleName = suggestModuleName(text).slice(0,64);
+            try { showStatusBubble('Validating'); } catch {}
+            try { vscode.postMessage({ command: 'validatePrompt', prompt: pendingPrompt, context: Array.isArray(contextItems) ? contextItems : [], flowId: currentFlowId }); } catch {}
             if (ti && 'value' in ti) { 
                 try { 
                     (ti).value = ''; 
@@ -1558,10 +1528,10 @@ function renderPlan(){
                     }
                 } catch {}
                 // If we have a pending plan for generation, start it now
-                if (pendingGenPayload && pendingGenPayload.version && pendingGenPayload.moduleName && pendingGenPayload.prompt) {
+                if (pendingGenPayload && pendingGenPayload.moduleName && pendingGenPayload.prompt) {
                     try { setGenerating(true); } catch {}
                     try { showStatusBubble('Analyzing'); } catch {}
-                    try { vscode.postMessage({ command: 'beginGenerateModule', prompt: pendingGenPayload.prompt, version: pendingGenPayload.version, moduleName: pendingGenPayload.moduleName, context: Array.isArray(contextItems) ? contextItems : [], flowId: currentFlowId }); } catch {}
+                    try { vscode.postMessage({ command: 'beginGenerateModule', prompt: pendingGenPayload.prompt, moduleName: pendingGenPayload.moduleName, context: Array.isArray(contextItems) ? contextItems : [], flowId: currentFlowId }); } catch {}
                     pendingGenPayload = null;
                 } else {
                     // Edit flow: user approved applying the plan
@@ -1822,7 +1792,6 @@ function renderPlan(){
                     try {
                         pendingGenPayload = {
                             prompt: String(msg.promptText || ''),
-                            version: String(msg.version || ''),
                             moduleName: String(msg.moduleName || '')
                         };
                     } catch {}
@@ -1905,25 +1874,14 @@ function renderPlan(){
                 try { hideStatusBubble(); } catch {}
                 return;
             }
-            // Handle validation result prior to version selection in Generate mode
+            // Handle validation result (auto-detect environment; no manual version selection)
             if (msg.command === 'validationResult') {
                 try {
                     const ok = !!msg.ok || !!msg.is_odoo_request;
                     if (ok) {
-                        // Hide the validating bubble before showing version choices
                         try { hideStatusBubble(); } catch {}
-                        // Render the same inline version choices as before
-                        addMessageHTML(
-                            '<div>Choose Odoo version:</div>' +
-                            '<div class="msg-actions"><div class="seg-group" role="radiogroup" aria-label="Odoo Version">' +
-                            '<button type="button" class="seg-btn" data-version-choice="18.0">18</button>' +
-                            '<button type="button" class="seg-btn" data-version-choice="17.0">17</button>' +
-                            '<button type="button" class="seg-btn" data-version-choice="16.0">16</button>' +
-                            '<button type="button" class="seg-btn" data-version-custom="1">Custom</button>' +
-                            '</div></div>',
-                            'ai'
-                        );
-                        // Do not show status bubble yet; wait until version is selected
+                        addMessage('Validation passed. Detecting environment and preparing a build plan…', 'ai');
+                        triggerPlanRequest();
                     } else {
                         const reason = String(msg.reason || 'This does not look like an Odoo module request.');
                         addMessage(reason, 'ai');
@@ -2232,44 +2190,29 @@ function renderPlan(){
             // No chat message on successful save (suppressed)
         });
 
-        // Version buttons inside chat message
-        function startWithVersion(ver) {
+        function triggerPlanRequest() {
             if (!pendingPrompt) {
-                addMessage('Please describe your module first, then pick a version.', 'ai');
+                addMessage('Please describe your module first.', 'ai');
+                try { setGenerating(false); } catch {}
+                try { hideStatusBubble(); } catch {}
                 return;
             }
             const nameVal = pendingModuleName || suggestModuleName(pendingPrompt).slice(0,64);
             if (!/^([a-z0-9_]+)$/.test(nameVal)) {
                 addMessage('Module name is invalid. Please try again.', 'ai');
+                try { setGenerating(false); } catch {}
+                try { hideStatusBubble(); } catch {}
                 return;
             }
-            // Request a plan preview before starting generation
-            // Hide the version selection bubble from chat
-            try {
-                const verMsg = document.querySelector('.seg-group [data-version-choice]')?.closest('.message');
-                if (verMsg && verMsg.parentElement) verMsg.parentElement.removeChild(verMsg);
-            } catch {}
             try { showStatusBubble('Processing'); } catch {}
-            vscode.postMessage({ command: 'requestPlan', prompt: pendingPrompt, version: ver, moduleName: nameVal });
+            vscode.postMessage({
+                command: 'requestPlan',
+                prompt: pendingPrompt,
+                moduleName: nameVal,
+                context: Array.isArray(contextItems) ? contextItems : [],
+                flowId: currentFlowId
+            });
         }
-        // Delegate clicks from inline buttons
-        document.addEventListener('click', (e) => {
-            const t = e.target;
-            if (!t || !(t instanceof Element)) return;
-            const ver = t.getAttribute('data-version-choice');
-            const isCustom = t.getAttribute('data-version-custom');
-            if (ver) {
-                startWithVersion(ver);
-            } else if (isCustom) {
-                if (!pendingPrompt) {
-                    addMessage('Please describe your module first, then choose Custom.', 'ai');
-                    return;
-                }
-                pendingModuleName = suggestModuleName(pendingPrompt).slice(0,64);
-                awaitingVersion = true;
-                addMessage('Type the Odoo version in the chat and press Enter (e.g., 15.0).', 'ai');
-            }
-        });
         // Progress cancel button disabled (use Stop in chat instead). Still cancels if triggered programmatically.
         progressCancelBtn?.addEventListener('click', () => {
             vscode.postMessage({ command: 'cancelGeneration' });

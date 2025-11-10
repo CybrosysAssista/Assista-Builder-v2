@@ -20,18 +20,17 @@ export class PlanHandler implements MessageHandler {
                 if (this.cancelChecker()) { return true; }
                 
                 const promptText: string = String(message.prompt || '').trim();
-                const version: string = String(message.version || '').trim();
                 const inputName: string = String(message.moduleName || '').trim();
                 const moduleName: string = sanitizeModuleName(inputName || promptText);
                 
-                if (!promptText || !version || !moduleName) {
+                if (!promptText || !moduleName) {
                     provider.sendMessage({ command: 'aiReply', text: 'Missing information to prepare a plan. Please retry.' });
                     return true;
                 }
                 
                 const { generateContent } = await import('../../ai/index.js');
                 const planPrompt = [
-                    `You are preparing a short build plan for an Odoo ${version} module named "${moduleName}" based on the user's request below.`,
+                    `You are preparing a short build plan for an Odoo module named "${moduleName}". The runtime environment (Odoo version, addons paths) will be auto-detected later in the workflow; avoid asking the user for it. Base the plan on the user's request below.`,
                     `User request: "${promptText}"`,
                     '',
                     'Respond with HTML ONLY (no markdown, no code fences). Use this exact structure and headings:',
@@ -71,7 +70,7 @@ export class PlanHandler implements MessageHandler {
                 } catch {}
                 
                 provider.sendMessage({ command: 'aiReplyHtml', html, kind: 'plan' });
-                provider.sendMessage({ command: 'confirmApplyPlan', prompt: 'Proceed to generate this module?', version, moduleName, promptText });
+                provider.sendMessage({ command: 'confirmApplyPlan', prompt: 'Proceed to generate this module?', moduleName, promptText });
             } catch (e: any) {
                 provider.sendMessage({ command: 'aiReply', text: `Failed to prepare plan: ${e?.message || e}` });
             }
@@ -140,7 +139,7 @@ export class PlanHandler implements MessageHandler {
                         timestamp: Date.now()
                     });
                 } catch {}
-                provider._view?.webview.postMessage({ command: 'confirmApplyPlan', prompt: lp?.userPrompt || '', detectedVersion: lp?.version || '' });
+                provider._view?.webview.postMessage({ command: 'confirmApplyPlan', prompt: lp?.userPrompt || '' });
             } catch (e) {
                 provider._view?.webview.postMessage({ command: 'aiReply', text: `Assista X: Failed to resend plan. ${String((e as Error)?.message || e)}` });
             }
