@@ -327,6 +327,60 @@ const chatInput = document.getElementById('chatInput');
             }
         } catch {}
 
+// --- Minimal Markdown -> HTML renderer for chat replies ---
+function escapeHtml(s){
+  return String(s||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+function renderMarkdown(md){
+  try {
+    let text = String(md || '');
+    // Normalize line endings
+    text = text.replace(/\r\n?/g, '\n');
+    // Fenced code blocks ```lang\n...\n```
+    text = text.replace(/```([\w-]*)\n([\s\S]*?)```/g, (m,lang,code)=>{
+      const l = String(lang||'').toLowerCase();
+      return `<pre><code class="language-${l}">${escapeHtml(code)}</code></pre>`;
+    });
+    // Inline code
+    text = text.replace(/`([^`\n]+)`/g, (m,code)=>`<code>${escapeHtml(code)}</code>`);
+    // Headings # .. ######
+    text = text.replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
+               .replace(/^#####\s+(.+)$/gm, '<h5>$1</h5>')
+               .replace(/^####\s+(.+)$/gm, '<h4>$1</h4>')
+               .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
+               .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
+               .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>');
+    // Bold/italic
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+               .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    // Links [text](url)
+    text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m,txt,url)=>`<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(txt)}</a>`);
+    // Lists - or *
+    // Convert list blocks line-wise
+    const lines = text.split('\n');
+    let out = [];
+    let inList = false;
+    for (let i=0;i<lines.length;i++){
+      const line = lines[i];
+      if (/^\s*[-*]\s+/.test(line)){
+        if (!inList){ out.push('<ul>'); inList = true; }
+        out.push('<li>' + line.replace(/^\s*[-*]\s+/, '') + '</li>');
+      } else {
+        if (inList){ out.push('</ul>'); inList = false; }
+        out.push(line);
+      }
+    }
+    if (inList) out.push('</ul>');
+    text = out.join('\n');
+    // Paragraphs: wrap remaining bare lines into <p>
+    text = text.replace(/^(?!<(h\d|ul|li|pre|code|blockquote|p|\/ul|\/li|\/pre|\/p)\b)([^\n<>][^\n]*)$/gm, '<p>$2</p>');
+    return text;
+  } catch { return escapeHtml(md||''); }
+}
+
 // ---- Dev-main style planning panel (no settings needed) ----
 let planState = { total: 0, done: 0, sections: { requirements: '', tasks: '', menu: '' } };
 let planActive = false;
@@ -1856,6 +1910,17 @@ function renderPlan(){
                 if (isNonOdooNotice(msg.text)) {
                     finalizeNonOdooStop();
                 }
+            }
+            if (msg.command === 'aiReplyMarkdown') {
+                try { setGenerating(false); } catch {}
+                hideConfirm();
+                const md = String(msg.markdown || msg.text || '');
+                if (md) {
+                    const html = renderMarkdown(md);
+                    addMessageHTML(html, 'ai');
+                }
+                try { hideStatusBubble(); } catch {}
+                return;
             }
             if (msg.command === 'aiReplyHtml') {
                 try { setGenerating(false); } catch {}
