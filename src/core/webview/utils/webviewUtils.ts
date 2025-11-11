@@ -1,16 +1,24 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { getNonce } from '../utils.js';
+
+function getNonce(): string {
+    let text = '';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+        text += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return text;
+}
 
 export function getHtmlForWebview(
     webview: vscode.Webview,
     extensionUri: vscode.Uri
 ): string {
     const nonce = getNonce();
-    const outPath = vscode.Uri.joinPath(extensionUri, 'out', 'lib', 'webview', 'ui', 'main.js').fsPath;
+    const outPath = vscode.Uri.joinPath(extensionUri, 'out', 'core', 'webview', 'ui', 'main.js').fsPath;
     const scriptPath = fs.existsSync(outPath)
-        ? ['out', 'lib', 'webview', 'ui', 'main.js']
-        : ['src', 'lib', 'webview', 'ui', 'main.js'];
+        ? ['out', 'core', 'webview', 'ui', 'main.js']
+        : ['src', 'core', 'webview', 'ui', 'main.js'];
 
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...scriptPath));
 
@@ -323,4 +331,5 @@ export function getHtmlForWebview(
   </body>
 </html>`;
 }
+
 

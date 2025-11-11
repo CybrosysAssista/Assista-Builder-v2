@@ -2,7 +2,7 @@
  * Configuration management service
  */
 import * as vscode from 'vscode';
-import { ProviderConfig } from '../ai/index.js';
+import { ProviderConfig } from '../ai/agent.js';
 
 export interface AppSettings {
     activeProvider: string;
@@ -36,7 +36,11 @@ export async function getActiveProviderConfig(
 
     const providersConfig = configSection.get<any>('providers', {});
     const secretKey = `assistaX.apiKey.${activeProvider}`;
-    const apiKey = activeProvider === 'google' ? googleKey : activeProvider === 'openrouter' ? openrouterKey : await context.secrets.get(secretKey);
+    const apiKey = activeProvider === 'google'
+        ? googleKey
+        : activeProvider === 'openrouter'
+            ? openrouterKey
+            : await context.secrets.get(secretKey);
 
     if (!apiKey) {
         throw new Error(`API Key for ${activeProvider} is not configured. Please go to Settings.`);
@@ -90,4 +94,5 @@ export async function getActiveProviderConfig(
 
     return { provider: activeProvider, config: providerConfig };
 }
+
 

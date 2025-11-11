@@ -2,12 +2,12 @@
  * Google Gemini provider implementation
  */
 import * as vscode from 'vscode';
-import { ProviderConfig } from '../index.js';
+import { ProviderConfig } from '../agent.js';
 
 export async function generateWithGoogle(
     params: any,
     config: ProviderConfig,
-    context: vscode.ExtensionContext
+    _context: vscode.ExtensionContext
 ): Promise<string> {
     const maxRetries = 3;
     let lastError: Error | null = null;
@@ -53,4 +53,5 @@ export async function generateWithGoogle(
     console.error('Google Generative AI failed after retries:', lastError);
     throw new Error(`Google API Error after ${maxRetries} retries: ${lastError?.message}. The service may be overloaded; try OpenRouter provider or later.`);
 }
+
 

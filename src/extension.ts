@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { AssistaXProvider } from './lib/webview/AssistaXProvider.js';
-import { registerAllCommands } from './lib/commands/index.js';
+import { AssistaXProvider } from './core/webview/AssistaXProvider.js';
+import { registerAllCommands } from './core/commands/index.js';
 
 export function activate(context: vscode.ExtensionContext) {
     const provider = new AssistaXProvider(context.extensionUri, context);

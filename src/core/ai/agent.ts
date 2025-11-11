@@ -3,6 +3,13 @@ import { getActiveProviderConfig } from '../services/configService.js';
 import { generateWithOpenAICompat } from './providers/openai.js';
 import { generateWithGoogle } from './providers/google.js';
 import * as tools from '../services/toolService.js';
+import {
+    ChatMessage,
+    clearSessionHistory,
+    getSessionHistory as readSessionHistory,
+    setSessionHistory,
+    trimHistory
+} from './sessionManager.js';
 
 export interface ProviderConfig {
     apiKey: string;
@@ -10,24 +17,9 @@ export interface ProviderConfig {
     customUrl?: string;
 }
 
-export interface AppSettings {
-    activeProvider: string;
-    providers: { [key: string]: ProviderConfig };
-}
+type ToolFn = (...args: any[]) => Promise<any> | any;
 
-type ChatMessage = {
-    role: 'system' | 'user' | 'assistant';
-    content: string;
-};
-
-interface SessionState {
-    history: ChatMessage[];
-}
-
-const MAX_HISTORY_MESSAGES = 20;
-const sessionStore = new WeakMap<vscode.ExtensionContext, SessionState>();
-
-const TOOL_REGISTRY: Record<string, (...args: any[]) => Promise<any> | any> = {
+const TOOL_REGISTRY: Record<string, ToolFn> = {
     list_files: tools.listFiles,
     listFiles: tools.listFiles,
     get_file_content: tools.getFileContent,
@@ -37,15 +29,6 @@ const TOOL_REGISTRY: Record<string, (...args: any[]) => Promise<any> | any> = {
     search_in_project: tools.searchInProject,
     searchInProject: tools.searchInProject,
 };
-
-function getSessionState(context: vscode.ExtensionContext): SessionState {
-    let state = sessionStore.get(context);
-    if (!state) {
-        state = { history: [] };
-        sessionStore.set(context, state);
-    }
-    return state;
-}
 
 function normalizeMessages(raw: any[]): ChatMessage[] {
     if (!Array.isArray(raw)) {
@@ -67,14 +50,6 @@ function normalizeMessages(raw: any[]): ChatMessage[] {
     return normalized;
 }
 
-function trimHistory(messages: ChatMessage[]): ChatMessage[] {
-    const filtered = messages.filter(msg => msg.role === 'user' || msg.role === 'assistant');
-    if (filtered.length <= MAX_HISTORY_MESSAGES) {
-        return filtered;
-    }
-    return filtered.slice(filtered.length - MAX_HISTORY_MESSAGES);
-}
-
 export async function generateContent(params: any = {}, context: vscode.ExtensionContext): Promise<any> {
     if (!context) {
         throw new Error('Extension context is required.');
@@ -90,11 +65,12 @@ export async function generateContent(params: any = {}, context: vscode.Extensio
         return await toolFn(...args);
     }
 
-    const session = getSessionState(context);
+    let session = readSessionHistory(context);
     const config = params.config = params.config ?? {};
 
     if (config.resetSession) {
-        session.history = [];
+        clearSessionHistory(context);
+        session = [];
     }
 
     const hasExplicitMessages = Array.isArray(params.messages) && params.messages.length > 0;
@@ -115,8 +91,8 @@ export async function generateContent(params: any = {}, context: vscode.Extensio
     if (systemInstruction) {
         requestMessages.push({ role: 'system', content: systemInstruction });
     }
-    if (useSessionHistory && session.history.length) {
-        requestMessages.push(...session.history);
+    if (useSessionHistory && session.length) {
+        requestMessages.push(...session);
     }
     requestMessages.push(...newMessages);
 
@@ -126,30 +102,42 @@ export async function generateContent(params: any = {}, context: vscode.Extensio
     };
     delete (requestPayload as any).contents;
 
+    try {
+        console.log('[Assista X] AI request payload:', JSON.stringify(requestPayload, null, 2));
+    } catch {
+        console.log('[Assista X] AI request payload (raw):', requestPayload);
+    }
+
     const { provider, config: providerConfig } = await getActiveProviderConfig(context);
 
     const response = provider === 'google'
         ? await generateWithGoogle(requestPayload, providerConfig, context)
         : await generateWithOpenAICompat(requestPayload, providerConfig, provider, context);
 
+    try {
+        console.log('[Assista X] AI response payload:', typeof response === 'string' ? response : JSON.stringify(response, null, 2));
+    } catch {
+        console.log('[Assista X] AI response payload (raw):', response);
+    }
+
     if (useSessionHistory) {
         const updatedHistory = [
-            ...session.history,
+            ...session,
             ...newMessages,
             { role: 'assistant', content: response } as ChatMessage,
         ];
-        session.history = trimHistory(updatedHistory);
+        setSessionHistory(context, trimHistory(updatedHistory));
     }
 
     return response;
 }
 
 export function resetSession(context: vscode.ExtensionContext): void {
-    getSessionState(context).history = [];
+    clearSessionHistory(context);
 }
 
 export function getSessionHistory(context: vscode.ExtensionContext): ChatMessage[] {
-    return [...getSessionState(context).history];
+    return readSessionHistory(context);
 }
 
 export async function generateOdooModule(): Promise<never> {
