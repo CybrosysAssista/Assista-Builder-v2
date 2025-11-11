@@ -101,11 +101,46 @@ export class PlanHandler implements MessageHandler {
                 if (this.cancelChecker()) { return true; }
                 
                 let parsed: any = undefined;
-                try { parsed = JSON.parse(String(raw || '{}')); } catch { }
-                
-                const isOk = !!(parsed && (parsed.is_odoo_request === true || parsed.is_odoo_request === 'true'));
-                const reason = parsed && parsed.reason ? String(parsed.reason) : (isOk ? '' : 'Your request does not appear to be an Odoo module request.');
-                provider.sendMessage({ command: 'validationResult', ok: isOk, is_odoo_request: isOk, reason });
+                try { parsed = JSON.parse(String(raw || '{}')); } catch { parsed = {}; }
+
+                // Support new validator schema with `intent`; fallback to legacy boolean
+                const intent: string | undefined = typeof parsed?.intent === 'string' ? String(parsed.intent).toLowerCase() : undefined;
+                const isModuleGen = intent ? intent === 'module_generate' : !!(parsed && (parsed.is_odoo_request === true || parsed.is_odoo_request === 'true'));
+                const reason = parsed && parsed.reason ? String(parsed.reason) : (isModuleGen ? '' : (intent ? `Intent classified as '${intent}', not a module generation request.` : 'Your request does not appear to be an Odoo module request.'));
+
+                // Send validation outcome to UI (include intent when available)
+                provider.sendMessage({ command: 'validationResult', ok: isModuleGen, is_odoo_request: isModuleGen, intent, reason });
+
+                // If not a module generation request, optionally handle chat/Q&A routing here
+                if (!isModuleGen && intent) {
+                    const { generateContent } = await import('../../ai/index.js');
+                    let systemInstruction = '';
+                    let preface = '';
+                    if (intent === 'smalltalk') {
+                        systemInstruction = 'You are a chill, friendly assistant. Keep replies short, warm, and casual. No code blocks unless explicitly asked.';
+                    } else if (intent === 'general_question') {
+                        systemInstruction = 'You are a helpful general-purpose assistant. Provide clear, concise answers. Use bullet points when helpful.';
+                    } else if (intent === 'odoo_question') {
+                        preface = "I can't proceed with module generation for this request. Answering as Odoo expert.";
+                        systemInstruction = 'You are an expert on Odoo features, versions, and functional flows. Answer precisely and concisely.';
+                    } else if (intent === 'odoo_dev_question') {
+                        preface = "I can't proceed with module generation for this request. Answering as Odoo developer.";
+                        systemInstruction = 'You are an expert Odoo developer. Explain how to implement things in Odoo with short, actionable guidance.';
+                    } else {
+                        preface = "I can't understand from the module generation side. Forwarding to model response.";
+                        systemInstruction = 'You are a concise assistant. If information is insufficient, ask a clarifying question.';
+                    }
+
+                    try {
+                        // Ask model to reply in Markdown (not HTML) for chat-style intents
+                        const mdInstruction = `${systemInstruction}\n\nRespond in concise Markdown. Do not use HTML or code fences unless necessary.`;
+                        const reply = await generateContent({ contents: promptText, config: { mode: 'general', systemInstruction: mdInstruction } }, this.context);
+                        if (preface) provider.sendMessage({ command: 'aiReplyMarkdown', markdown: `> ${preface}` });
+                        provider.sendMessage({ command: 'aiReplyMarkdown', markdown: String(reply || ''), sender: 'model' });
+                    } catch (e) {
+                        provider.sendMessage({ command: 'aiReply', text: `Failed to get model response: ${String((e as Error)?.message || e)}` });
+                    }
+                }
             } catch (e: any) {
                 provider.sendMessage({ command: 'validationResult', ok: false, reason: `Validation failed: ${e?.message || e}` });
             }

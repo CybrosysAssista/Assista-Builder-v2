@@ -1,17 +1,26 @@
 export const createOdooValidationPrompt = (prompt: string) => `
-Analyze this user request and determine if it's specifically for Odoo module development.
+Determine the user's intent from this request.
 
 Request: "${prompt}"
 
-Respond ONLY with JSON in this exact format - NO MARKDOWN, NO EXTRA TEXT:
+Respond ONLY with JSON in this exact structure:
 {
-  "is_odoo_request": true/false,
-  "reason": "Brief explanation why this is/isn't an Odoo module request"
+  "intent": "one_of: smalltalk | general_question | odoo_question | odoo_dev_question | module_generate | module_modify | file_action | error_help | unknown",
+  "reason": "Brief explanation of why you chose this intent"
 }
 
-If the request mentions Odoo, modules, models, views, or Odoo-specific terms, set is_odoo_request to true.
+Guidelines for intent:
+- "smalltalk": greetings, chit-chat, non-technical.
+- "general_question": not related to Odoo or coding.
+- "odoo_question": asks about Odoo features, versions, business flow.
+- "odoo_dev_question": asks how to develop in Odoo.
+- "module_generate": user wants a new Odoo module created.
+- "module_modify": user wants to add/modify fields, models, views, logic in an existing module.
+- "file_action": user wants to create/read/update/delete project files or folders.
+- "error_help": user shares traceback, error logs, or debugging issues.
+- "unknown": intent unclear.
 
-IMPORTANT: Your response must be valid JSON only. Start with { and end with }. No code blocks, no explanations.
+Your response MUST be valid JSON only. No extra text, no comments, no markdown.
 `;
 
 // ===== Dev-main style prompts (added for compatibility with Assista-x-Dev-main workflow) =====

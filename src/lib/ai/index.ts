@@ -606,19 +606,32 @@ export async function generateOdooModule(
         console.log('Enhanced validation JSON processing complete. Length:', jsonText.length, 'Preview:', jsonText.substring(0, 200) + (jsonText.length > 200 ? '...' : ''));
 
         // Parse with comprehensive error handling
-        validationData = JSON.parse(jsonText);
+        const parsed: any = JSON.parse(jsonText);
 
-        // Enhanced structure validation with auto-correction
-        if (typeof validationData.is_odoo_request !== 'boolean') {
-            console.warn(`Validation warning: 'is_odoo_request' is ${typeof validationData.is_odoo_request}, defaulting to boolean`);
-            validationData.is_odoo_request = !!validationData.is_odoo_request; // Coerce to boolean
-        }
-
-        if (typeof validationData.reason !== 'string') {
-            console.warn(`Validation warning: 'reason' is ${typeof validationData.reason}, generating default`);
-            validationData.reason = validationData.is_odoo_request ?
-                'Request recognized as Odoo module development' :
-                'Request does not appear to be Odoo-specific';
+        // New intent-based validation (backward-compatible):
+        // - If validator returns `intent`, treat module_generate as valid request
+        // - Otherwise, fall back to legacy `is_odoo_request` boolean
+        const intent = typeof parsed?.intent === 'string' ? String(parsed.intent).toLowerCase() : undefined;
+        if (intent) {
+            validationData.is_odoo_request = intent === 'module_generate';
+            validationData.reason = typeof parsed?.reason === 'string' && parsed.reason.trim()
+                ? String(parsed.reason)
+                : (validationData.is_odoo_request
+                    ? 'Intent classified as module generation'
+                    : `Intent classified as '${intent}', not a module generation request`);
+        } else {
+            // Legacy structure support
+            validationData = parsed;
+            if (typeof validationData.is_odoo_request !== 'boolean') {
+                console.warn(`Validation warning: 'is_odoo_request' is ${typeof validationData.is_odoo_request}, defaulting to boolean`);
+                validationData.is_odoo_request = !!validationData.is_odoo_request; // Coerce to boolean
+            }
+            if (typeof validationData.reason !== 'string') {
+                console.warn(`Validation warning: 'reason' is ${typeof validationData.reason}, generating default`);
+                validationData.reason = validationData.is_odoo_request ?
+                    'Request recognized as Odoo module development' :
+                    'Request does not appear to be Odoo-specific';
+            }
         }
 
         // Ensure reason has reasonable length
@@ -656,7 +669,7 @@ export async function generateOdooModule(
         console.log(`Validation fallback analysis: keywordScore=${keywordScore}, semanticScore=${semanticScore}, totalConfidence=${totalConfidence}`);
         console.log(`Odoo matches: ${odooMatches}, Non-Odoo matches: ${nonOdooMatches}`);
 
-        // Determine validation result
+        // Determine validation result (legacy fallback path)
         let isOdooRequest = false;
         let fallbackReason = '';
 
