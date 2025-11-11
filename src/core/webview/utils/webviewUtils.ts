@@ -1,7 +1,15 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { getNonce } from '../utils.js';
 import { getSettingsModalHtml } from '../settings/settingsHtml.js';
+
+function getNonce(): string {
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let text = '';
+    for (let i = 0; i < 32; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+}
 
 export function getHtmlForWebview(
     webview: vscode.Webview,
