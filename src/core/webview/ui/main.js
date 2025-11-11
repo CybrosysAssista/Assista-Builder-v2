@@ -5,18 +5,16 @@ const inputEl = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const stopBtn = document.getElementById('stopBtn');
 const welcomeEl = document.getElementById('welcomeScreen');
-const settingsBtn = document.getElementById('settingsBtn');
-const settingsOverlay = document.getElementById('settingsOverlay');
-const closeSettingsBtn = document.getElementById('closeSettingsBtn');
-const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
-const settingsForm = document.getElementById('settingsForm');
-const settingsMessageEl = document.getElementById('settingsMessage');
-const googleKeyInput = document.getElementById('googleKey');
-const googleModelInput = document.getElementById('googleModel');
-const googleStatusEl = document.getElementById('googleStatus');
-const openrouterKeyInput = document.getElementById('openrouterKey');
-const openrouterModelInput = document.getElementById('openrouterModel');
-const openrouterStatusEl = document.getElementById('openrouterStatus');
+// New full-page settings UI elements
+const settingsPage = document.getElementById('settingsPage');
+const providerSelect = document.getElementById('provider');
+const apiKeyInput = document.getElementById('apiKey');
+const modelSelect = document.getElementById('model');
+const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+const settingsDoneBtn = document.getElementById('settingsDoneBtn');
+const apiKeyLabel = document.getElementById('apiKeyLabel');
+const docLink = document.getElementById('docLink');
+const inputBar = document.querySelector('.input-bar');
 
 let isBusy = false;
 
@@ -121,62 +119,72 @@ if (stopBtn) {
 }
 
 function openSettings() {
-    if (!settingsOverlay) return;
-    settingsOverlay.classList.add('visible');
-    settingsOverlay.setAttribute('aria-hidden', 'false');
-    if (settingsMessageEl) {
-        settingsMessageEl.textContent = '';
-        settingsMessageEl.className = 'settings-message';
-    }
+    if (!settingsPage) return;
+    // Hide chat UI
+    if (messagesEl) messagesEl.style.display = 'none';
+    if (inputBar) inputBar.style.display = 'none';
+    // Show settings page
+    settingsPage.style.display = 'block';
     vscode.postMessage({ command: 'loadSettings' });
 }
 
 function closeSettings() {
-    if (!settingsOverlay) return;
-    settingsOverlay.classList.remove('visible');
-    settingsOverlay.setAttribute('aria-hidden', 'true');
-    settingsForm?.reset();
-    if (settingsMessageEl) {
-        settingsMessageEl.textContent = '';
-        settingsMessageEl.className = 'settings-message';
-    }
+    if (!settingsPage) return;
+    settingsPage.style.display = 'none';
+    if (messagesEl) messagesEl.style.display = '';
+    if (inputBar) inputBar.style.display = '';
 }
 
-function updateStatusLabel(labelEl, configured) {
-    if (!labelEl) return;
-    labelEl.textContent = configured ? 'Configured' : 'Not set';
-    labelEl.classList.toggle('configured', !!configured);
-    labelEl.classList.toggle('missing', !configured);
-}
-
-settingsBtn?.addEventListener('click', () => openSettings());
-closeSettingsBtn?.addEventListener('click', () => closeSettings());
-cancelSettingsBtn?.addEventListener('click', () => closeSettings());
-
-settingsOverlay?.addEventListener('click', (event) => {
-    if (event.target === settingsOverlay) {
-        closeSettings();
-    }
-});
-
-settingsForm?.addEventListener('submit', (event) => {
-    event.preventDefault();
-    if (!settingsForm) return;
-    const formData = new FormData(settingsForm);
-    const activeProvider = String(formData.get('activeProvider') || 'google');
-    const payload = {
-        command: 'saveSettings',
-        activeProvider,
-        googleKey: String(googleKeyInput?.value || ''),
-        googleModel: String(googleModelInput?.value || ''),
-        openrouterKey: String(openrouterKeyInput?.value || ''),
-        openrouterModel: String(openrouterModelInput?.value || '')
+function updateProviderUiLabels(provider) {
+    if (!apiKeyLabel || !docLink) return;
+    const map = {
+        google: { label: 'Gemini API Key', doc: 'https://ai.google.dev/docs', text: 'Google AI documentation' },
+        openrouter: { label: 'OpenRouter API Key', doc: 'https://openrouter.ai/docs', text: 'OpenRouter documentation' },
+        openai: { label: 'OpenAI API Key', doc: 'https://platform.openai.com/docs', text: 'OpenAI documentation' },
+        anthropic: { label: 'Anthropic API Key', doc: 'https://docs.anthropic.com', text: 'Anthropic documentation' },
+        azure: { label: 'Azure OpenAI API Key', doc: 'https://learn.microsoft.com/azure/ai-services/openai', text: 'Azure OpenAI documentation' },
+        cohere: { label: 'Cohere API Key', doc: 'https://docs.cohere.com', text: 'Cohere documentation' },
+        huggingface: { label: 'HuggingFace API Key', doc: 'https://huggingface.co/docs', text: 'HuggingFace documentation' },
+        mistral: { label: 'Mistral AI API Key', doc: 'https://docs.mistral.ai', text: 'Mistral AI documentation' },
     };
-    if (settingsMessageEl) {
-        settingsMessageEl.textContent = 'Saving...';
-        settingsMessageEl.className = 'settings-message';
+    const cfg = map[provider] || map.openrouter;
+    apiKeyLabel.textContent = cfg.label;
+    docLink.textContent = cfg.text;
+    docLink.href = cfg.doc;
+}
+
+function saveSettings() {
+    const provider = String(providerSelect?.value || 'google');
+    const model = String(modelSelect?.value || '');
+    const key = String(apiKeyInput?.value || '');
+    const payload = { command: 'saveSettings', activeProvider: provider };
+    if (provider === 'google') {
+        payload['googleModel'] = model;
+        if (key) payload['googleKey'] = key;
+    } else if (provider === 'openrouter') {
+        payload['openrouterModel'] = model;
+        if (key) payload['openrouterKey'] = key;
+    } else {
+        // For not-yet-implemented providers, just keep UI but do not send keys
+        // Falls back to existing backend which only handles google/openrouter
     }
     vscode.postMessage(payload);
+}
+
+settingsSaveBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    saveSettings();
+});
+
+settingsDoneBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeSettings();
+});
+
+providerSelect?.addEventListener('change', () => {
+    updateProviderUiLabels(String(providerSelect.value));
+    // Clear apiKey input on provider change for safety
+    if (apiKeyInput) apiKeyInput.value = '';
 });
 
 window.addEventListener('message', (event) => {
@@ -207,34 +215,32 @@ window.addEventListener('message', (event) => {
         case 'settingsData': {
             const data = message.payload || {};
             const activeProvider = data.activeProvider || 'google';
-            const radios = settingsForm?.querySelectorAll('input[name="activeProvider"]');
-            radios?.forEach((input) => {
-                input.checked = input.value === activeProvider;
-            });
-            if (googleModelInput && typeof data.googleModel === 'string') {
-                googleModelInput.value = data.googleModel;
-            }
-            if (openrouterModelInput && typeof data.openrouterModel === 'string') {
-                openrouterModelInput.value = data.openrouterModel;
-            }
-            updateStatusLabel(googleStatusEl, !!data.hasGoogleKey);
-            updateStatusLabel(openrouterStatusEl, !!data.hasOpenrouterKey);
-            if (settingsMessageEl) {
-                settingsMessageEl.textContent = '';
-                settingsMessageEl.className = 'settings-message';
+            if (providerSelect) providerSelect.value = activeProvider;
+            updateProviderUiLabels(activeProvider);
+            if (modelSelect) {
+                // Prefer the provider-specific model if present
+                const model = activeProvider === 'google' ? (data.googleModel || '') :
+                              activeProvider === 'openrouter' ? (data.openrouterModel || '') : '';
+                // If options exist, try to select matching value, else set as a single option
+                let option = modelSelect.querySelector(`option[value="${model}"]`);
+                if (!option && model) {
+                    modelSelect.innerHTML = '';
+                    const opt = document.createElement('option');
+                    opt.value = model;
+                    opt.textContent = model;
+                    modelSelect.appendChild(opt);
+                }
+                modelSelect.value = model || modelSelect.value;
             }
             break;
         }
         case 'settingsSaved': {
             const payload = message.payload || {};
             if (payload.success) {
-                updateStatusLabel(googleStatusEl, !!payload.hasGoogleKey);
-                updateStatusLabel(openrouterStatusEl, !!payload.hasOpenrouterKey);
                 appendMessage('Settings saved.', 'system');
                 closeSettings();
-            } else if (settingsMessageEl) {
-                settingsMessageEl.textContent = payload.error ? String(payload.error) : 'Failed to save settings.';
-                settingsMessageEl.className = 'settings-message error';
+            } else {
+                appendMessage(payload.error ? String(payload.error) : 'Failed to save settings.', 'error');
             }
             break;
         }
@@ -244,4 +250,3 @@ window.addEventListener('message', (event) => {
 });
 
 vscode.postMessage({ command: 'loadSettings' });
-
