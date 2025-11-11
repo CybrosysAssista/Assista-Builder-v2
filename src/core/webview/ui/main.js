@@ -250,4 +250,3 @@ window.addEventListener('message', (event) => {
 });
 
 vscode.postMessage({ command: 'loadSettings' });
-

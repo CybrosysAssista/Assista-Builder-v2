@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { generateContent } from '../ai/index.js';
+import { generateContent } from '../ai/agent.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
@@ -76,7 +76,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         this._view?.webview.postMessage(payload ? { type, payload } : { type });
     }
 
-    sendAssistantMessage(text: string, type: 'assistantMessage' | 'error' | 'systemMessage' = 'assistantMessage') {
+    private sendAssistantMessage(text: string, type: 'assistantMessage' | 'error' | 'systemMessage' = 'assistantMessage') {
         this._view?.webview.postMessage({ type, text });
     }
 
@@ -161,3 +161,5 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         }
     }
 }
+
+

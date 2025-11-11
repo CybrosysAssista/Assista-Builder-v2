@@ -1,9 +1,8 @@
 /**
  * OpenAI-compatible provider implementation
- * Supports: OpenAI, Anthropic (via OpenRouter), OpenRouter, Custom
  */
 import * as vscode from 'vscode';
-import { ProviderConfig } from '../index.js';
+import { ProviderConfig } from '../agent.js';
 
 function getApiUrl(provider: string, config: ProviderConfig): string {
     switch (provider) {
@@ -136,4 +135,5 @@ export async function generateWithOpenAICompat(
     }
     throw new Error(`Request failed after ${maxRetries} attempts: ${lastErr?.message || lastErr}`);
 }
+
 

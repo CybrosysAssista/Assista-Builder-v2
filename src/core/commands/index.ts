@@ -25,3 +25,4 @@ export function registerAllCommands(
 
     return disposables;
 }
+

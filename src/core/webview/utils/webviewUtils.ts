@@ -8,10 +8,10 @@ export function getHtmlForWebview(
     extensionUri: vscode.Uri
 ): string {
     const nonce = getNonce();
-    const outPath = vscode.Uri.joinPath(extensionUri, 'out', 'lib', 'webview', 'ui', 'main.js').fsPath;
+    const outPath = vscode.Uri.joinPath(extensionUri, 'out', 'core', 'webview', 'ui', 'main.js').fsPath;
     const scriptPath = fs.existsSync(outPath)
-        ? ['out', 'lib', 'webview', 'ui', 'main.js']
-        : ['src', 'lib', 'webview', 'ui', 'main.js'];
+        ? ['out', 'core', 'webview', 'ui', 'main.js']
+        : ['src', 'core', 'webview', 'ui', 'main.js'];
 
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...scriptPath));
 
@@ -328,4 +328,3 @@ export function getHtmlForWebview(
   </body>
 </html>`;
 }
-
