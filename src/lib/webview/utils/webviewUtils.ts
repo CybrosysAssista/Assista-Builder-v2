@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { getNonce } from '../utils.js';
+import { getSettingsModalHtml } from '../settings/settingsHtml.js';
 
 export function getHtmlForWebview(
     webview: vscode.Webview,
@@ -259,61 +260,65 @@ export function getHtmlForWebview(
       .settings-message.success {
         color: var(--vscode-testing-iconPassed, #56c);
       }
+
+      /* New full-page Settings styles */
+      #settingsPage {
+        padding: 20px;
+        background: var(--vscode-editor-background);
+        color: var(--vscode-editor-foreground);
+      }
+      .settings-container { max-width: 800px; margin: 0 auto; }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--vscode-panel-border, #333);
+      }
+      .header h1 { font-size: 24px; font-weight: 400; }
+      .header-buttons { display: flex; gap: 10px; }
+      .btn { padding: 8px 16px; border: none; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 500; }
+      .btn-save { background-color: var(--vscode-button-background, #0e639c); color: var(--vscode-button-foreground, #fff); }
+      .btn-save:hover { filter: brightness(1.05); }
+      .btn-done { background-color: var(--vscode-sideBar-background, #3c3c3c); color: var(--vscode-editor-foreground, #ccc); }
+      .btn-done:hover { filter: brightness(1.1); }
+      .section { margin-bottom: 30px; }
+      .section-title { font-size: 13px; margin-bottom: 8px; font-weight: 400; }
+      .section-description { font-size: 12px; color: var(--vscode-descriptionForeground, #888); margin-bottom: 15px; }
+      .input-group { margin-bottom: 20px; }
+      .input-label { font-size: 13px; margin-bottom: 8px; display: block; }
+      .link { color: var(--vscode-textLink-foreground, #3794ff); text-decoration: none; margin-left: 10px; font-size: 12px; }
+      .link:hover { text-decoration: underline; }
+      select, input[type="text"], input[type="password"] {
+        width: 100%; padding: 8px 12px; background-color: var(--vscode-input-background, #3c3c3c);
+        border: 1px solid var(--vscode-input-border, #3c3c3c); color: inherit; border-radius: 3px; font-size: 13px; outline: none;
+      }
+      select:focus, input:focus { border-color: var(--vscode-focusBorder, #007acc); }
+      .inline-buttons { display: flex; gap: 5px; margin-left: 10px; }
+      .icon-btn { background: none; border: none; color: inherit; cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; }
+      .icon-btn:hover { background-color: var(--vscode-editorWidget-background, #3c3c3c); }
+      .profile-row { display: flex; align-items: center; margin-bottom: 15px; }
+      .profile-row select { flex: 1; }
+      .checkbox-group { display: flex; align-items: center; margin-bottom: 12px; }
+      .checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; cursor: pointer; }
+      .checkbox-group label { font-size: 13px; cursor: pointer; }
+      .info-text { font-size: 12px; color: var(--vscode-descriptionForeground, #888); margin-top: 5px; }
+      .info-box { background-color: var(--vscode-editorWidget-background, #252526); padding: 15px; border-radius: 4px; margin-top: 15px; font-size: 12px; line-height: 1.6; }
+      .info-box ul { list-style: none; padding-left: 15px; }
+      .info-box li { margin: 5px 0; }
+      .info-box li::before { content: "✓"; color: var(--vscode-testing-iconPassed, #4ec9b0); margin-right: 8px; }
+      .error-message { background-color: #5a1d1d; border-left: 3px solid #f48771; padding: 10px; margin: 10px 0; font-size: 12px; color: #f48771; border-radius: 3px; }
+      .expandable { cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 13px; margin-top: 15px; padding: 8px 0; }
+      .arrow { transition: transform 0.2s; }
+      .arrow.expanded { transform: rotate(90deg); }
     </style>
   </head>
   <body>
-    <header class="top-bar">
-      <div class="title">Assista X</div>
-      <button id="settingsBtn" type="button">Settings</button>
-    </header>
+    
     <div id="welcomeScreen" style="display:none;" aria-hidden="true"></div>
     <div id="messages"></div>
-    <div id="settingsOverlay" class="settings-overlay" aria-hidden="true">
-      <div class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-        <div class="settings-header">
-          <h2 id="settingsTitle">Settings</h2>
-          <button id="closeSettingsBtn" type="button" aria-label="Close settings">×</button>
-        </div>
-        <form id="settingsForm">
-          <div id="settingsMessage" class="settings-message"></div>
-          <div class="settings-section">
-            <h3>Active Provider</h3>
-            <div class="radio-group">
-              <label><input type="radio" name="activeProvider" value="google"> Gemini (Google)</label>
-              <label><input type="radio" name="activeProvider" value="openrouter"> OpenRouter</label>
-            </div>
-          </div>
-          <div class="settings-section">
-            <h3>Gemini (Google)</h3>
-            <div class="settings-group">
-              <label for="googleKey">API Key <span id="googleStatus" class="settings-status"></span></label>
-              <input id="googleKey" type="password" placeholder="Enter Gemini API key" autocomplete="off" />
-              <small>Leave blank to keep the existing key.</small>
-            </div>
-            <div class="settings-group">
-              <label for="googleModel">Model</label>
-              <input id="googleModel" type="text" placeholder="gemini-1.5-pro-latest" />
-            </div>
-          </div>
-          <div class="settings-section">
-            <h3>OpenRouter</h3>
-            <div class="settings-group">
-              <label for="openrouterKey">API Key <span id="openrouterStatus" class="settings-status"></span></label>
-              <input id="openrouterKey" type="password" placeholder="Enter OpenRouter API key" autocomplete="off" />
-              <small>Leave blank to keep the existing key.</small>
-            </div>
-            <div class="settings-group">
-              <label for="openrouterModel">Model</label>
-              <input id="openrouterModel" type="text" placeholder="anthropic/claude-3.5-sonnet" />
-            </div>
-          </div>
-          <div class="settings-actions">
-            <button type="button" class="secondary" id="cancelSettingsBtn">Cancel</button>
-            <button type="submit" class="primary" id="saveSettingsBtn">Save</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    ${getSettingsModalHtml()}
     <div class="input-bar">
       <textarea id="chatInput" rows="1" placeholder="Ask anything..."></textarea>
       <button id="stopBtn" type="button">Stop</button>
