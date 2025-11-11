@@ -16,23 +16,40 @@ export async function getActiveProviderConfig(
     context: vscode.ExtensionContext
 ): Promise<{ provider: string; config: ProviderConfig }> {
     const configSection = vscode.workspace.getConfiguration('assistaX');
-    const activeProvider = configSection.get<string>('activeProvider');
-    
+    let activeProvider = configSection.get<string>('activeProvider') || '';
+    const googleKey = await context.secrets.get('assistaX.apiKey.google');
+    const openrouterKey = await context.secrets.get('assistaX.apiKey.openrouter');
+
     if (!activeProvider) {
-        throw new Error('No active provider configured. Please go to Settings and select a provider.');
+        if (googleKey) {
+            activeProvider = 'google';
+            await configSection.update('activeProvider', activeProvider, vscode.ConfigurationTarget.Global);
+        } else if (openrouterKey) {
+            activeProvider = 'openrouter';
+            await configSection.update('activeProvider', activeProvider, vscode.ConfigurationTarget.Global);
+        }
+    }
+
+    if (!activeProvider) {
+        throw new Error('No provider configured. Open Settings to add an API key.');
     }
 
     const providersConfig = configSection.get<any>('providers', {});
     const secretKey = `assistaX.apiKey.${activeProvider}`;
-    const apiKey = await context.secrets.get(secretKey);
-    
+    const apiKey = activeProvider === 'google' ? googleKey : activeProvider === 'openrouter' ? openrouterKey : await context.secrets.get(secretKey);
+
     if (!apiKey) {
         throw new Error(`API Key for ${activeProvider} is not configured. Please go to Settings.`);
     }
 
+    const defaultModels: Record<string, string> = {
+        google: 'gemini-1.5-pro-latest',
+        openrouter: 'anthropic/claude-3.5-sonnet'
+    };
+
     const providerConfig: ProviderConfig = {
         apiKey,
-        model: providersConfig[activeProvider]?.model || '',
+        model: providersConfig[activeProvider]?.model || defaultModels[activeProvider] || '',
         customUrl: providersConfig[activeProvider]?.customUrl,
     };
 
@@ -57,6 +74,18 @@ export async function getActiveProviderConfig(
             console.warn(`[Assista X] Normalized Google model id '${providerConfig.model}' -> '${normalized}' for v1beta compatibility`);
             providerConfig.model = normalized;
         }
+    }
+
+    const existingProviderConfig = providersConfig[activeProvider] || {};
+    if (existingProviderConfig.model !== providerConfig.model) {
+        const nextProviders = {
+            ...providersConfig,
+            [activeProvider]: {
+                ...existingProviderConfig,
+                model: providerConfig.model
+            }
+        };
+        await configSection.update('providers', nextProviders, vscode.ConfigurationTarget.Global);
     }
 
     return { provider: activeProvider, config: providerConfig };
