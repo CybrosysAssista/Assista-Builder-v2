@@ -107,6 +107,71 @@ export function getHtmlForWebview(
         white-space: pre-wrap;
         box-shadow: 0 2px 6px rgba(0,0,0,0.12);
       }
+      .message.markdown {
+        white-space: normal;
+        line-height: 1.5;
+      }
+      .message.markdown p {
+        margin: 0 0 0.65em;
+      }
+      .message.markdown p:last-child {
+        margin-bottom: 0;
+      }
+      .message.markdown pre {
+        background: var(--vscode-editor-background);
+        color: inherit;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 0.75em 0;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .message.markdown code {
+        font-family: var(--vscode-editor-font-family, "SFMono-Regular", Consolas, "Liberation Mono", monospace);
+        background: var(--vscode-editor-background);
+        padding: 0.1em 0.35em;
+        border-radius: 4px;
+        font-size: 0.95em;
+      }
+      .message.markdown pre code {
+        padding: 0;
+        background: transparent;
+        font-size: 12px;
+      }
+      .message.markdown ul,
+      .message.markdown ol {
+        padding-left: 1.4em;
+        margin: 0.5em 0 0.75em;
+      }
+      .message.markdown li + li {
+        margin-top: 0.35em;
+      }
+      .message.markdown blockquote {
+        border-left: 3px solid var(--vscode-editorLineNumber-foreground, rgba(255,255,255,0.25));
+        margin: 0.75em 0;
+        padding-left: 0.85em;
+        color: var(--vscode-descriptionForeground);
+      }
+      .message.markdown table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0.75em 0;
+        font-size: 12px;
+      }
+      .message.markdown th,
+      .message.markdown td {
+        border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.1));
+        padding: 6px 8px;
+        text-align: left;
+      }
+      .message.markdown a {
+        color: var(--vscode-textLink-foreground, #3794ff);
+        text-decoration: none;
+      }
+      .message.markdown a:hover {
+        text-decoration: underline;
+      }
       .input-bar {
         display: flex;
         gap: 8px;

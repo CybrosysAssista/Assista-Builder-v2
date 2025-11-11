@@ -49,8 +49,19 @@ function toggleBusy(state) {
     }
 }
 
-function appendMessage(text, sender) {
-    if (!messagesEl || !text) {
+function enhanceMarkdownContent(container) {
+    if (!container) return;
+    container.querySelectorAll('a').forEach((link) => {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noreferrer noopener');
+    });
+    container.querySelectorAll('table').forEach((table) => {
+        table.setAttribute('role', 'table');
+    });
+}
+
+function appendMessage(text, sender, html) {
+    if (!messagesEl || (!text && !html)) {
         return;
     }
     showChatArea();
@@ -60,7 +71,14 @@ function appendMessage(text, sender) {
 
     const bubble = document.createElement('div');
     bubble.className = `message ${sender || 'ai'}`;
-    bubble.textContent = text;
+
+    if (html && sender === 'ai') {
+        bubble.classList.add('markdown');
+        bubble.innerHTML = html;
+        enhanceMarkdownContent(bubble);
+    } else {
+        bubble.textContent = text;
+    }
 
     row.appendChild(bubble);
     messagesEl.appendChild(row);
@@ -192,7 +210,11 @@ window.addEventListener('message', (event) => {
 
     switch (message.type) {
         case 'assistantMessage':
-            appendMessage(String(message.text || ''), 'ai');
+            appendMessage(
+                String(message.text || ''),
+                'ai',
+                typeof message.html === 'string' ? message.html : undefined
+            );
             toggleBusy(false);
             break;
         case 'systemMessage':

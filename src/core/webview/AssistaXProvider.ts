@@ -76,18 +76,44 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         this._view?.webview.postMessage(payload ? { type, payload } : { type });
     }
 
-    private sendAssistantMessage(text: string, type: 'assistantMessage' | 'error' | 'systemMessage' = 'assistantMessage') {
-        this._view?.webview.postMessage({ type, text });
+    private async renderMarkdownToHtml(markdown: string): Promise<string | undefined> {
+        if (!markdown.trim()) {
+            return undefined;
+        }
+        try {
+            const rendered = await vscode.commands.executeCommand<string>('markdown.api.render', markdown);
+            return rendered;
+        } catch (error) {
+            console.warn('[AssistaX] Failed to render markdown via VS Code API:', error);
+            return undefined;
+        }
+    }
+
+    private async sendAssistantMessage(
+        text: string,
+        type: 'assistantMessage' | 'error' | 'systemMessage' = 'assistantMessage'
+    ) {
+        if (!this._view) {
+            return;
+        }
+
+        if (type === 'assistantMessage') {
+            const html = await this.renderMarkdownToHtml(text);
+            this._view.webview.postMessage({ type, text, html });
+            return;
+        }
+
+        this._view.webview.postMessage({ type, text });
     }
 
     private async handleUserMessage(text: string) {
         try {
             const response = await generateContent({ contents: text }, this._context);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
-            this.sendAssistantMessage(reply);
+            await this.sendAssistantMessage(reply);
         } catch (error: any) {
             const message = error?.message || String(error) || 'Unexpected error';
-            this.sendAssistantMessage(message, 'error');
+            await this.sendAssistantMessage(message, 'error');
         }
     }
 
