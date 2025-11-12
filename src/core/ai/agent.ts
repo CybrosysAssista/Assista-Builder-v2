@@ -5,9 +5,9 @@ import { generateWithGoogle } from './providers/google.js';
 import * as tools from '../services/toolService.js';
 import {
     ChatMessage,
-    clearSessionHistory,
-    getSessionHistory as readSessionHistory,
-    setSessionHistory,
+    clearActiveSession,
+    readSessionMessages,
+    writeSessionMessages,
     trimHistory
 } from './sessionManager.js';
 
@@ -65,11 +65,11 @@ export async function generateContent(params: any = {}, context: vscode.Extensio
         return await toolFn(...args);
     }
 
-    let sessionHistory = await readSessionHistory(context);
+    let sessionHistory = await readSessionMessages(context);
     const config = params.config = params.config ?? {};
 
     if (config.resetSession) {
-        await clearSessionHistory(context);
+        await clearActiveSession(context);
         sessionHistory = [];
     }
 
@@ -129,18 +129,18 @@ export async function generateContent(params: any = {}, context: vscode.Extensio
             ...newMessages,
             { role: 'assistant', content: assistantContent },
         ];
-        await setSessionHistory(context, updatedHistory);
+        await writeSessionMessages(context, updatedHistory);
     }
 
     return response;
 }
 
 export async function resetSession(context: vscode.ExtensionContext): Promise<void> {
-    await clearSessionHistory(context);
+    await clearActiveSession(context);
 }
 
 export async function getSessionHistory(context: vscode.ExtensionContext): Promise<ChatMessage[]> {
-    return await readSessionHistory(context);
+    return await readSessionMessages(context);
 }
 
 export async function generateOdooModule(): Promise<never> {

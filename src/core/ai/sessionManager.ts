@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 import { randomUUID } from 'crypto';
-import type { ChatMessage, ChatSession } from './history/types.js';
+import type { ChatMessage, ChatSession } from './sessions/types.js';
 import {
     readActiveSessionId,
     readPersistedSessions,
     writeActiveSessionId,
     writePersistedSessions
-} from './history/storage.js';
+} from './sessions/storage.js';
 
-export type { ChatRole, ChatMessage, ChatSession } from './history/types.js';
+export type { ChatRole, ChatMessage, ChatSession } from './sessions/types.js';
 
 interface SessionState {
     loaded: boolean;
@@ -20,6 +20,14 @@ export const MAX_HISTORY_MESSAGES = 20;
 
 const RUNTIME_STATE = new WeakMap<vscode.ExtensionContext, SessionState>();
 
+function deepClone<T>(value: T): T {
+    const clone = (globalThis as typeof globalThis & { structuredClone?: typeof structuredClone }).structuredClone;
+    if (typeof clone === 'function') {
+        return clone(value);
+    }
+    return JSON.parse(JSON.stringify(value)) as T;
+}
+
 function ensureState(context: vscode.ExtensionContext): SessionState {
     let state = RUNTIME_STATE.get(context);
     if (!state) {
@@ -27,14 +35,6 @@ function ensureState(context: vscode.ExtensionContext): SessionState {
         RUNTIME_STATE.set(context, state);
     }
     return state;
-}
-
-function cloneMessage(message: ChatMessage): ChatMessage {
-    return { ...message };
-}
-
-function cloneSession(session: ChatSession): ChatSession {
-    return { ...session, messages: session.messages.map(cloneMessage) };
 }
 
 function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
@@ -45,6 +45,14 @@ function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
             content: message.content,
             timestamp: typeof message.timestamp === 'number' ? message.timestamp : Date.now()
         }));
+}
+
+function deriveTitle(messages: ChatMessage[]): string {
+    const firstUser = messages.find((message) => message.role === 'user' && message.content.trim());
+    if (!firstUser) {
+        return 'Untitled';
+    }
+    return firstUser.content.replace(/\s+/g, ' ').slice(0, 40) || 'Untitled';
 }
 
 function createSession(): ChatSession {
@@ -60,12 +68,17 @@ function createSession(): ChatSession {
 
 async function persist(context: vscode.ExtensionContext, state: SessionState): Promise<void> {
     const sessionsWithMessages = state.sessions.filter((session) => session.messages.length > 0);
+    for (const session of sessionsWithMessages) {
+        if (!session.title || !session.title.trim()) {
+            session.title = deriveTitle(session.messages);
+        }
+    }
     const activeId = sessionsWithMessages.some((session) => session.id === state.activeSessionId)
         ? state.activeSessionId
         : undefined;
 
     await Promise.all([
-        writePersistedSessions(context, sessionsWithMessages),
+        writePersistedSessions(context, deepClone(sessionsWithMessages)),
         writeActiveSessionId(context, activeId)
     ]);
 }
@@ -76,7 +89,7 @@ async function ensureLoaded(context: vscode.ExtensionContext): Promise<SessionSt
         return state;
     }
 
-    state.sessions = readPersistedSessions(context).map(cloneSession);
+    state.sessions = deepClone(readPersistedSessions(context));
     state.activeSessionId = readActiveSessionId(context);
 
     if (!state.sessions.length) {
@@ -119,15 +132,15 @@ async function getMutableActiveSession(context: vscode.ExtensionContext): Promis
 
 export async function getActiveSession(context: vscode.ExtensionContext): Promise<ChatSession> {
     const session = await getMutableActiveSession(context);
-    return cloneSession(session);
+    return deepClone(session);
 }
 
-export async function getSessionHistory(context: vscode.ExtensionContext): Promise<ChatMessage[]> {
+export async function readSessionMessages(context: vscode.ExtensionContext): Promise<ChatMessage[]> {
     const session = await getMutableActiveSession(context);
-    return session.messages.map(cloneMessage);
+    return deepClone(session.messages);
 }
 
-export async function setSessionHistory(
+export async function writeSessionMessages(
     context: vscode.ExtensionContext,
     history: ChatMessage[]
 ): Promise<void> {
@@ -136,10 +149,11 @@ export async function setSessionHistory(
     const sanitized = trimHistory(sanitizeMessages(history));
     session.messages = sanitized;
     session.updatedAt = sanitized.length ? Date.now() : session.updatedAt;
+    session.title = deriveTitle(session.messages);
     await persist(context, state);
 }
 
-export async function clearSessionHistory(context: vscode.ExtensionContext): Promise<void> {
+export async function clearActiveSession(context: vscode.ExtensionContext): Promise<void> {
     const state = await ensureLoaded(context);
     const session = await getMutableActiveSession(context);
     session.messages = [];
@@ -155,10 +169,13 @@ export async function startNewSession(
     const session = createSession();
     session.messages = sanitizeMessages(initialMessages);
     session.updatedAt = session.messages.length ? Date.now() : session.updatedAt;
+    if (session.messages.length) {
+        session.title = deriveTitle(session.messages);
+    }
     state.sessions.unshift(session);
     state.activeSessionId = session.id;
     await persist(context, state);
-    return cloneSession(session);
+    return deepClone(session);
 }
 
 export async function switchActiveSession(
@@ -172,7 +189,7 @@ export async function switchActiveSession(
     }
     state.activeSessionId = sessionId;
     await persist(context, state);
-    return cloneSession(target);
+    return deepClone(target);
 }
 
 export async function deleteSession(
@@ -197,19 +214,17 @@ export async function deleteSession(
 
 export async function getAllSessions(context: vscode.ExtensionContext): Promise<ChatSession[]> {
     const state = await ensureLoaded(context);
-    return state.sessions
+    const ordered = state.sessions
         .filter((session) => session.messages.length > 0)
         .slice()
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .map(cloneSession);
+        .sort((a, b) => b.updatedAt - a.updatedAt);
+    return deepClone(ordered);
 }
 
 export function trimHistory(messages: ChatMessage[]): ChatMessage[] {
     const filtered = messages.filter((msg) => msg.role === 'user' || msg.role === 'assistant');
     if (filtered.length <= MAX_HISTORY_MESSAGES) {
-        return filtered.map(cloneMessage);
+        return deepClone(filtered);
     }
-    return filtered
-        .slice(filtered.length - MAX_HISTORY_MESSAGES)
-        .map(cloneMessage);
+    return deepClone(filtered.slice(filtered.length - MAX_HISTORY_MESSAGES));
 }
