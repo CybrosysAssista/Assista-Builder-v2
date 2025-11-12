@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { generateContent } from '../ai/agent.js';
+import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../ai/sessionManager.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
 
@@ -9,6 +10,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
     private _pendingShowSettings = false;
     private _settings?: SettingsController;
+    private _pendingHydration?: { sessionId: string; messages: ChatMessage[] };
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -73,6 +75,9 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             this.postMessage('showSettings');
             this._settings?.handleLoadSettings();
         }
+
+        void this.syncActiveSession();
+        void this.flushPendingHydration();
     }
 
     public showSettings() {
@@ -81,6 +86,64 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             this._settings?.handleLoadSettings();
         } else {
             this._pendingShowSettings = true;
+        }
+    }
+
+    public async startNewChat(): Promise<void> {
+        try {
+            const session = await startNewSession(this._context);
+            this._view?.show?.(true);
+            await this.queueHydration(session.id, session.messages);
+        } catch (error: any) {
+            vscode.window.showErrorMessage(error?.message || 'Failed to start a new chat session.');
+        }
+    }
+
+    public async showHistoryPicker(): Promise<void> {
+        try {
+            const sessions = await getAllSessions(this._context);
+            const active = await getActiveSession(this._context);
+
+            const items: Array<vscode.QuickPickItem & { session: ChatSession }> = [];
+
+            if (active.messages.length === 0) {
+                items.push({
+                    label: 'New Chat',
+                    description: 'Current chat',
+                    detail: 'Start typing to save this conversation.',
+                    session: active
+                });
+            }
+
+            for (const session of sessions) {
+                items.push({
+                    label: this.formatSessionTitle(session),
+                    description: session.id === active.id ? 'Current chat' : undefined,
+                    detail: this.createPreview(session),
+                    session
+                });
+            }
+
+            if (!items.length) {
+                vscode.window.showInformationMessage('No chat history available yet.');
+                return;
+            }
+
+            const pick = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Select a chat session',
+                matchOnDescription: true,
+                matchOnDetail: true
+            });
+
+            if (!pick || pick.session.id === active.id) {
+                return;
+            }
+
+            const switched = await switchActiveSession(this._context, pick.session.id);
+            this._view?.show?.(true);
+            await this.queueHydration(switched.id, switched.messages);
+        } catch (error: any) {
+            vscode.window.showErrorMessage(error?.message || 'Failed to load chat history.');
         }
     }
 
@@ -93,8 +156,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             return undefined;
         }
         try {
-            const rendered = await vscode.commands.executeCommand<string>('markdown.api.render', markdown);
-            return rendered;
+            return await vscode.commands.executeCommand<string>('markdown.api.render', markdown);
         } catch (error) {
             console.warn('[AssistaX] Failed to render markdown via VS Code API:', error);
             return undefined;
@@ -123,6 +185,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             const response = await generateContent({ contents: text }, this._context);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
             await this.sendAssistantMessage(reply);
+            void this.syncActiveSession();
         } catch (error: any) {
             const message = error?.message || String(error) || 'Unexpected error';
             await this.sendAssistantMessage(message, 'error');

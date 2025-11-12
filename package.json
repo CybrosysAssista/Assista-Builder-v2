@@ -12,14 +12,10 @@
   "activationEvents": [
     "onView:assistaXView",
     "onCommand:assistaX.generateOdooModule",
-    "onCommand:assistaX.createManifest",
     "onCommand:assistaX.open",
     "onCommand:assistaX.settings",
     "onCommand:assistaX.openHistory",
-    "onCommand:assistaX.addFolder",
-    "onCommand:assistaX.editOdooProject",
-    "onCommand:assistaX.openChat",
-    "onCommand:assistaX.more"
+    "onCommand:assistaX.newChat"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -42,26 +38,11 @@
       ]
     },
     "commands": [
+      { "command": "assistaX.open", "title": "Open Assista X" },
       {
-        "command": "assistaX.open",
-        "title": "Open Assista X"
-      },
-      {
-        "command": "assistaX.applyEditsFromPrompt",
-        "title": "Assista X: Apply Edits From Prompt"
-      },
-      {
-        "command": "assistaX.insertContent",
-        "title": "Assista X: Insert Content Into Active File"
-      },
-      {
-        "command": "assistaX.searchAndReplace",
-        "title": "Assista X: Search And Replace In Active File"
-      },
-      {
-        "command": "assistaX.addFolder",
+        "command": "assistaX.newChat",
         "title": "New Chat",
-        "icon": "$(comment-add)"
+        "icon": "$(add)"
       },
       {
         "command": "assistaX.settings",
@@ -74,42 +55,26 @@
         "icon": "$(history)"
       },
       {
-        "command": "assistaX.editOdooProject",
-        "title": "Assista X: Edit Existing Odoo Project"
-      },
-      {
-        "command": "assistaX.openChat",
-        "title": "Assista X: Open Chat"
-      },
-      {
-        "command": "assistaX.more",
-        "title": "Assista X: More"
-      },
-      {
         "command": "assistaX.generateOdooModule",
         "title": "Generate Odoo Module"
-      },
-      {
-        "command": "assistaX.createManifest",
-        "title": "Assista X: Create __manifest__.py"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "assistaX.addFolder",
+          "command": "assistaX.newChat",
           "when": "view == assistaXView",
           "group": "navigation@1"
+        },
+        {
+          "command": "assistaX.openHistory",
+          "when": "view == assistaXView",
+          "group": "navigation@2"
         },
         {
           "command": "assistaX.settings",
           "when": "view == assistaXView",
           "group": "navigation@3"
-        },
-        {
-          "command": "assistaX.openHistory",
-          "when": "view == assistaXView",
-          "group": "overflow@1"
         }
       ]
     },

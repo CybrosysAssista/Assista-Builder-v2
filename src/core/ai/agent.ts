@@ -5,9 +5,9 @@ import { generateWithGoogle } from './providers/google.js';
 import * as tools from '../services/toolService.js';
 import {
     ChatMessage,
-    clearSessionHistory,
-    getSessionHistory as readSessionHistory,
-    setSessionHistory,
+    clearActiveSession,
+    readSessionMessages,
+    writeSessionMessages,
     trimHistory
 } from './sessionManager.js';
 
@@ -65,12 +65,12 @@ export async function generateContent(params: any = {}, context: vscode.Extensio
         return await toolFn(...args);
     }
 
-    let session = readSessionHistory(context);
+    let sessionHistory = await readSessionMessages(context);
     const config = params.config = params.config ?? {};
 
     if (config.resetSession) {
-        clearSessionHistory(context);
-        session = [];
+        await clearActiveSession(context);
+        sessionHistory = [];
     }
 
     const hasExplicitMessages = Array.isArray(params.messages) && params.messages.length > 0;
@@ -91,8 +91,8 @@ export async function generateContent(params: any = {}, context: vscode.Extensio
     if (systemInstruction) {
         requestMessages.push({ role: 'system', content: systemInstruction });
     }
-    if (useSessionHistory && session.length) {
-        requestMessages.push(...session);
+    if (useSessionHistory && sessionHistory.length) {
+        requestMessages.push(...trimHistory(sessionHistory));
     }
     requestMessages.push(...newMessages);
 
@@ -121,23 +121,26 @@ export async function generateContent(params: any = {}, context: vscode.Extensio
     }
 
     if (useSessionHistory) {
-        const updatedHistory = [
-            ...session,
+        const assistantContent = typeof response === 'string'
+            ? response
+            : JSON.stringify(response, null, 2);
+        const updatedHistory: ChatMessage[] = [
+            ...sessionHistory,
             ...newMessages,
-            { role: 'assistant', content: response } as ChatMessage,
+            { role: 'assistant', content: assistantContent },
         ];
-        setSessionHistory(context, trimHistory(updatedHistory));
+        await writeSessionMessages(context, updatedHistory);
     }
 
     return response;
 }
 
-export function resetSession(context: vscode.ExtensionContext): void {
-    clearSessionHistory(context);
+export async function resetSession(context: vscode.ExtensionContext): Promise<void> {
+    await clearActiveSession(context);
 }
 
-export function getSessionHistory(context: vscode.ExtensionContext): ChatMessage[] {
-    return readSessionHistory(context);
+export async function getSessionHistory(context: vscode.ExtensionContext): Promise<ChatMessage[]> {
+    return await readSessionMessages(context);
 }
 
 export async function generateOdooModule(): Promise<never> {
