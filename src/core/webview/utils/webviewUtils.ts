@@ -38,7 +38,7 @@ export function getHtmlForWebview(
         margin: 0;
         padding: 0;
         font-family: var(--vscode-font-family, Sans-Serif);
-        background: var(--vscode-editor-background);
+        // background: var(--vscode-editor-background);
         color: var(--vscode-editor-foreground);
         display: flex;
         flex-direction: column;

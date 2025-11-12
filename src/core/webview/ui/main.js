@@ -15,8 +15,8 @@ const settingsDoneBtn = document.getElementById('settingsDoneBtn');
 const apiKeyLabel = document.getElementById('apiKeyLabel');
 const docLink = document.getElementById('docLink');
 const inputBar = document.querySelector('.input-bar');
-
 let isBusy = false;
+let activeSessionId = undefined;
 
 function showChatArea() {
     try {
@@ -85,6 +85,45 @@ function appendMessage(text, sender, html) {
     messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+function renderSession(sessionId, messages) {
+    if (!messagesEl) return;
+
+    messagesEl.innerHTML = '';
+    activeSessionId = sessionId;
+
+    if (Array.isArray(messages)) {
+        messages.forEach((message) => {
+            const role = message.role === 'assistant' ? 'ai'
+                : message.role === 'system' ? 'system'
+                : 'user';
+            appendMessage(
+                String(message.content ?? ''),
+                role,
+                typeof message.html === 'string' ? message.html : undefined
+            );
+        });
+    }
+
+    if (!messages || !messages.length) {
+        if (welcomeEl) {
+            welcomeEl.style.display = '';
+            welcomeEl.classList.add('active');
+            welcomeEl.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    toggleBusy(false);
+
+    vscode.setState({
+        activeSessionId,
+        messages: Array.isArray(messages) ? messages : []
+    });
+}
+
+const bootState = typeof vscode.getState === 'function' ? vscode.getState() : undefined;
+if (bootState && Array.isArray(bootState.messages)) {
+    renderSession(bootState.activeSessionId, bootState.messages);
+}
 function clearInput() {
     if (!inputEl) return;
     inputEl.value = '';
@@ -234,6 +273,11 @@ window.addEventListener('message', (event) => {
         case 'showSettings':
             openSettings();
             break;
+        case 'sessionHydrated': {
+            const payload = message.payload || {};
+            renderSession(payload.sessionId, Array.isArray(payload.messages) ? payload.messages : []);
+            break;
+        }
         case 'settingsData': {
             const data = message.payload || {};
             const activeProvider = data.activeProvider || 'google';

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { generateContent } from '../ai/agent.js';
+import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../ai/sessionManager.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
@@ -7,6 +8,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
 
     private _view?: vscode.WebviewView;
     private _pendingShowSettings = false;
+    private _pendingHydration?: { sessionId: string; messages: ChatMessage[] };
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -52,7 +54,6 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
 
             if (message.command === 'saveSettings') {
                 await this.handleSaveSettings(message);
-                return;
             }
         });
 
@@ -61,6 +62,9 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             this.postMessage('showSettings');
             this.handleLoadSettings();
         }
+
+        void this.syncActiveSession();
+        void this.flushPendingHydration();
     }
 
     public showSettings() {
@@ -69,6 +73,50 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             this.handleLoadSettings();
         } else {
             this._pendingShowSettings = true;
+        }
+    }
+
+    public async startNewChat(): Promise<void> {
+        try {
+            const session = await startNewSession(this._context);
+            this._view?.show?.(true);
+            await this.queueHydration(session.id, session.messages);
+        } catch (error: any) {
+            vscode.window.showErrorMessage(error?.message || 'Failed to start a new chat session.');
+        }
+    }
+
+    public async showHistoryPicker(): Promise<void> {
+        try {
+            const sessions = await getAllSessions(this._context);
+            if (!sessions.length) {
+                vscode.window.showInformationMessage('No chat history available yet.');
+                return;
+            }
+
+            const active = await getActiveSession(this._context);
+            const items = sessions.map((session) => ({
+                label: this.formatSessionTitle(session),
+                description: session.id === active.id ? 'Current chat' : undefined,
+                detail: this.createPreview(session),
+                session
+            }));
+
+            const pick = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Select a chat session',
+                matchOnDescription: true,
+                matchOnDetail: true
+            });
+
+            if (!pick || pick.session.id === active.id) {
+                return;
+            }
+
+            const switched = await switchActiveSession(this._context, pick.session.id);
+            this._view?.show?.(true);
+            await this.queueHydration(switched.id, switched.messages);
+        } catch (error: any) {
+            vscode.window.showErrorMessage(error?.message || 'Failed to load chat history.');
         }
     }
 
@@ -81,8 +129,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             return undefined;
         }
         try {
-            const rendered = await vscode.commands.executeCommand<string>('markdown.api.render', markdown);
-            return rendered;
+            return await vscode.commands.executeCommand<string>('markdown.api.render', markdown);
         } catch (error) {
             console.warn('[AssistaX] Failed to render markdown via VS Code API:', error);
             return undefined;
@@ -111,10 +158,84 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             const response = await generateContent({ contents: text }, this._context);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
             await this.sendAssistantMessage(reply);
+            void this.syncActiveSession();
         } catch (error: any) {
             const message = error?.message || String(error) || 'Unexpected error';
             await this.sendAssistantMessage(message, 'error');
         }
+    }
+
+    private async mapMessageForWebview(message: ChatMessage): Promise<{ role: string; content: string; html?: string; timestamp?: number }> {
+        const base = {
+            role: message.role,
+            content: message.content,
+            timestamp: message.timestamp
+        };
+        if (message.role === 'assistant') {
+            const html = await this.renderMarkdownToHtml(message.content);
+            return { ...base, html };
+        }
+        return base;
+    }
+
+    private async queueHydration(sessionId: string, messages: ChatMessage[]): Promise<void> {
+        if (!this._view) {
+            this._pendingHydration = { sessionId, messages: messages.map((msg) => ({ ...msg })) };
+            return;
+        }
+        const formatted = await Promise.all(messages.map((msg) => this.mapMessageForWebview(msg)));
+        this._view.webview.postMessage({
+            type: 'sessionHydrated',
+            payload: {
+                sessionId,
+                messages: formatted
+            }
+        });
+    }
+
+    private async flushPendingHydration(): Promise<void> {
+        if (!this._view || !this._pendingHydration) {
+            return;
+        }
+        const pending = this._pendingHydration;
+        this._pendingHydration = undefined;
+        await this.queueHydration(pending.sessionId, pending.messages);
+    }
+
+    private async syncActiveSession(): Promise<void> {
+        try {
+            const session = await getActiveSession(this._context);
+            await this.queueHydration(session.id, session.messages);
+        } catch (error) {
+            console.warn('[AssistaX] Failed to load current chat session:', error);
+        }
+    }
+
+    private formatSessionTitle(session: ChatSession): string {
+        if (session.title && session.title.trim()) {
+            return session.title;
+        }
+        const firstUserMessage = session.messages.find((msg) => msg.role === 'user');
+        if (firstUserMessage) {
+            const cleaned = firstUserMessage.content.replace(/\s+/g, ' ').trim();
+            if (cleaned) {
+                return cleaned.length > 50 ? `${cleaned.slice(0, 50)}…` : cleaned;
+            }
+        }
+        return `Chat ${session.id.slice(0, 8)}`;
+    }
+
+    private createPreview(session: ChatSession): string {
+        const lastMessage = [...session.messages].reverse()
+            .find((message) => message.role === 'assistant' || message.role === 'user');
+        if (!lastMessage || !lastMessage.content.trim()) {
+            return '';
+        }
+        const singleLine = lastMessage.content.replace(/\s+/g, ' ').trim();
+        if (singleLine.length <= 80) {
+            return singleLine;
+        }
+        return `${singleLine.slice(0, 80)}…`;
     }
 
     private async handleLoadSettings() {
@@ -187,5 +308,3 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         }
     }
 }
-
-
