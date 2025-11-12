@@ -18,6 +18,83 @@ const inputBar = document.querySelector('.input-bar');
 let isBusy = false;
 let activeSessionId = undefined;
 
+// Request provider models dynamically (top-level)
+function requestModelList() {
+    const provider = String(providerSelect?.value || '');
+    if (!provider || !modelSelect) return;
+    // Clear options and disable during fetch (no placeholder text)
+    try { modelSelect.innerHTML = ''; modelSelect.disabled = true; } catch (_) {}
+    const apiKey = String(apiKeyInput?.value || '');
+    setTimeout(() => {
+        vscode.postMessage({ command: 'listModels', provider, apiKey });
+    }, 0);
+}
+
+// Debounce helper for model listing
+let requestModelsTimer;
+function debounceRequestModelList(delay = 250) {
+    clearTimeout(requestModelsTimer);
+    requestModelsTimer = setTimeout(() => requestModelList(), delay);
+}
+
+// Sidebar navigation for settings (used by settingsHtml.ts inline onclick)
+function showSectionInternal(sectionName) {
+    const providers = document.getElementById('providersSection');
+    const general = document.getElementById('generalSection');
+    if (!providers || !general) return;
+    // Hide both sections
+    providers.style.display = 'none';
+    general.style.display = 'none';
+    // Remove active class from all sidebar items
+    document.querySelectorAll('.sidebar .sidebar-item').forEach((el) => el.classList.remove('active'));
+    // Show selected and update active state
+    const items = document.querySelectorAll('.sidebar .sidebar-item');
+    if (sectionName === 'general') {
+        general.style.display = 'block';
+        if (items[1]) items[1].classList.add('active');
+    } else {
+        providers.style.display = 'block';
+        if (items[0]) items[0].classList.add('active');
+    }
+}
+
+// Expose globally so inline onclick="showSection('...')" works
+window.showSection = showSectionInternal;
+
+// Also wire listeners programmatically (CSP-safe) in case inline onclick is blocked
+function wireSettingsSidebar() {
+    const items = document.querySelectorAll('.sidebar .sidebar-item');
+    if (items[0]) {
+        items[0].addEventListener('click', () => showSectionInternal('providers'));
+    }
+    if (items[1]) {
+        items[1].addEventListener('click', () => showSectionInternal('general'));
+    }
+}
+
+// Collapse sidebar based on the webview pane width (container-based, not viewport)
+let sidebarResizeObserver;
+function startSidebarObserver() {
+    try {
+        const frame = document.querySelector('.settings-frame');
+        if (!frame) return;
+        if (sidebarResizeObserver) {
+            try { sidebarResizeObserver.disconnect(); } catch (_) {}
+        }
+        sidebarResizeObserver = new ResizeObserver((entries) => {
+            const sidebar = document.querySelector('.sidebar');
+            if (!sidebar) return;
+            for (const e of entries) {
+                const w = e.contentRect.width || frame.clientWidth || 0;
+                // Threshold where labels start to cramp; tune as needed
+                if (w <= 720) sidebar.classList.add('collapsed');
+                else sidebar.classList.remove('collapsed');
+            }
+        });
+        sidebarResizeObserver.observe(frame);
+    } catch (_) { /* no-op */ }
+}
+
 function showChatArea() {
     try {
         if (welcomeEl) {
@@ -183,6 +260,10 @@ function openSettings() {
     // Show settings page
     settingsPage.style.display = 'block';
     vscode.postMessage({ command: 'loadSettings' });
+    // Ensure sidebar click handlers are bound
+    try { wireSettingsSidebar(); } catch (_) {}
+    // Start observing width to auto-collapse sidebar
+    try { startSidebarObserver(); } catch (_) {}
 }
 
 function closeSettings() {
@@ -240,8 +321,13 @@ settingsDoneBtn?.addEventListener('click', (e) => {
 
 providerSelect?.addEventListener('change', () => {
     updateProviderUiLabels(String(providerSelect.value));
-    // Clear apiKey input on provider change for safety
-    if (apiKeyInput) apiKeyInput.value = '';
+    // Refresh models for selected provider (debounced)
+    debounceRequestModelList();
+});
+
+// Refresh models when the user finishes entering a key
+apiKeyInput?.addEventListener('blur', () => {
+    debounceRequestModelList();
 });
 
 window.addEventListener('message', (event) => {
@@ -272,6 +358,8 @@ window.addEventListener('message', (event) => {
             break;
         case 'showSettings':
             openSettings();
+            try { wireSettingsSidebar(); } catch (_) {}
+            try { startSidebarObserver(); } catch (_) {}
             break;
         case 'sessionHydrated': {
             const payload = message.payload || {};
@@ -298,15 +386,40 @@ window.addEventListener('message', (event) => {
                 }
                 modelSelect.value = model || modelSelect.value;
             }
+            // After settings load, request latest models for the active provider (debounced)
+            debounceRequestModelList(50);
+            // Sidebar could be newly injected; ensure handlers are attached
+            try { wireSettingsSidebar(); } catch (_) {}
+            try { startSidebarObserver(); } catch (_) {}
+            break;
+        }
+        case 'modelsListed': {
+            const { provider, models } = message.payload || {};
+            if (!Array.isArray(models) || !modelSelect) break;
+            modelSelect.innerHTML = '';
+            models.forEach((m) => {
+                if (!m || !m.id) return;
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                // Always show the model ID, avoid descriptive display names
+                opt.textContent = m.id;
+                modelSelect.appendChild(opt);
+            });
+            try { modelSelect.disabled = false; } catch (_) {}
+            break;
+        }
+        case 'modelsError': {
+            // Suppress chat errors while Settings UI is visible
+            // Keep manual entry possible, but do not append to chat
+            // Optionally we could show inline hint near the dropdown later
+            try { modelSelect.disabled = false; } catch (_) {}
             break;
         }
         case 'settingsSaved': {
             const payload = message.payload || {};
+            // Suppress chat toasts for settings operations
             if (payload.success) {
-                appendMessage('Settings saved.', 'system');
                 closeSettings();
-            } else {
-                appendMessage(payload.error ? String(payload.error) : 'Failed to save settings.', 'error');
             }
             break;
         }

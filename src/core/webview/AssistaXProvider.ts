@@ -2,12 +2,14 @@ import * as vscode from 'vscode';
 import { generateContent } from '../ai/agent.js';
 import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../ai/sessionManager.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
+import { SettingsController } from './settings/SettingsController.js';
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaXView';
 
     private _view?: vscode.WebviewView;
     private _pendingShowSettings = false;
+    private _settings?: SettingsController;
     private _pendingHydration?: { sessionId: string; messages: ChatMessage[] };
 
     constructor(
@@ -29,6 +31,11 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = getHtmlForWebview(webviewView.webview, this._extensionUri);
 
+        // Instantiate settings controller for delegating settings logic
+        this._settings = new SettingsController(this._context, (type: string, payload?: any) => {
+            this.postMessage(type, payload);
+        });
+
         webviewView.webview.onDidReceiveMessage(async (message) => {
             if (!message) {
                 return;
@@ -48,19 +55,25 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             }
 
             if (message.command === 'loadSettings') {
-                await this.handleLoadSettings();
+                await this._settings?.handleLoadSettings();
                 return;
             }
 
             if (message.command === 'saveSettings') {
-                await this.handleSaveSettings(message);
+                await this._settings?.handleSaveSettings(message);
+                return;
+            }
+
+            if (message.command === 'listModels') {
+                await this._settings?.handleListModels(message);
+                return;
             }
         });
 
         if (this._pendingShowSettings) {
             this._pendingShowSettings = false;
             this.postMessage('showSettings');
-            this.handleLoadSettings();
+            this._settings?.handleLoadSettings();
         }
 
         void this.syncActiveSession();
@@ -70,7 +83,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
     public showSettings() {
         if (this._view) {
             this.postMessage('showSettings');
-            this.handleLoadSettings();
+            this._settings?.handleLoadSettings();
         } else {
             this._pendingShowSettings = true;
         }
@@ -179,146 +192,4 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async mapMessageForWebview(message: ChatMessage): Promise<{ role: string; content: string; html?: string; timestamp?: number }> {
-        const base = {
-            role: message.role,
-            content: message.content,
-            timestamp: message.timestamp
-        };
-        if (message.role === 'assistant') {
-            const html = await this.renderMarkdownToHtml(message.content);
-            return { ...base, html };
-        }
-        return base;
-    }
-
-    private async queueHydration(sessionId: string, messages: ChatMessage[]): Promise<void> {
-        if (!this._view) {
-            this._pendingHydration = { sessionId, messages: messages.map((msg) => ({ ...msg })) };
-            return;
-        }
-        const formatted = await Promise.all(messages.map((msg) => this.mapMessageForWebview(msg)));
-        this._view.webview.postMessage({
-            type: 'sessionHydrated',
-            payload: {
-                sessionId,
-                messages: formatted
-            }
-        });
-    }
-
-    private async flushPendingHydration(): Promise<void> {
-        if (!this._view || !this._pendingHydration) {
-            return;
-        }
-        const pending = this._pendingHydration;
-        this._pendingHydration = undefined;
-        await this.queueHydration(pending.sessionId, pending.messages);
-    }
-
-    private async syncActiveSession(): Promise<void> {
-        try {
-            const session = await getActiveSession(this._context);
-            await this.queueHydration(session.id, session.messages);
-        } catch (error) {
-            console.warn('[AssistaX] Failed to load current chat session:', error);
-        }
-    }
-
-    private formatSessionTitle(session: ChatSession): string {
-        if (session.title && session.title.trim()) {
-            return session.title;
-        }
-        const firstUserMessage = session.messages.find((msg) => msg.role === 'user');
-        if (firstUserMessage) {
-            const cleaned = firstUserMessage.content.replace(/\s+/g, ' ').trim();
-            if (cleaned) {
-                return cleaned.length > 50 ? `${cleaned.slice(0, 50)}…` : cleaned;
-            }
-        }
-        return `Chat ${session.id.slice(0, 8)}`;
-    }
-
-    private createPreview(session: ChatSession): string {
-        const lastMessage = [...session.messages].reverse()
-            .find((message) => message.role === 'assistant' || message.role === 'user');
-        if (!lastMessage || !lastMessage.content.trim()) {
-            return '';
-        }
-        const singleLine = lastMessage.content.replace(/\s+/g, ' ').trim();
-        if (singleLine.length <= 80) {
-            return singleLine;
-        }
-        return `${singleLine.slice(0, 80)}…`;
-    }
-
-    private async handleLoadSettings() {
-        const config = vscode.workspace.getConfiguration('assistaX');
-        const providers = config.get<any>('providers', {});
-        const activeProvider = config.get<string>('activeProvider') || 'google';
-        const googleModel = providers?.google?.model || '';
-        const openrouterModel = providers?.openrouter?.model || '';
-
-        const hasGoogleKey = !!(await this._context.secrets.get('assistaX.apiKey.google'));
-        const hasOpenrouterKey = !!(await this._context.secrets.get('assistaX.apiKey.openrouter'));
-
-        this.postMessage('settingsData', {
-            activeProvider,
-            googleModel,
-            openrouterModel,
-            hasGoogleKey,
-            hasOpenrouterKey
-        });
-    }
-
-    private async handleSaveSettings(message: any) {
-        try {
-            const activeProvider = typeof message.activeProvider === 'string' ? message.activeProvider : 'google';
-            const googleKey = typeof message.googleKey === 'string' ? message.googleKey.trim() : '';
-            const openrouterKey = typeof message.openrouterKey === 'string' ? message.openrouterKey.trim() : '';
-            const googleModel = typeof message.googleModel === 'string' ? message.googleModel.trim() : '';
-            const openrouterModel = typeof message.openrouterModel === 'string' ? message.openrouterModel.trim() : '';
-
-            const config = vscode.workspace.getConfiguration('assistaX');
-            const providers = config.get<any>('providers', {});
-            const nextProviders: any = { ...providers };
-
-            nextProviders.google = { ...(nextProviders.google || {}) };
-            nextProviders.openrouter = { ...(nextProviders.openrouter || {}) };
-
-            if (googleModel) {
-                nextProviders.google.model = googleModel;
-            }
-            if (openrouterModel) {
-                nextProviders.openrouter.model = openrouterModel;
-            }
-
-            await config.update('providers', nextProviders, vscode.ConfigurationTarget.Global);
-
-            if (activeProvider === 'google' || activeProvider === 'openrouter') {
-                await config.update('activeProvider', activeProvider, vscode.ConfigurationTarget.Global);
-            }
-
-            if (googleKey) {
-                await this._context.secrets.store('assistaX.apiKey.google', googleKey);
-            }
-            if (openrouterKey) {
-                await this._context.secrets.store('assistaX.apiKey.openrouter', openrouterKey);
-            }
-
-            const hasGoogleKey = !!(await this._context.secrets.get('assistaX.apiKey.google'));
-            const hasOpenrouterKey = !!(await this._context.secrets.get('assistaX.apiKey.openrouter'));
-
-            this.postMessage('settingsSaved', {
-                success: true,
-                hasGoogleKey,
-                hasOpenrouterKey
-            });
-        } catch (error: any) {
-            this.postMessage('settingsSaved', {
-                success: false,
-                error: error?.message || String(error) || 'Failed to save settings.'
-            });
-        }
-    }
 }
