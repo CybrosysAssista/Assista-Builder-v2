@@ -59,9 +59,14 @@ function createSession(): ChatSession {
 }
 
 async function persist(context: vscode.ExtensionContext, state: SessionState): Promise<void> {
+    const sessionsWithMessages = state.sessions.filter((session) => session.messages.length > 0);
+    const activeId = sessionsWithMessages.some((session) => session.id === state.activeSessionId)
+        ? state.activeSessionId
+        : undefined;
+
     await Promise.all([
-        writePersistedSessions(context, state.sessions),
-        writeActiveSessionId(context, state.activeSessionId)
+        writePersistedSessions(context, sessionsWithMessages),
+        writeActiveSessionId(context, activeId)
     ]);
 }
 
@@ -193,6 +198,7 @@ export async function deleteSession(
 export async function getAllSessions(context: vscode.ExtensionContext): Promise<ChatSession[]> {
     const state = await ensureLoaded(context);
     return state.sessions
+        .filter((session) => session.messages.length > 0)
         .slice()
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .map(cloneSession);

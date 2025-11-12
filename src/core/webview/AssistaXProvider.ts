@@ -89,18 +89,32 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
     public async showHistoryPicker(): Promise<void> {
         try {
             const sessions = await getAllSessions(this._context);
-            if (!sessions.length) {
+            const active = await getActiveSession(this._context);
+
+            const items: Array<vscode.QuickPickItem & { session: ChatSession }> = [];
+
+            if (active.messages.length === 0) {
+                items.push({
+                    label: 'New Chat',
+                    description: 'Current chat',
+                    detail: 'Start typing to save this conversation.',
+                    session: active
+                });
+            }
+
+            for (const session of sessions) {
+                items.push({
+                    label: this.formatSessionTitle(session),
+                    description: session.id === active.id ? 'Current chat' : undefined,
+                    detail: this.createPreview(session),
+                    session
+                });
+            }
+
+            if (!items.length) {
                 vscode.window.showInformationMessage('No chat history available yet.');
                 return;
             }
-
-            const active = await getActiveSession(this._context);
-            const items = sessions.map((session) => ({
-                label: this.formatSessionTitle(session),
-                description: session.id === active.id ? 'Current chat' : undefined,
-                detail: this.createPreview(session),
-                session
-            }));
 
             const pick = await vscode.window.showQuickPick(items, {
                 placeHolder: 'Select a chat session',
