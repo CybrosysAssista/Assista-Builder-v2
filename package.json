@@ -11,7 +11,6 @@
   ],
   "activationEvents": [
     "onView:assistaXView",
-    "onCommand:assistaX.generateOdooModule",
     "onCommand:assistaX.open",
     "onCommand:assistaX.settings",
     "onCommand:assistaX.openHistory",
@@ -53,10 +52,6 @@
         "command": "assistaX.openHistory",
         "title": "History",
         "icon": "$(history)"
-      },
-      {
-        "command": "assistaX.generateOdooModule",
-        "title": "Generate Odoo Module"
       }
     ],
     "menus": {
