@@ -100,11 +100,15 @@ async function callProvider(
     const { provider, config: providerConfig } = await getActiveProviderConfig(context);
 
     // Hook point: you could perform pre-call transformations here (rate-limiting, chunking)
+    console.log('[Assista X] Provider request payload:', payload);
+    let providerResponse;
     if (provider === 'google') {
-        return await generateWithGoogle(payload, providerConfig, context);
+        providerResponse = await generateWithGoogle(payload, providerConfig, context);
     } else {
-        return await generateWithOpenAICompat(payload, providerConfig, provider, context);
+        providerResponse = await generateWithOpenAICompat(payload, providerConfig, provider, context);
     }
+    console.log('[Assista X] Provider response:', providerResponse);
+    return providerResponse;
 }
 
 /** Persist assistant reply into session store (keeps existing behaviour) */
@@ -149,11 +153,6 @@ export async function runAgent(params: any = {}, context: vscode.ExtensionContex
 
     // Build messages (includes system + session + new user messages)
     const requestMessages = await assemblePrompt(params, sessionHistory);
-
-    // Logging (concise)
-    try {
-        console.debug('[Assista X] request messages length:', requestMessages.length);
-    } catch { /* no-op */ }
 
     // Call LLM provider
     const response = await callProvider(requestMessages, params, context);
