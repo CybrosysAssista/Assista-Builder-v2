@@ -397,7 +397,7 @@ export function getHtmlForWebview(
       <button id="stopBtn" type="button">Stop</button>
       <button id="sendBtn" type="button">Send</button>
     </div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
+    <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
   </body>
 </html>`;
 }
