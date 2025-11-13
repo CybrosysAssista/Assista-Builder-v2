@@ -68,7 +68,7 @@ async function assemblePrompt(
         ? normalizeMessages(params.messages)
         : normalizeMessages([{ role: 'user', content: params.contents }]);
 
-    if (!newMessages.length) throw new Error('generateContent requires at least one user message.');
+    if (!newMessages.length) throw new Error('runAgent requires at least one user message.');
 
     // Future: insert RAG/context here, e.g. await attachRagContext(...)
     const messages: ChatMessage[] = getSystemPrompts();
@@ -129,7 +129,7 @@ async function persistAssistantReply(
     await writeSessionMessages(context, updated);
 }
 
-export async function generateContent(params: any = {}, context: vscode.ExtensionContext): Promise<any> {
+export async function runAgent(params: any = {}, context: vscode.ExtensionContext): Promise<any> {
     if (!context) throw new Error('Extension context is required.');
 
     // Tool call mode (short-circuit)

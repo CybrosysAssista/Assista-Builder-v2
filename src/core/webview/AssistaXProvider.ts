@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { generateContent } from '../ai/agent.js';
+import { runAgent } from '../ai/agent.js';
 import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../ai/sessionManager.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
@@ -182,7 +182,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
 
     private async handleUserMessage(text: string) {
         try {
-            const response = await generateContent({ contents: text }, this._context);
+            const response = await runAgent({ contents: text }, this._context);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
             await this.sendAssistantMessage(reply);
             void this.syncActiveSession();
