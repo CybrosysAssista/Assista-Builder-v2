@@ -10,24 +10,15 @@ import {
     writeSessionMessages,
     trimHistory
 } from './sessionManager.js';
-
-export interface ProviderConfig {
-    apiKey: string;
-    model: string;
-    customUrl?: string;
-}
+import { getSystemPrompts } from './prompts/systemPrompts.js';
 
 type ToolFn = (...args: any[]) => Promise<any> | any;
 
 const TOOL_REGISTRY: Record<string, ToolFn> = {
     list_files: tools.listFiles,
-    listFiles: tools.listFiles,
     get_file_content: tools.getFileContent,
-    getFileContent: tools.getFileContent,
     write_file: tools.writeFileContent,
-    writeFileContent: tools.writeFileContent,
     search_in_project: tools.searchInProject,
-    searchInProject: tools.searchInProject,
 };
 
 function normalizeMessages(raw: any[]): ChatMessage[] {
@@ -50,29 +41,23 @@ function normalizeMessages(raw: any[]): ChatMessage[] {
     return normalized;
 }
 
-export async function generateContent(params: any = {}, context: vscode.ExtensionContext): Promise<any> {
-    if (!context) {
-        throw new Error('Extension context is required.');
-    }
+/** Tool call dispatcher */
+async function handleToolCall(toolCall: any): Promise<any> {
+    const name: string | undefined = toolCall?.name;
+    const args: any[] = Array.isArray(toolCall?.args) ? toolCall.args : [];
+    const fn = name ? TOOL_REGISTRY[name] : undefined;
+    if (!fn) throw new Error(`Tool "${name ?? '<unknown>'}" is not registered.`);
+    return await fn(...args);
+}
 
-    if (params?.toolCall) {
-        const name: string | undefined = params.toolCall?.name;
-        const args: any[] = Array.isArray(params.toolCall?.args) ? params.toolCall.args : [];
-        const toolFn = name ? TOOL_REGISTRY[name] : undefined;
-        if (!toolFn) {
-            throw new Error(`Tool "${name ?? '<unknown>'}" is not registered.`);
-        }
-        return await toolFn(...args);
-    }
-
-    let sessionHistory = await readSessionMessages(context);
-    const config = params.config = params.config ?? {};
-
-    if (config.resetSession) {
-        await clearActiveSession(context);
-        sessionHistory = [];
-    }
-
+/** Build the final messages array for provider call.
+ *  Hook point: future RAG/context injection should be applied here.
+ */
+async function assemblePrompt(
+    params: any,
+    sessionHistory: ChatMessage[]
+): Promise<ChatMessage[]> {
+    const config = params.config ?? {};
     const hasExplicitMessages = Array.isArray(params.messages) && params.messages.length > 0;
     const useSessionHistory = !hasExplicitMessages && config.useSession !== false;
     const systemInstruction = typeof config.systemInstruction === 'string'
@@ -83,53 +68,107 @@ export async function generateContent(params: any = {}, context: vscode.Extensio
         ? normalizeMessages(params.messages)
         : normalizeMessages([{ role: 'user', content: params.contents }]);
 
-    if (!newMessages.length) {
-        throw new Error('generateContent requires at least one user message.');
-    }
+    if (!newMessages.length) throw new Error('generateContent requires at least one user message.');
 
-    const requestMessages: ChatMessage[] = [];
+    // Future: insert RAG/context here, e.g. await attachRagContext(...)
+    const messages: ChatMessage[] = getSystemPrompts();
     if (systemInstruction) {
-        requestMessages.push({ role: 'system', content: systemInstruction });
+        messages.push({ role: 'system', content: systemInstruction });
     }
     if (useSessionHistory && sessionHistory.length) {
-        requestMessages.push(...trimHistory(sessionHistory));
+        messages.push(...trimHistory(sessionHistory));
     }
-    requestMessages.push(...newMessages);
+    messages.push(...newMessages);
 
-    const requestPayload = {
+    return messages;
+}
+
+/** Call the configured provider with the assembled payload */
+async function callProvider(
+    messages: ChatMessage[],
+    params: any,
+    context: vscode.ExtensionContext
+): Promise<any> {
+    // Build payload - keep all params but replace messages with sanitized role/content objects
+    const payload = {
         ...params,
-        messages: requestMessages.map(msg => ({ role: msg.role, content: msg.content })),
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
     };
-    delete (requestPayload as any).contents;
+    delete (payload as any).contents;
 
-    try {
-        console.log('[Assista X] AI request payload:', JSON.stringify(requestPayload, null, 2));
-    } catch {
-        console.log('[Assista X] AI request payload (raw):', requestPayload);
-    }
-
+    // Resolve provider config (throws if missing)
     const { provider, config: providerConfig } = await getActiveProviderConfig(context);
 
-    const response = provider === 'google'
-        ? await generateWithGoogle(requestPayload, providerConfig, context)
-        : await generateWithOpenAICompat(requestPayload, providerConfig, provider, context);
+    // Hook point: you could perform pre-call transformations here (rate-limiting, chunking)
+    if (provider === 'google') {
+        return await generateWithGoogle(payload, providerConfig, context);
+    } else {
+        return await generateWithOpenAICompat(payload, providerConfig, provider, context);
+    }
+}
 
-    try {
-        console.log('[Assista X] AI response payload:', typeof response === 'string' ? response : JSON.stringify(response, null, 2));
-    } catch {
-        console.log('[Assista X] AI response payload (raw):', response);
+/** Persist assistant reply into session store (keeps existing behaviour) */
+async function persistAssistantReply(
+    context: vscode.ExtensionContext,
+    previousHistory: ChatMessage[],
+    newMessages: ChatMessage[],
+    assistantResponse: any
+): Promise<void> {
+    // Convert assistant response to string (keep same behavior as before)
+    const assistantContent = typeof assistantResponse === 'string'
+        ? assistantResponse
+        : JSON.stringify(assistantResponse, null, 2);
+
+    // Append to history and write back
+    // Note: we mutate a copy to avoid surprises with callers
+    const updated: ChatMessage[] = [
+        ...previousHistory,
+        ...newMessages,
+        { role: 'assistant', content: assistantContent },
+    ];
+    await writeSessionMessages(context, updated);
+}
+
+export async function generateContent(params: any = {}, context: vscode.ExtensionContext): Promise<any> {
+    if (!context) throw new Error('Extension context is required.');
+
+    // Tool call mode (short-circuit)
+    if (params?.toolCall) {
+        return await handleToolCall(params.toolCall);
     }
 
+    // Load session history
+    let sessionHistory = await readSessionMessages(context);
+
+    // Support resetSession flag in config (existing behavior)
+    const cfg = params.config ?? {};
+    if (cfg.resetSession) {
+        await clearActiveSession(context);
+        sessionHistory = [];
+    }
+
+    // Build messages (includes system + session + new user messages)
+    const requestMessages = await assemblePrompt(params, sessionHistory);
+
+    // Logging (concise)
+    try {
+        console.debug('[Assista X] request messages length:', requestMessages.length);
+    } catch { /* no-op */ }
+
+    // Call LLM provider
+    const response = await callProvider(requestMessages, params, context);
+
+    // Persist assistant response only when session usage is enabled
+    const hasExplicitMessages = Array.isArray(params.messages) && params.messages.length > 0;
+    const useSessionHistory = !hasExplicitMessages && (params.config?.useSession !== false);
     if (useSessionHistory) {
-        const assistantContent = typeof response === 'string'
-            ? response
-            : JSON.stringify(response, null, 2);
-        const updatedHistory: ChatMessage[] = [
-            ...sessionHistory,
-            ...newMessages,
-            { role: 'assistant', content: assistantContent },
-        ];
-        await writeSessionMessages(context, updatedHistory);
+        // Determine which messages are the "new" ones that we appended (they are the tail of requestMessages)
+        // We can reconstruct new messages as those after any injected system/session items.
+        // Simpler: reuse normalizeMessages on the original input path
+        const newMessages = Array.isArray(params.messages) && params.messages.length > 0
+            ? normalizeMessages(params.messages)
+            : normalizeMessages([{ role: 'user', content: params.contents }]);
+        await persistAssistantReply(context, sessionHistory, newMessages, response);
     }
 
     return response;
@@ -142,8 +181,3 @@ export async function resetSession(context: vscode.ExtensionContext): Promise<vo
 export async function getSessionHistory(context: vscode.ExtensionContext): Promise<ChatMessage[]> {
     return await readSessionMessages(context);
 }
-
-export async function generateOdooModule(): Promise<never> {
-    throw new Error('Module generation has been removed in the simplified AI pipeline.');
-}
-

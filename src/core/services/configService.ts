@@ -2,7 +2,7 @@
  * Configuration management service
  */
 import * as vscode from 'vscode';
-import { ProviderConfig } from '../ai/agent.js';
+import { ProviderConfig } from '../ai/providers/types.js';
 
 export interface AppSettings {
     activeProvider: string;

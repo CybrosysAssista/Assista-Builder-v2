@@ -2,7 +2,7 @@
  * OpenAI-compatible provider implementation
  */
 import * as vscode from 'vscode';
-import { ProviderConfig } from '../agent.js';
+import { ProviderConfig } from './types.js';
 
 function getApiUrl(provider: string, config: ProviderConfig): string {
     switch (provider) {

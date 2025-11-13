@@ -2,7 +2,7 @@
  * Google Gemini provider implementation
  */
 import * as vscode from 'vscode';
-import { ProviderConfig } from '../agent.js';
+import { ProviderConfig } from './types.js';
 
 export async function generateWithGoogle(
     params: any,
