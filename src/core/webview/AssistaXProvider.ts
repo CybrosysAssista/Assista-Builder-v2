@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { runAgent } from '../ai/agent.js';
 import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../ai/sessionManager.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
+import { agentController } from '../ai/agent/agentController.js';
+// import { runAgent } from '../ai/agent.js';
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaXView';
@@ -182,7 +183,11 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
 
     private async handleUserMessage(text: string) {
         try {
-            const response = await runAgent({ contents: text }, this._context);
+            const startTime = Date.now();
+            const response = await agentController(text, this._context);
+            // const response = await runAgent({ contents: text }, this._context);
+            const elapsed = Date.now() - startTime;
+            console.log(`[AssistaX] Total completion time taken in ${elapsed}ms`);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
             await this.sendAssistantMessage(reply);
             void this.syncActiveSession();
