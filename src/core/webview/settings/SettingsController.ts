@@ -4,7 +4,7 @@ export class SettingsController {
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly postMessage: (type: string, payload?: any) => void,
-  ) {}
+  ) { }
 
   public async handleLoadSettings() {
     const config = vscode.workspace.getConfiguration('assistaX');
@@ -87,7 +87,7 @@ export class SettingsController {
       if (provider === 'openrouter') {
         const baseUrl = config.get<string>('providers.openrouter.customUrl', 'https://openrouter.ai/api/v1') || 'https://openrouter.ai/api/v1';
         const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.openrouter')) || '';
-        if (!key) throw new Error('OpenRouter API key is required to list models.');
+        if (!key) { throw new Error('OpenRouter API key is required to list models.'); }
 
         const url = `${baseUrl.replace(/\/$/, '')}/models`;
         const headers: Record<string, string> = {
@@ -113,7 +113,7 @@ export class SettingsController {
       } else if (provider === 'google') {
         // Use Google Generative Language public models endpoint
         const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.google')) || '';
-        if (!key) throw new Error('Gemini API key is required to list models.');
+        if (!key) { throw new Error('Gemini API key is required to list models.'); }
         // Fetch all pages
         let nextPageToken: string | undefined;
         const collected: any[] = [];
@@ -122,7 +122,7 @@ export class SettingsController {
           url.searchParams.set('key', key);
           // Large page size to reduce pagination; API caps internally
           url.searchParams.set('pageSize', '200');
-          if (nextPageToken) url.searchParams.set('pageToken', nextPageToken);
+          if (nextPageToken) { url.searchParams.set('pageToken', nextPageToken); }
 
           const resp = await fetch(url.toString(), { method: 'GET' });
           if (!resp.ok) {
@@ -130,7 +130,7 @@ export class SettingsController {
             throw new Error(`Google models error (${resp.status} ${resp.statusText})${detail ? `: ${detail}` : ''}`);
           }
           const json: any = await resp.json();
-          if (Array.isArray(json?.models)) collected.push(...json.models);
+          if (Array.isArray(json?.models)) { collected.push(...json.models); }
           nextPageToken = typeof json?.nextPageToken === 'string' && json.nextPageToken ? json.nextPageToken : undefined;
         } while (nextPageToken);
 
@@ -146,7 +146,7 @@ export class SettingsController {
           .sort((a, b) => a.id.localeCompare(b.id));
       } else if (provider === 'openai') {
         const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.openai')) || '';
-        if (!key) throw new Error('OpenAI API key is required to list models.');
+        if (!key) { throw new Error('OpenAI API key is required to list models.'); }
         const resp = await fetch('https://api.openai.com/v1/models', {
           method: 'GET',
           headers: {
@@ -168,7 +168,7 @@ export class SettingsController {
           .sort((a, b) => a.id.localeCompare(b.id));
       } else if (provider === 'anthropic') {
         const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.anthropic')) || '';
-        if (!key) throw new Error('Anthropic API key is required to list models.');
+        if (!key) { throw new Error('Anthropic API key is required to list models.'); }
         const resp = await fetch('https://api.anthropic.com/v1/models', {
           method: 'GET',
           headers: {
@@ -190,7 +190,7 @@ export class SettingsController {
           .sort((a, b) => a.id.localeCompare(b.id));
       } else if (provider === 'mistral') {
         const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.mistral')) || '';
-        if (!key) throw new Error('Mistral API key is required to list models.');
+        if (!key) { throw new Error('Mistral API key is required to list models.'); }
         const resp = await fetch('https://api.mistral.ai/v1/models', {
           method: 'GET',
           headers: {

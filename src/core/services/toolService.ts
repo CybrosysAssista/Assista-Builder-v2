@@ -24,7 +24,7 @@ export async function listFiles(
 ): Promise<ToolResponse<string[]>> {
   try {
     const root = getWorkspaceRoot();
-    if (!root) return { success: false, error: 'No workspace open' };
+    if (!root) { return { success: false, error: 'No workspace open' }; }
 
     const result: string[] = [];
 
@@ -56,7 +56,7 @@ export async function listFiles(
 export async function getFileContent(relPath: string): Promise<ToolResponse<string>> {
   try {
     const root = getWorkspaceRoot();
-    if (!root) return { success: false, error: 'No workspace open' };
+    if (!root) { return { success: false, error: 'No workspace open' }; }
     const fileUri = vscode.Uri.joinPath(root, relPath);
     const data = await readFileContent(fileUri);
     return { success: true, data };
@@ -69,7 +69,7 @@ export async function getFileContent(relPath: string): Promise<ToolResponse<stri
 export async function writeFileContent(relPath: string, content: string): Promise<ToolResponse> {
   try {
     const root = getWorkspaceRoot();
-    if (!root) return { success: false, error: 'No workspace open' };
+    if (!root) { return { success: false, error: 'No workspace open' }; }
     const fileUri = vscode.Uri.joinPath(root, relPath);
     const segments = relPath.split(/[\\/]+/).filter(Boolean);
     const dirUri = segments.length > 1 ? vscode.Uri.joinPath(root, ...segments.slice(0, -1)) : root;
@@ -87,7 +87,7 @@ export async function searchInProject(
 ): Promise<ToolResponse<{ path: string; line: number; match: string }[]>> {
   try {
     const root = getWorkspaceRoot();
-    if (!root) return { success: false, error: 'No workspace open' };
+    if (!root) { return { success: false, error: 'No workspace open' }; }
     const filesRes = await listFiles(undefined, ['.py', '.xml']);
     if (!filesRes.success || !filesRes.data) {
       return { success: false, error: filesRes.error || 'No files found' };
@@ -97,11 +97,11 @@ export async function searchInProject(
 
     for (const rel of filesRes.data) {
       const fileRes = await getFileContent(rel);
-      if (!fileRes.success || !fileRes.data) continue;
+      if (!fileRes.success || !fileRes.data) { continue; }
 
       const lines = fileRes.data.split('\n');
       lines.forEach((line, i) => {
-        if (line.includes(query)) results.push({ path: rel, line: i + 1, match: line.trim() });
+        if (line.includes(query)) { results.push({ path: rel, line: i + 1, match: line.trim() }); }
       });
     }
 

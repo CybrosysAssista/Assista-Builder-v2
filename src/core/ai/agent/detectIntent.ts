@@ -21,12 +21,12 @@ const GREETING_PATTERNS: RegExp[] = [
 function isGreeting(prompt: string): boolean {
   const text = normalize(prompt);
 
-  if (!text) return false;
+  if (!text) { return false; }
   const cleaned = text
     .replace(/\b(bro|man|dude|dear|friend|buddy)\b/g, "")
     .trim();
 
-  if (!cleaned) return false;
+  if (!cleaned) { return false; }
   const words = cleaned.split(/\s+/);
 
   if (words.length === 1) {
@@ -78,8 +78,7 @@ const RULES: Array<{ type: DetectedIntent["type"]; patterns: RegExp[] }> = [
 function ruleBasedIntent(prompt: string): DetectedIntent | null {
   const text = normalize(prompt);
   for (const rule of RULES) {
-    if (rule.patterns.every((rx) => rx.test(text)))
-      return { type: rule.type, raw: prompt };
+    if (rule.patterns.every((rx) => rx.test(text))) { return { type: rule.type, raw: prompt }; }
   }
   return null;
 }
@@ -98,7 +97,7 @@ function extractJson(text: string): string | null {
   try {
     JSON.parse(text.trim());
     return text.trim();
-  } catch {}
+  } catch { }
 
   // Balanced object detection
   const match = text.match(/\{[\s\S]*?\}/);
@@ -106,7 +105,7 @@ function extractJson(text: string): string | null {
     try {
       JSON.parse(match[0]);
       return match[0];
-    } catch {}
+    } catch { }
   }
 
   // Line-based key-value detection fallback
@@ -115,7 +114,7 @@ function extractJson(text: string): string | null {
 
   for (const line of lines) {
     const kv = line.match(/"?(type|name|entity)"?\s*[:=]\s*"?([^"]+)"?/i);
-    if (kv) obj[kv[1]] = kv[2];
+    if (kv) { obj[kv[1]] = kv[2]; }
   }
 
   if (Object.keys(obj).length > 0) {
@@ -187,12 +186,12 @@ If unsure, return:
   const cleaned = sanitize(rawText);
   const block = extractJson(cleaned);
 
-  if (!block) return { type: "unknown", raw: rawText };
+  if (!block) { return { type: "unknown", raw: rawText }; }
 
   // strict parse
   try {
     return validate(JSON.parse(block), rawText);
-  } catch {}
+  } catch { }
 
   // relaxed fallback
   const relaxed = block
@@ -202,7 +201,7 @@ If unsure, return:
 
   try {
     return validate(JSON.parse(relaxed), rawText);
-  } catch {}
+  } catch { }
 
   return { type: "unknown", raw: rawText };
 }

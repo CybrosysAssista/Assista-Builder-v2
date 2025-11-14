@@ -27,15 +27,15 @@ function normalizeMessages(raw: any[]): ChatMessage[] {
     }
     const normalized: ChatMessage[] = [];
     for (const entry of raw) {
-        if (!entry) continue;
+        if (!entry) { continue; }
         const rawRole = typeof entry.role === 'string' ? entry.role.toLowerCase() : 'user';
         const role: ChatMessage['role'] =
             rawRole === 'assistant' ? 'assistant' :
-            rawRole === 'system' ? 'system' : 'user';
+                rawRole === 'system' ? 'system' : 'user';
         const rawContent = (entry as any).content;
-        if (rawContent == null) continue;
+        if (rawContent === null) { continue; }
         const text = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
-        if (!text.trim()) continue;
+        if (!text.trim()) { continue; }
         normalized.push({ role, content: text });
     }
     return normalized;
@@ -46,7 +46,7 @@ async function handleToolCall(toolCall: any): Promise<any> {
     const name: string | undefined = toolCall?.name;
     const args: any[] = Array.isArray(toolCall?.args) ? toolCall.args : [];
     const fn = name ? TOOL_REGISTRY[name] : undefined;
-    if (!fn) throw new Error(`Tool "${name ?? '<unknown>'}" is not registered.`);
+    if (!fn) { throw new Error(`Tool "${name ?? '<unknown>'}" is not registered.`); }
     return await fn(...args);
 }
 
@@ -68,7 +68,7 @@ async function assemblePrompt(
         ? normalizeMessages(params.messages)
         : normalizeMessages([{ role: 'user', content: params.contents }]);
 
-    if (!newMessages.length) throw new Error('runAgent requires at least one user message.');
+    if (!newMessages.length) { throw new Error('runAgent requires at least one user message.'); }
 
     // Future: insert RAG/context here, e.g. await attachRagContext(...)
     const messages: ChatMessage[] = getSystemPrompts();
@@ -134,7 +134,7 @@ async function persistAssistantReply(
 }
 
 export async function runAgent(params: any = {}, context: vscode.ExtensionContext): Promise<any> {
-    if (!context) throw new Error('Extension context is required.');
+    if (!context) { throw new Error('Extension context is required.'); }
 
     // Tool call mode (short-circuit)
     if (params?.toolCall) {

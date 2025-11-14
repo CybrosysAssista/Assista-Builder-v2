@@ -16,7 +16,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
     constructor(
         private readonly _extensionUri: vscode.Uri,
         private readonly _context: vscode.ExtensionContext
-    ) {}
+    ) { }
 
     resolveWebviewView(
         webviewView: vscode.WebviewView,

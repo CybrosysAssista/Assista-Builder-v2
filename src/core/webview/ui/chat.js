@@ -1,10 +1,10 @@
 export function initChatUI(vscode) {
-    const messagesEl = document.getElementById('messages');
-    const inputEl = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const welcomeEl = document.getElementById('welcomeScreen');
-    const inputBar = document.querySelector('.input-bar');
+    const messagesEl = document.getElementById("messages");
+    const inputEl = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const welcomeEl = document.getElementById("welcomeScreen");
+    const inputBar = document.querySelector(".input-bar");
 
     let isBusy = false;
     let activeSessionId;
@@ -12,15 +12,15 @@ export function initChatUI(vscode) {
     function showChatArea() {
         try {
             if (welcomeEl) {
-                welcomeEl.style.display = 'none';
-                welcomeEl.classList.remove('active');
-                welcomeEl.setAttribute('aria-hidden', 'true');
+                welcomeEl.style.display = "none";
+                welcomeEl.classList.remove("active");
+                welcomeEl.setAttribute("aria-hidden", "true");
             }
             if (messagesEl) {
-                messagesEl.classList.add('active');
+                messagesEl.classList.add("active");
             }
             if (inputBar) {
-                inputBar.style.display = '';
+                inputBar.style.display = "";
             }
         } catch (_) {
             // no-op
@@ -32,11 +32,11 @@ export function initChatUI(vscode) {
         try {
             if (sendBtn) {
                 sendBtn.disabled = isBusy;
-                sendBtn.classList.toggle('hidden', isBusy);
+                sendBtn.classList.toggle("hidden", isBusy);
             }
             if (stopBtn) {
                 stopBtn.disabled = !isBusy;
-                stopBtn.classList.toggle('visible', isBusy);
+                stopBtn.classList.toggle("visible", isBusy);
             }
         } catch (_) {
             // ignore styling errors
@@ -44,13 +44,15 @@ export function initChatUI(vscode) {
     }
 
     function enhanceMarkdownContent(container) {
-        if (!container) return;
-        container.querySelectorAll('a').forEach((link) => {
-            link.setAttribute('target', '_blank');
-            link.setAttribute('rel', 'noreferrer noopener');
+        if (!container) {
+            return;
+        }
+        container.querySelectorAll("a").forEach((link) => {
+            link.setAttribute("target", "_blank");
+            link.setAttribute("rel", "noreferrer noopener");
         });
-        container.querySelectorAll('table').forEach((table) => {
-            table.setAttribute('role', 'table');
+        container.querySelectorAll("table").forEach((table) => {
+            table.setAttribute("role", "table");
         });
     }
 
@@ -60,14 +62,14 @@ export function initChatUI(vscode) {
         }
         showChatArea();
 
-        const row = document.createElement('div');
-        row.className = 'message-row';
+        const row = document.createElement("div");
+        row.className = "message-row";
 
-        const bubble = document.createElement('div');
-        bubble.className = `message ${sender || 'ai'}`;
+        const bubble = document.createElement("div");
+        bubble.className = `message ${sender || "ai"}`;
 
-        if (html && sender === 'ai') {
-            bubble.classList.add('markdown');
+        if (html && sender === "ai") {
+            bubble.classList.add("markdown");
             bubble.innerHTML = html;
             enhanceMarkdownContent(bubble);
         } else {
@@ -80,35 +82,42 @@ export function initChatUI(vscode) {
     }
 
     function clearInput() {
-        if (!inputEl) return;
-        inputEl.value = '';
-        inputEl.style.height = '';
+        if (!inputEl) {
+            return;
+        }
+        inputEl.value = "";
+        inputEl.style.height = "";
     }
 
     function renderSession(sessionId, messages) {
-        if (!messagesEl) return;
+        if (!messagesEl) {
+            return;
+        }
 
-        messagesEl.innerHTML = '';
+        messagesEl.innerHTML = "";
         activeSessionId = sessionId;
 
         if (Array.isArray(messages)) {
             messages.forEach((message) => {
-                const role = message.role === 'assistant' ? 'ai'
-                    : message.role === 'system' ? 'system'
-                        : 'user';
+                const role =
+                    message.role === "assistant"
+                        ? "ai"
+                        : message.role === "system"
+                            ? "system"
+                            : "user";
                 appendMessage(
-                    String(message.content ?? ''),
+                    String(message.content ?? ""),
                     role,
-                    typeof message.html === 'string' ? message.html : undefined
+                    typeof message.html === "string" ? message.html : undefined
                 );
             });
         }
 
         if (!messages || !messages.length) {
             if (welcomeEl) {
-                welcomeEl.style.display = '';
-                welcomeEl.classList.add('active');
-                welcomeEl.setAttribute('aria-hidden', 'false');
+                welcomeEl.style.display = "";
+                welcomeEl.classList.add("active");
+                welcomeEl.setAttribute("aria-hidden", "false");
             }
         } else {
             showChatArea();
@@ -119,7 +128,7 @@ export function initChatUI(vscode) {
         try {
             vscode.setState?.({
                 activeSessionId,
-                messages: Array.isArray(messages) ? messages : []
+                messages: Array.isArray(messages) ? messages : [],
             });
         } catch (_) {
             // ignore persistence issues
@@ -128,7 +137,7 @@ export function initChatUI(vscode) {
 
     function clearMessages() {
         if (messagesEl) {
-            messagesEl.innerHTML = '';
+            messagesEl.innerHTML = "";
         }
     }
 
@@ -141,29 +150,32 @@ export function initChatUI(vscode) {
             return;
         }
 
-        appendMessage(text, 'user');
+        appendMessage(text, "user");
         clearInput();
         toggleBusy(true);
 
-        vscode.postMessage({ command: 'userMessage', text });
+        vscode.postMessage({ command: "userMessage", text });
     }
 
     if (sendBtn) {
-        sendBtn.addEventListener('click', sendMessage);
+        sendBtn.addEventListener("click", sendMessage);
     }
 
     if (inputEl) {
-        inputEl.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
+        inputEl.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 sendMessage();
             }
         });
 
-        inputEl.addEventListener('input', () => {
+        inputEl.addEventListener("input", () => {
             try {
-                inputEl.style.height = 'auto';
-                inputEl.style.height = `${Math.min(Math.max(inputEl.scrollHeight, 28), 160)}px`;
+                inputEl.style.height = "auto";
+                inputEl.style.height = `${Math.min(
+                    Math.max(inputEl.scrollHeight, 28),
+                    160
+                )}px`;
             } catch (_) {
                 // ignore sizing issues
             }
@@ -171,9 +183,9 @@ export function initChatUI(vscode) {
     }
 
     if (stopBtn) {
-        stopBtn.addEventListener('click', () => {
+        stopBtn.addEventListener("click", () => {
             toggleBusy(false);
-            vscode.postMessage({ command: 'cancel' });
+            vscode.postMessage({ command: "cancel" });
         });
     }
 
@@ -187,4 +199,3 @@ export function initChatUI(vscode) {
         isBusy: () => isBusy,
     };
 }
-

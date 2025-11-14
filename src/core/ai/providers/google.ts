@@ -21,7 +21,7 @@ export async function generateWithGoogle(
             const systemPrompt = params.config?.systemInstruction || '';
             const promptParts: string[] = [];
             if (Array.isArray(params?.messages) && params.messages.length) {
-                if (systemPrompt) promptParts.push(systemPrompt);
+                if (systemPrompt) { promptParts.push(systemPrompt); }
                 // Flatten messages into a single textual context for Gemini simple generateContent
                 const combined = params.messages.map((m: any) => {
                     const role = String(m.role || '').toUpperCase();
@@ -30,8 +30,8 @@ export async function generateWithGoogle(
                 promptParts.push(combined);
             } else {
                 let userPrompt = params.contents;
-                if (typeof userPrompt !== 'string') userPrompt = JSON.stringify(userPrompt);
-                if (systemPrompt) promptParts.push(systemPrompt);
+                if (typeof userPrompt !== 'string') { userPrompt = JSON.stringify(userPrompt); }
+                if (systemPrompt) { promptParts.push(systemPrompt); }
                 promptParts.push(userPrompt);
             }
 
@@ -42,7 +42,7 @@ export async function generateWithGoogle(
         } catch (error) {
             lastError = error as Error;
             console.warn(`Google API attempt ${attempt} failed:`, error);
-            
+
             if (attempt < maxRetries) {
                 const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s backoff
                 await new Promise(resolve => setTimeout(resolve, delay));
