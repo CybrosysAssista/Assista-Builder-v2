@@ -43,7 +43,6 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         });
 
         webviewView.webview.onDidReceiveMessage(async (message) => {
-            try { console.log('[AssistaX] onDidReceiveMessage', message); } catch {}
             if (!message) {
                 return;
             }

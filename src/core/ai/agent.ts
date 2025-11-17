@@ -120,48 +120,124 @@ async function persistAssistantReply(
 export async function runAgent(params: any = {}, context: vscode.ExtensionContext): Promise<any> {
     if (!context) { throw new Error('Extension context is required.'); }
     if (params?.toolCall) {
-        const name = params.toolCall.name  as keyof typeof TOOL_REGISTRY;
+        const name = params.toolCall.name as keyof typeof TOOL_REGISTRY;
         const args = Array.isArray(params.toolCall.args) ? params.toolCall.args : [];
 
-        const fn = TOOL_REGISTRY[name] as ToolFn | undefined;
-        if (!fn) {
-            throw new Error(`Unknown tool: ${name}`);
-        }
-
-        console.log(`[Assista X] Executing tool: ${name}`);
+        const rawFn = TOOL_REGISTRY[name] as unknown;
+        const fn = rawFn as ToolFn;
+        if (typeof fn !== 'function') { throw new Error(`Unknown tool: ${String(name)}`); }
+        console.log(`[Assista X] Executing tool (explicit param): ${name}`);
         return await fn(...args);
     }
 
-    // Load session history
+    // --- normal flow: build prompt and ask provider ---
     let sessionHistory = await readSessionMessages(context);
-
-    // Support resetSession flag in config (existing behavior)
     const cfg = params.config ?? {};
     if (cfg.resetSession) {
         await clearActiveSession(context);
         sessionHistory = [];
     }
-
-    // Build messages (includes system + session + new user messages)
     const requestMessages = await assemblePrompt(params, sessionHistory);
 
-    // Call LLM provider
-    const response = await callProvider(requestMessages, params, context);
+    // We'll implement a small loop to handle toolCall -> execute -> feed result back -> re-call provider
+    const MAX_TOOL_CALLS = 3;
+    let iterations = 0;
+    let lastAssistantResponse: any = null;
 
-    // Persist assistant response only when session usage is enabled
+    // initial provider call
+    let providerResponse = await callProvider(requestMessages, params, context);
+    lastAssistantResponse = providerResponse;
+
+    while (iterations < MAX_TOOL_CALLS) {
+        iterations++;
+
+        // normalize providerResponse to string content (provider may return object)
+        const content = typeof providerResponse === 'string' ? providerResponse : (providerResponse?.content ?? JSON.stringify(providerResponse));
+
+        // try to extract JSON from assistant response (robust: tries to find first {...} block)
+        let parsed: any = null;
+        try {
+            // first attempt: whole content is JSON
+            parsed = JSON.parse(content);
+        } catch (e) {
+            // fallback: try to extract a JSON block using regex
+            const jsonBlockMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonBlockMatch) {
+                try { parsed = JSON.parse(jsonBlockMatch[0]); } catch { parsed = null; }
+            }
+        }
+
+        const call = parsed?.toolCall ?? parsed?.tool_call ?? null;
+        if (!call) { break; } // no toolCall -> done
+
+        // Validate tool call shape
+        const name = call.name;
+        const args = Array.isArray(call.args) ? call.args : [];
+
+        if (typeof name !== 'string') {
+            throw new Error('Invalid toolCall: "name" must be a string.');
+        }
+
+        const rawFn = (TOOL_REGISTRY as any)[name];
+        const fn = rawFn as ToolFn;
+        if (typeof fn !== 'function') {
+            throw new Error(`Unknown tool requested by assistant: ${name}`);
+        }
+
+        // Additional safety checks (example): ensure args are simple
+        const unsafeArg = args.find((a: any) => a === undefined);
+        if (unsafeArg !== undefined) {
+            throw new Error('Invalid toolCall args: contains undefined.');
+        }
+
+        console.log(`[Assista X] Executing tool requested by model: ${name}`);
+        let toolResult;
+        try {
+            // cast to ToolFn to avoid TS tuple spread issue
+            toolResult = await fn(...args);
+        } catch (err) {
+            toolResult = { __toolError: String(err) };
+        }
+
+        // Persist the assistant tool call + the tool result into session history
+        // Compose messages to append:
+        // 1) assistant message content (the original provider response)
+        // 2) system message or assistant message containing the tool result (so LLM can see it)
+        try {
+            // persist assistant's tool-call message
+            await persistAssistantReply(context, sessionHistory, [], providerResponse);
+        } catch (err) {
+            console.error('[Assista X] Failed to persist assistant tool call:', err);
+        }
+
+        // Now create a message containing the tool result and append to requestMessages for the next provider call
+        const toolResultMessage = {
+            role: 'system',
+            content: `Tool ${name} returned:\n${typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2)}`
+        };
+
+        // Build next round messages: we append tool result to the previous request messages
+        // (assemblePrompt returned a fresh message array earlier; we should rebuild from session+user to keep things consistent)
+        // For simplicity, push tool result onto requestMessages and call provider again.
+        requestMessages.push({ role: 'assistant', content: content }); // assistant's toolCall content
+        requestMessages.push(toolResultMessage as any);
+
+        // Call provider again to continue the conversation / produce final assistant reply
+        providerResponse = await callProvider(requestMessages, params, context);
+        lastAssistantResponse = providerResponse;
+    }
+
+    // After loop, persist assistant reply if session history is enabled (your original logic)
     const hasExplicitMessages = Array.isArray(params.messages) && params.messages.length > 0;
     const useSessionHistory = !hasExplicitMessages && (params.config?.useSession !== false);
     if (useSessionHistory) {
-        // Determine which messages are the "new" ones that we appended (they are the tail of requestMessages)
-        // We can reconstruct new messages as those after any injected system/session items.
-        // Simpler: reuse normalizeMessages on the original input path
         const newMessages = Array.isArray(params.messages) && params.messages.length > 0
             ? normalizeMessages(params.messages)
             : normalizeMessages([{ role: 'user', content: params.contents }]);
-        await persistAssistantReply(context, sessionHistory, newMessages, response);
+        await persistAssistantReply(context, sessionHistory, newMessages, lastAssistantResponse);
     }
 
-    return response;
+    return lastAssistantResponse;
 }
 
 export async function resetSession(context: vscode.ExtensionContext): Promise<void> {
