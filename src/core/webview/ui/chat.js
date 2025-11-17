@@ -1,13 +1,29 @@
 export function initChatUI(vscode) {
-    const messagesEl = document.getElementById("messages");
-    const inputEl = document.getElementById("chatInput");
-    const sendBtn = document.getElementById("sendBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const welcomeEl = document.getElementById("welcomeScreen");
-    const inputBar = document.querySelector(".input-bar");
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const welcomeEl = document.getElementById('welcomeScreen');
+    const inputBar = document.querySelector('.input-bar');
+    // New chatbox toolbar controls
+    const addBtn = document.getElementById('addBtn');
+    const modeToggle = document.getElementById('modeToggle');
+    const modeDropdown = document.getElementById('modeDropdown');
+    const modeLabel = document.getElementById('modeLabel');
+    const modelToggle = document.getElementById('modelToggle');
+    const modelDropdown = document.getElementById('modelDropdown');
+    const modelLabel = document.getElementById('modelLabel');
+    const mentionBtn = document.getElementById('mentionBtn');
+    const micBtn = document.getElementById('micBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
 
     let isBusy = false;
     let activeSessionId;
+    // Local UI state (vanilla JS equivalent of React state)
+    let selectedMode = 'code';
+    let selectedModel = 'gpt5-low';
+    let showModeMenu = false;
+    let showModelMenu = false;
 
     function showChatArea() {
         try {
@@ -157,6 +173,101 @@ export function initChatUI(vscode) {
         vscode.postMessage({ command: "userMessage", text });
     }
 
+    // --- New UI: toolbar behaviors ---
+    function closeMenus() {
+        try {
+            if (modeDropdown) modeDropdown.classList.remove('visible');
+            if (modelDropdown) modelDropdown.classList.remove('visible');
+            showModeMenu = false; showModelMenu = false;
+        } catch (_) { /* no-op */ }
+    }
+
+    function applyMode(mode) {
+        selectedMode = mode;
+        if (modeLabel) modeLabel.textContent = mode === 'code' ? 'Code' : 'Chat';
+        // Optional: inform host of mode change in the future
+    }
+
+    function applyModel(model, labelText) {
+        selectedModel = model;
+        if (modelLabel && labelText) modelLabel.textContent = labelText;
+        // Optional: map to actual provider/model config later
+    }
+
+    // Toggle menus
+    modeToggle?.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        showModeMenu = !showModeMenu;
+        if (modeDropdown) modeDropdown.classList.toggle('visible', showModeMenu);
+        if (showModeMenu && modelDropdown) modelDropdown.classList.remove('visible');
+    });
+    modelToggle?.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        showModelMenu = !showModelMenu;
+        if (modelDropdown) modelDropdown.classList.toggle('visible', showModelMenu);
+        if (showModelMenu && modeDropdown) modeDropdown.classList.remove('visible');
+    });
+
+    // Dropdown item selects
+    modeDropdown?.addEventListener('click', (e) => {
+        const btn = e.target.closest('button.item');
+        if (!btn) return;
+        const mode = btn.getAttribute('data-mode');
+        if (!mode) return;
+        applyMode(mode);
+        closeMenus();
+    });
+    modelDropdown?.addEventListener('click', (e) => {
+        const btn = e.target.closest('button.item');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        if (action === 'custom-api') {
+            // Open Settings so the user can enter a custom API key
+            try { vscode.postMessage({ command: 'loadSettings' }); } catch (_) {}
+            closeMenus();
+            return;
+        }
+        const model = btn.getAttribute('data-model');
+        if (!model) return;
+        const labelText = btn.querySelector('span')?.textContent || '';
+        applyModel(model, labelText);
+        closeMenus();
+    });
+
+    // Click outside to close menus
+    document.addEventListener('mousedown', (e) => {
+        if (modeDropdown && !modeDropdown.contains(e.target) && modeToggle && !modeToggle.contains(e.target)) {
+            modeDropdown.classList.remove('visible');
+            showModeMenu = false;
+        }
+        if (modelDropdown && !modelDropdown.contains(e.target) && modelToggle && !modelToggle.contains(e.target)) {
+            modelDropdown.classList.remove('visible');
+            showModelMenu = false;
+        }
+    });
+
+    // Plus, Mention, Mic, Settings placeholders
+    addBtn?.addEventListener('click', () => {
+        try { vscode.postMessage({ command: 'quickActions' }); } catch (_) {}
+    });
+    mentionBtn?.addEventListener('click', () => {
+        try { inputEl?.focus(); document.execCommand?.('insertText', false, '@'); } catch (_) {}
+    });
+    micBtn?.addEventListener('click', () => {
+        try { vscode.postMessage({ command: 'voiceInput' }); } catch (_) {}
+    });
+    settingsBtn?.addEventListener('click', () => {
+        try { vscode.postMessage({ command: 'loadSettings' }); } catch (_) {}
+    });
+
+    // Ctrl+L to focus input
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'l' || e.key === 'L')) {
+            e.preventDefault();
+            inputEl?.focus();
+        }
+    });
+
     if (sendBtn) {
         sendBtn.addEventListener("click", sendMessage);
     }
@@ -171,15 +282,16 @@ export function initChatUI(vscode) {
 
         inputEl.addEventListener("input", () => {
             try {
-                inputEl.style.height = "auto";
-                inputEl.style.height = `${Math.min(
-                    Math.max(inputEl.scrollHeight, 28),
-                    160
-                )}px`;
+                inputEl.style.height = 'auto';
+                inputEl.style.height = `${Math.min(Math.max(inputEl.scrollHeight, 28), 160)}px`;
+                // Enable/disable send button
+                if (sendBtn) sendBtn.disabled = !inputEl.value.trim();
             } catch (_) {
                 // ignore sizing issues
             }
         });
+        // Initialize disabled state
+        try { if (sendBtn) sendBtn.disabled = !inputEl.value.trim(); } catch(_) {}
     }
 
     if (stopBtn) {

@@ -2,15 +2,17 @@ import * as vscode from 'vscode';
 import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../ai/sessionManager.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
+import { HistoryController } from './history/HistoryController.js';
 import { runAgent } from "../ai/agent.js";
-// import { runAgent } from '../ai/agent.js';
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaXView';
 
     private _view?: vscode.WebviewView;
     private _pendingShowSettings = false;
+    private _pendingShowHistory = false;
     private _settings?: SettingsController;
+    private _history?: HistoryController;
     private _pendingHydration?: { sessionId: string; messages: ChatMessage[] };
 
     constructor(
@@ -32,12 +34,16 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = getHtmlForWebview(webviewView.webview, this._extensionUri);
 
-        // Instantiate settings controller for delegating settings logic
+        // Instantiate controllers for delegating settings/history logic
         this._settings = new SettingsController(this._context, (type: string, payload?: any) => {
+            this.postMessage(type, payload);
+        });
+        this._history = new HistoryController(this._context, (type: string, payload?: any) => {
             this.postMessage(type, payload);
         });
 
         webviewView.webview.onDidReceiveMessage(async (message) => {
+            try { console.log('[AssistaX] onDidReceiveMessage', message); } catch {}
             if (!message) {
                 return;
             }
@@ -69,12 +75,41 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 await this._settings?.handleListModels(message);
                 return;
             }
+
+            // History page commands
+            if (message.command === 'loadHistory') {
+                await this._history?.handleLoadHistory(message);
+                return;
+            }
+            if (message.command === 'deleteSession') {
+                try { console.log('[AssistaX] deleteSession received for', message?.id); } catch {}
+                try { vscode.window.showInformationMessage(`Deleting chat: ${String(message?.id || '')}`); } catch {}
+                await this._history?.handleDeleteSession(message);
+                return;
+            }
+            if (message.command === 'openSession') {
+                // Switch active session and hydrate webview
+                const id = typeof message.id === 'string' ? message.id : '';
+                if (id) {
+                    const switched = await switchActiveSession(this._context, id);
+                    this._view?.show?.(true);
+                    await this.queueHydration(switched.id, switched.messages);
+                    this.postMessage('historyOpened', { sessionId: switched.id });
+                }
+                return;
+            }
         });
 
         if (this._pendingShowSettings) {
             this._pendingShowSettings = false;
             this.postMessage('showSettings');
             this._settings?.handleLoadSettings();
+        }
+
+        if (this._pendingShowHistory) {
+            this._pendingShowHistory = false;
+            this.postMessage('showHistory');
+            this._history?.handleLoadHistory();
         }
 
         void this.syncActiveSession();
@@ -87,6 +122,15 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             this._settings?.handleLoadSettings();
         } else {
             this._pendingShowSettings = true;
+        }
+    }
+
+    public showHistory() {
+        if (this._view) {
+            this.postMessage('showHistory');
+            this._history?.handleLoadHistory();
+        } else {
+            this._pendingShowHistory = true;
         }
     }
 

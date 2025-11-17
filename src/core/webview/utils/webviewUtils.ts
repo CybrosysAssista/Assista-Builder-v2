@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { getSettingsModalHtml } from '../settings/settingsHtml.js';
+import { getHistoryHtml } from '../history/historyHtml.js';
 
 function getNonce(): string {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -43,6 +44,15 @@ export function getHtmlForWebview(
         display: flex;
         flex-direction: column;
         height: 100vh;
+      }
+      /* Force VS Code UI font in chat area */
+      #messages,
+      #messages .message,
+      .chatbox textarea,
+      .chatbox-toolbar,
+      .chip-btn,
+      .icon-btn {
+        font-family: var(--vscode-font-family, Sans-Serif);
       }
       .top-bar {
         display: flex;
@@ -172,13 +182,59 @@ export function getHtmlForWebview(
       .message.markdown a:hover {
         text-decoration: underline;
       }
+      /* Input bar container at the bottom */
       .input-bar {
-        display: flex;
-        gap: 8px;
         padding: 12px;
         border-top: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.1));
         background: var(--vscode-sideBar-background);
       }
+      /* Chatbox styled like the reference */
+      .chatbox {
+        background: var(--vscode-input-background, #1f1f1f);
+        border: 1px solid var(--vscode-input-border, #3a3a3a);
+        border-radius: 12px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        overflow: visible;
+      }
+      .chatbox textarea {
+        width: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        padding: 12px 14px 8px 14px;
+        font-family: inherit;
+        font-size: 13px;
+        color: inherit;
+        resize: none;
+      }
+      .chatbox-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px 8px 8px;
+      }
+      .chatbox-toolbar .left,
+      .chatbox-toolbar .right { display: flex; align-items: center; gap: 8px; }
+      /* Tighter spacing between Code chip and Model chip */
+      .chatbox-toolbar .left { gap: 6px; }
+      /* Tighter spacing on the right icon cluster */
+      .chatbox-toolbar .right { gap: 6px; }
+      .chatbox-toolbar .right .icon-btn { padding: 4px; }
+      .chatbox-toolbar .right .icon-svg { width: 14px; height: 14px; }
+      .icon-btn { display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--vscode-descriptionForeground); cursor: pointer; }
+      .icon-btn:hover { background: var(--vscode-editorWidget-background); }
+      .chip-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--vscode-descriptionForeground); background: transparent; border: none; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+      .chip-btn:hover { color: inherit; background: var(--vscode-editorWidget-background); }
+      .menu { position: relative; }
+      .dropdown { position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; width: 260px; background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12)); border-radius: 8px; box-shadow: 0 16px 40px rgba(0,0,0,0.35); display: none; overflow: hidden; z-index: 9999; }
+      .dropdown.visible { display: block; }
+      .dropdown .section-title { padding: 8px 10px; font-size: 11px; color: var(--vscode-descriptionForeground); border-bottom: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.08)); }
+      .dropdown button.item { width: 100%; text-align: left; padding: 8px 10px; background: transparent; color: inherit; border: none; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+      .dropdown button.item:hover { background: rgba(255,255,255,0.06); }
+      .dropdown .item.custom { border-top: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.08)); justify-content: flex-start; gap: 8px; }
+      .send-btn { padding: 6px; border-radius: 9999px; }
+      .send-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+      .icon-svg { width: 16px; height: 16px; display: inline-block; }
       textarea {
         flex: 1;
         resize: none;
@@ -201,10 +257,8 @@ export function getHtmlForWebview(
         font-size: 13px;
         cursor: pointer;
       }
-      #sendBtn {
-        background: var(--vscode-button-background);
-        color: var(--vscode-button-foreground);
-      }
+      /* Keep send button unstyled (no blue background) */
+      #sendBtn { background: transparent; color: inherit; }
       #sendBtn.hidden {
         display: none;
       }
@@ -392,10 +446,59 @@ export function getHtmlForWebview(
     <div id="welcomeScreen" style="display:none;" aria-hidden="true"></div>
     <div id="messages"></div>
     ${getSettingsModalHtml()}
+    ${getHistoryHtml()}
     <div class="input-bar">
-      <textarea id="chatInput" rows="1" placeholder="Ask anything..."></textarea>
-      <button id="stopBtn" type="button">Stop</button>
-      <button id="sendBtn" type="button">Send</button>
+      <div class="chatbox">
+        <textarea id="chatInput" rows="1" placeholder="Ask anything (Ctrl+L)" style="max-height:200px; min-height:44px"></textarea>
+        <div class="chatbox-toolbar">
+          <div class="left">
+            <div class="menu" id="modeMenu">
+              <button class="chip-btn" id="modeToggle" title="Mode">
+                <span id="modeIcon">
+                  <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 18 22 12 16 6"/>
+                    <polyline points="8 6 2 12 8 18"/>
+                  </svg>
+                </span>
+                <span id="modeLabel">Code</span>
+              </button>
+              <div class="dropdown" id="modeDropdown">
+                <button class="item" data-mode="code"><span>Code</span><span class="desc" style="opacity:.6;font-size:11px">Cascade can write and edit code</span></button>
+                <button class="item" data-mode="chat"><span>Chat</span><span class="desc" style="opacity:.6;font-size:11px">Chat with Cascade</span></button>
+              </div>
+            </div>
+            <div class="menu" id="modelMenu">
+              <button class="chip-btn" id="modelToggle" title="Model">
+                <span id="modelLabel">GPT-5 (low reasoning)</span>
+              </button>
+              <div class="dropdown" id="modelDropdown">
+                <div class="section-title">Recently Used</div>
+                <button class="item" data-model="gpt5-low"><span>GPT-5 (low reasoning)</span><span style="opacity:.6;font-size:11px">0.5x</span></button>
+                <button class="item" data-model="gpt5-high"><span>GPT-5 (high reasoning)</span><span style="opacity:.6;font-size:11px">3x</span></button>
+                <div class="section-title">Recommended</div>
+                <button class="item" data-model="gpt4"><span>GPT-4</span><span style="opacity:.6;font-size:11px">2x</span></button>
+                <button class="item" data-model="sonnet-4.5"><span>Claude Sonnet 4.5</span><span style="opacity:.6;font-size:11px">2x</span></button>
+                <button class="item" data-model="sonnet-4-thinking"><span>Claude Sonnet 4.5 Thinking</span><span style="opacity:.6;font-size:11px">3x</span></button>
+                <button class="item custom" data-action="custom-api"><span>Use custom API key…</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="right">
+            <button class="icon-btn" id="mentionBtn" title="Mention"><span style="font-weight:600; font-size:13px;">@</span></button>
+            <button class="icon-btn send-btn" id="stopBtn" type="button" title="Stop">
+              <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="6" width="12" height="12" rx="1"/>
+              </svg>
+            </button>
+            <button class="icon-btn send-btn" id="sendBtn" type="button" title="Send">
+              <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 2L11 13"/>
+                <path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
   </body>
