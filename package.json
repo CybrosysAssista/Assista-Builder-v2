@@ -11,7 +11,6 @@
   ],
   "activationEvents": [
     "onView:assistaXView",
-    "onCommand:assistaX.generateOdooModule",
     "onCommand:assistaX.open",
     "onCommand:assistaX.settings",
     "onCommand:assistaX.openHistory",
@@ -38,7 +37,10 @@
       ]
     },
     "commands": [
-      { "command": "assistaX.open", "title": "Open Assista X" },
+      {
+        "command": "assistaX.open",
+        "title": "Open Assista X"
+      },
       {
         "command": "assistaX.newChat",
         "title": "New Chat",
@@ -53,10 +55,6 @@
         "command": "assistaX.openHistory",
         "title": "History",
         "icon": "$(history)"
-      },
-      {
-        "command": "assistaX.generateOdooModule",
-        "title": "Generate Odoo Module"
       }
     ],
     "menus": {
@@ -239,6 +237,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/diff": "^7.0.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.102.0",
@@ -253,6 +252,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.20.0",
     "@xmldom/xmldom": "^0.8.11",
+    "diff": "^7.0.0",
     "ts-node": "^10.9.2"
   }
 }

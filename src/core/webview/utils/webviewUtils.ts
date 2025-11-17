@@ -4,27 +4,27 @@ import { getSettingsModalHtml } from '../settings/settingsHtml.js';
 import { getHistoryHtml } from '../history/historyHtml.js';
 
 function getNonce(): string {
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let text = '';
-    for (let i = 0; i < 32; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-    return text;
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let text = '';
+  for (let i = 0; i < 32; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
 }
 
 export function getHtmlForWebview(
-    webview: vscode.Webview,
-    extensionUri: vscode.Uri
+  webview: vscode.Webview,
+  extensionUri: vscode.Uri
 ): string {
-    const nonce = getNonce();
-    const outPath = vscode.Uri.joinPath(extensionUri, 'out', 'core', 'webview', 'ui', 'main.js').fsPath;
-    const scriptPath = fs.existsSync(outPath)
-        ? ['out', 'core', 'webview', 'ui', 'main.js']
-        : ['src', 'core', 'webview', 'ui', 'main.js'];
+  const nonce = getNonce();
+  const outPath = vscode.Uri.joinPath(extensionUri, 'out', 'core', 'webview', 'ui', 'main.js').fsPath;
+  const scriptPath = fs.existsSync(outPath)
+    ? ['out', 'core', 'webview', 'ui', 'main.js']
+    : ['src', 'core', 'webview', 'ui', 'main.js'];
 
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...scriptPath));
+  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...scriptPath));
 
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />

@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { getActiveProviderConfig } from '../services/configService.js';
 import { generateWithOpenAICompat } from './providers/openai.js';
 import { generateWithGoogle } from './providers/google.js';
-import * as tools from '../services/toolService.js';
 import {
     ChatMessage,
     clearActiveSession,
@@ -11,15 +10,9 @@ import {
     trimHistory
 } from './sessionManager.js';
 import { getSystemPrompts } from './prompts/systemPrompts.js';
+import { TOOL_REGISTRY } from '../tools/registry.js';
 
 type ToolFn = (...args: any[]) => Promise<any> | any;
-
-const TOOL_REGISTRY: Record<string, ToolFn> = {
-    list_files: tools.listFiles,
-    get_file_content: tools.getFileContent,
-    write_file: tools.writeFileContent,
-    search_in_project: tools.searchInProject,
-};
 
 function normalizeMessages(raw: any[]): ChatMessage[] {
     if (!Array.isArray(raw)) {
@@ -27,27 +20,18 @@ function normalizeMessages(raw: any[]): ChatMessage[] {
     }
     const normalized: ChatMessage[] = [];
     for (const entry of raw) {
-        if (!entry) continue;
+        if (!entry) { continue; }
         const rawRole = typeof entry.role === 'string' ? entry.role.toLowerCase() : 'user';
         const role: ChatMessage['role'] =
             rawRole === 'assistant' ? 'assistant' :
-            rawRole === 'system' ? 'system' : 'user';
+                rawRole === 'system' ? 'system' : 'user';
         const rawContent = (entry as any).content;
-        if (rawContent == null) continue;
+        if (rawContent === null) { continue; }
         const text = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
-        if (!text.trim()) continue;
+        if (!text.trim()) { continue; }
         normalized.push({ role, content: text });
     }
     return normalized;
-}
-
-/** Tool call dispatcher */
-async function handleToolCall(toolCall: any): Promise<any> {
-    const name: string | undefined = toolCall?.name;
-    const args: any[] = Array.isArray(toolCall?.args) ? toolCall.args : [];
-    const fn = name ? TOOL_REGISTRY[name] : undefined;
-    if (!fn) throw new Error(`Tool "${name ?? '<unknown>'}" is not registered.`);
-    return await fn(...args);
 }
 
 /** Build the final messages array for provider call.
@@ -68,7 +52,7 @@ async function assemblePrompt(
         ? normalizeMessages(params.messages)
         : normalizeMessages([{ role: 'user', content: params.contents }]);
 
-    if (!newMessages.length) throw new Error('runAgent requires at least one user message.');
+    if (!newMessages.length) { throw new Error('runAgent requires at least one user message.'); }
 
     // Future: insert RAG/context here, e.g. await attachRagContext(...)
     const messages: ChatMessage[] = getSystemPrompts();
@@ -100,11 +84,15 @@ async function callProvider(
     const { provider, config: providerConfig } = await getActiveProviderConfig(context);
 
     // Hook point: you could perform pre-call transformations here (rate-limiting, chunking)
+    console.log('[Assista X] Provider request payload:', payload);
+    let providerResponse;
     if (provider === 'google') {
-        return await generateWithGoogle(payload, providerConfig, context);
+        providerResponse = await generateWithGoogle(payload, providerConfig, context);
     } else {
-        return await generateWithOpenAICompat(payload, providerConfig, provider, context);
+        providerResponse = await generateWithOpenAICompat(payload, providerConfig, provider, context);
     }
+    console.log('[Assista X] Provider response:', providerResponse);
+    return providerResponse;
 }
 
 /** Persist assistant reply into session store (keeps existing behaviour) */
@@ -130,11 +118,18 @@ async function persistAssistantReply(
 }
 
 export async function runAgent(params: any = {}, context: vscode.ExtensionContext): Promise<any> {
-    if (!context) throw new Error('Extension context is required.');
-
-    // Tool call mode (short-circuit)
+    if (!context) { throw new Error('Extension context is required.'); }
     if (params?.toolCall) {
-        return await handleToolCall(params.toolCall);
+        const name = params.toolCall.name  as keyof typeof TOOL_REGISTRY;
+        const args = Array.isArray(params.toolCall.args) ? params.toolCall.args : [];
+
+        const fn = TOOL_REGISTRY[name] as ToolFn | undefined;
+        if (!fn) {
+            throw new Error(`Unknown tool: ${name}`);
+        }
+
+        console.log(`[Assista X] Executing tool: ${name}`);
+        return await fn(...args);
     }
 
     // Load session history
@@ -149,11 +144,6 @@ export async function runAgent(params: any = {}, context: vscode.ExtensionContex
 
     // Build messages (includes system + session + new user messages)
     const requestMessages = await assemblePrompt(params, sessionHistory);
-
-    // Logging (concise)
-    try {
-        console.debug('[Assista X] request messages length:', requestMessages.length);
-    } catch { /* no-op */ }
 
     // Call LLM provider
     const response = await callProvider(requestMessages, params, context);

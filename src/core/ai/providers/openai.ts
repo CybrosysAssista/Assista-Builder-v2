@@ -21,7 +21,7 @@ export async function generateWithOpenAICompat(
     context: vscode.ExtensionContext
 ): Promise<string> {
     const url = getApiUrl(provider, config);
-    if (!url) throw new Error(`URL for provider ${provider} not configured.`);
+    if (!url) { throw new Error(`URL for provider ${provider} not configured.`); }
 
     const systemPrompt = params.config?.systemInstruction || '';
     // Support either a full messages array or a single string prompt
@@ -31,7 +31,7 @@ export async function generateWithOpenAICompat(
         // Prepend system if provided and not already present
         if (systemPrompt) {
             const hasSystem = messages.length && messages[0].role === 'system';
-            if (!hasSystem) messages.unshift({ role: 'system', content: systemPrompt });
+            if (!hasSystem) { messages.unshift({ role: 'system', content: systemPrompt }); }
         }
     } else {
         let userPrompt = params.contents;
@@ -51,9 +51,9 @@ export async function generateWithOpenAICompat(
 
     // Optional generation parameters passthrough
     const reqCfg = params.config || {};
-    if (typeof reqCfg.temperature === 'number') body.temperature = reqCfg.temperature;
-    if (typeof reqCfg.maxTokens === 'number') body.max_tokens = reqCfg.maxTokens;
-    if (typeof reqCfg.topP === 'number') body.top_p = reqCfg.topP;
+    if (typeof reqCfg.temperature === 'number') { body.temperature = reqCfg.temperature; }
+    if (typeof reqCfg.maxTokens === 'number') { body.max_tokens = reqCfg.maxTokens; }
+    if (typeof reqCfg.topP === 'number') { body.top_p = reqCfg.topP; }
 
     // Enforce JSON mode where supported and append guard instruction once
     if (reqCfg?.responseMimeType === 'application/json') {

@@ -64,7 +64,7 @@ export async function getActiveProviderConfig(
     // Normalize Google model ids to v1beta-supported variants
     if (activeProvider === 'google') {
         const normalizeGoogleModelId = (m: string): string => {
-            if (!m) return m;
+            if (!m) { return m; }
             const map: Record<string, string> = {
                 'gemini-1.5-flash-latest': 'gemini-1.5-flash-001',
                 'gemini-1.5-flash': 'gemini-1.5-flash-001',

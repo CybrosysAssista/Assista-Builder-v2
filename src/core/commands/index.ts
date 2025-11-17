@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { registerGenerateModuleCommand } from './generateModule.js';
 import type { AssistaXProvider } from '../webview/AssistaXProvider.js';
 
 export function registerAllCommands(
@@ -7,8 +6,6 @@ export function registerAllCommands(
     provider: AssistaXProvider
 ): vscode.Disposable[] {
     const disposables: vscode.Disposable[] = [];
-
-    disposables.push(registerGenerateModuleCommand(context, provider));
 
     disposables.push(
         vscode.commands.registerCommand('assistaX.open', () => {
