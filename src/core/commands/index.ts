@@ -33,7 +33,7 @@ export function registerAllCommands(
     disposables.push(
         vscode.commands.registerCommand('assistaX.openHistory', async () => {
             await vscode.commands.executeCommand('assistaX.open');
-            await provider.showHistoryPicker();
+            provider.showHistory();
         })
     );
 

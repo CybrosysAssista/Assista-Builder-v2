@@ -4,31 +4,39 @@ export function getSettingsModalHtml(): string {
     <div id="settingsPage" style="display:none">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        .sidebar { width: 200px; border-right: 1px solid #333; display: flex; flex-direction: column; overflow-y: auto; transition: width 0.3s ease; }
+        /* Ensure no outer padding/margins so sidebar is flush to the panel edge */
+        html, body, #settingsPage { margin: 0 !important; padding: 0 !important; }
+        .sidebar { width: 200px; border-right: none; display: flex; flex-direction: column; overflow-y: auto; transition: width 0.3s ease; background-color: transparent; box-shadow: none; }
         .sidebar.collapsed { width: 50px; }
-        .sidebar-item { position: relative; padding: 12px 20px 12px 24px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #cccccc; transition: background-color 0.2s; }
+        .sidebar-item { position: relative; padding: 12px 16px 12px 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #cccccc; transition: background-color 0.2s; }
         .sidebar-item:hover { background-color: #2a2d2e; }
         .sidebar-item.active { background-color: #094771; }
-        .sidebar-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: transparent; }
-        .sidebar-item.active::before { background: #0e639c; }
+        /* Remove accent bar so active background starts at absolute left */
+        .sidebar-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: transparent; }
         .sidebar-item-icon { font-size: 16px; flex-shrink: 0; }
         .sidebar-item-icon svg { width: 16px; height: 16px; fill: currentColor; display: block; }
         .sidebar-item-text { overflow: hidden; text-overflow: ellipsis; transition: opacity 0.2s; }
         .sidebar.collapsed .sidebar-item { padding: 12px; justify-content: center; }
         .sidebar.collapsed .sidebar-item-text { opacity: 0; width: 0; }
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%; }
-        .settings-frame { display: flex; height: 100vh; min-height: 100vh; gap: 12px; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%; background-color: transparent; border-left: none; padding-left: 0; }
+        .settings-frame { display: flex; height: 100vh; min-height: 100vh; gap: 0; background-color: transparent; }
+        .sidebar, .settings-frame { margin: 0; padding: 0; }
         .sidebar { height: 100%; align-self: stretch; }
-        .settings-container { flex: 1; overflow-y: auto; padding: 20px 40px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #333; }
-        .header h1 { font-size: 24px; font-weight: 400; color: #cccccc; }
-        .header-buttons { display: flex; gap: 10px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; padding: 12px 16px; border-bottom: 1px solid #333; flex-wrap: nowrap; column-gap: 12px; }
+        .header h1 { font-size: 24px; font-weight: 400; color: #cccccc; margin: 0; flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+{{ ... }}
+        .header-buttons .btn { white-space: nowrap; }
         .btn { padding: 8px 16px; border: none; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 500; }
         .btn.btn-save { background-color: #0e639c; color: white; }
         .btn.btn-done { background-color: #3c3c3c; color: #cccccc; }
         .section { margin-bottom: 30px; }
-        .section-title { font-size: 13px; color: #cccccc; margin-bottom: 8px; font-weight: 400; }
+        /* Ensure content aligns with subheader padding */
+        .content-body { padding: 0 12px; }
+        .settings-container { padding: 0 8px 16px 12px; }
+        .section-title { font-size: 13px; color: #cccccc; margin-bottom: 8px; font-weight: 600; }
         .section-description { font-size: 12px; color: #888; margin-bottom: 15px; }
+        /* Make content section headings bold (e.g., General Settings h2) */
+        .settings-container h2, .content-body h2 { font-weight: 600 !important; }
         .profile-row { display: flex; align-items: center; margin-bottom: 15px; }
         .profile-row select { flex: 1; }
         .inline-buttons { display: flex; gap: 5px; margin-left: 10px; }
@@ -40,6 +48,10 @@ export function getSettingsModalHtml(): string {
         select, input[type="text"], input[type="password"] { width: 100%; padding: 8px 12px; background-color: #3c3c3c; border: 1px solid #3c3c3c; color: #cccccc; border-radius: 3px; font-size: 13px; outline: none; }
         select:focus, input:focus { border-color: #007acc; }
 
+        /* Subheading for active section (text only) */
+        .subheader { display: flex; align-items: center; height: 32px; padding: 0 12px; color: #cccccc; background-color: #1f1f1f; margin-bottom: 5px; }
+        .subheader .subheader-text { font-size: 13px; font-weight: 500; }
+
         /* Responsive tweaks */
         @media (max-width: 768px) {
           .sidebar { width: 50px; }
@@ -48,9 +60,16 @@ export function getSettingsModalHtml(): string {
         }
         @media (max-width: 600px) {
           .settings-container { padding: 20px 16px; }
-          .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+          .header { flex-direction: row; align-items: center; }
         }
       </style>
+      <div class="header">
+        <h1>Settings</h1>
+        <div class="header-buttons">
+          <button class="btn btn-save" id="settingsSaveBtn">Save</button>
+          <button class="btn btn-done" id="settingsDoneBtn">Done</button>
+        </div>
+      </div>
       <div class="settings-frame">
         <div class="sidebar" id="sidebar">
           <div class="sidebar-item active" onclick="showSection('providers')">
@@ -71,16 +90,11 @@ export function getSettingsModalHtml(): string {
           </div>
         </div>
         <div class="main-content" id="providersSection">
-          <div class="header">
-            <h1>Settings</h1>
-            <div class="header-buttons">
-              <button class="btn btn-save" id="settingsSaveBtn">Save</button>
-              <button class="btn btn-done" id="settingsDoneBtn">Done</button>
-            </div>
-          </div>
+          <div class="subheader"><span class="subheader-text">Providers</span></div>
+          <div class="content-body">
 
             <div class="section">
-              <div class="section-title">API Provider <a href="#" class="link" id="docLink">OpenRouter documentation</a></div>
+              <div class="section-title">API Provider </div>
               <select id="provider">
                 <option value="openrouter">OpenRouter</option>
                 <option value="anthropic">Anthropic</option>
@@ -115,6 +129,7 @@ export function getSettingsModalHtml(): string {
           </div>
 
           <div class="settings-container" id="generalSection" style="display:none;">
+            <div class="subheader"><span class="subheader-text">General</span></div>
             <div class="section">
               <h2 style="font-size: 18px; font-weight: 500; margin-bottom: 20px;">General Settings</h2>
               <p style="color: #888;">General configuration options will appear here.</p>

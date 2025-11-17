@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { getSettingsModalHtml } from '../settings/settingsHtml.js';
+import { getHistoryHtml } from '../history/historyHtml.js';
 
 function getNonce(): string {
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -392,6 +393,7 @@ export function getHtmlForWebview(
     <div id="welcomeScreen" style="display:none;" aria-hidden="true"></div>
     <div id="messages"></div>
     ${getSettingsModalHtml()}
+    ${getHistoryHtml()}
     <div class="input-bar">
       <textarea id="chatInput" rows="1" placeholder="Ask anything..."></textarea>
       <button id="stopBtn" type="button">Stop</button>

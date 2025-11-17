@@ -1,10 +1,12 @@
 import { initChatUI } from './chat.js';
 import { initSettingsUI } from './settings.js';
+import { initHistoryUI } from './history.js';
 
 const vscode = acquireVsCodeApi();
 
 const chat = initChatUI(vscode);
 const settings = initSettingsUI(vscode);
+const history = initHistoryUI(vscode);
 
 const bootState = typeof vscode.getState === 'function' ? vscode.getState() : undefined;
 if (bootState && Array.isArray(bootState.messages)) {
@@ -38,6 +40,9 @@ window.addEventListener('message', (event) => {
         case 'showSettings':
             settings.openSettings();
             break;
+        case 'showHistory':
+            history.openHistory();
+            break;
         case 'sessionHydrated': {
             const payload = message.payload || {};
             chat.renderSession(payload.sessionId, Array.isArray(payload.messages) ? payload.messages : []);
@@ -46,6 +51,27 @@ window.addEventListener('message', (event) => {
         case 'settingsData':
             settings.applySettingsData(message.payload || {});
             break;
+        case 'historyData':
+            history.applyHistoryData(message.payload || {});
+            break;
+        case 'historyOpened':
+            // After switching session, close the history overlay
+            if (history && typeof history.closeHistory === 'function') {
+                history.closeHistory();
+            }
+            break;
+        case 'historyDeleted':
+            // No-op: optimistic UI already removed the item. Could show a toast here.
+            break;
+        case 'historyDeleteFailed': {
+            // Reload authoritative list and notify user
+            vscode.postMessage({ command: 'loadHistory' });
+            const payload = message.payload || {};
+            if (payload && payload.error) {
+                try { alert('Delete failed: ' + String(payload.error)); } catch (_) {}
+            }
+            break;
+        }
         case 'modelsListed':
             settings.applyModelList(message.payload || {});
             break;
