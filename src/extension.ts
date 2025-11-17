@@ -17,4 +17,4 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(...commandDisposables);
 }
 
-export function deactivate() {}
+export function deactivate() { }

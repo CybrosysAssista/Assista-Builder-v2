@@ -12,6 +12,17 @@ const SYSTEM_PROMPTS: ReadonlyArray<ChatMessage> = Object.freeze([
     {
         role: 'system',
         content: 'Never guess unknown facts, never output destructive commands unless explicitly requested and safe, and never expose private data, secrets, or internal file paths unless provided by the user. Prioritize accuracy, reliability, and a professional tone.'
+    },
+    {
+        role: 'system',
+        content: `When you want the assistant to perform filesystem or repo actions, return EXACTLY a JSON object with a "toolCall" field:
+{
+  "toolCall": {
+    "name": "read_file" | "write_file" | "apply_patch" | "create_folder",
+    "args": [ ... ]
+  }
+}
+Do not include extra text. If you only need to explain something, respond normally (no toolCall).`
     }
 ]);
 
@@ -22,4 +33,3 @@ export function getSystemPrompts(): ChatMessage[] {
         timestamp: prompt.timestamp
     }));
 }
-
