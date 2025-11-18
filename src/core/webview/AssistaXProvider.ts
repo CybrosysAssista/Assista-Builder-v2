@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../ai/sessionManager.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
 import { HistoryController } from './history/HistoryController.js';
+import { MentionController } from './mentions/MentionController.js';
 import { runAgent } from "../ai/agent.js";
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
@@ -13,6 +15,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
     private _pendingShowHistory = false;
     private _settings?: SettingsController;
     private _history?: HistoryController;
+    private _mentions?: MentionController;
     private _pendingHydration?: { sessionId: string; messages: ChatMessage[] };
 
     constructor(
@@ -39,6 +42,9 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             this.postMessage(type, payload);
         });
         this._history = new HistoryController(this._context, (type: string, payload?: any) => {
+            this.postMessage(type, payload);
+        });
+        this._mentions = new MentionController(this._context, (type: string, payload?: any) => {
             this.postMessage(type, payload);
         });
 
@@ -75,6 +81,8 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 await this._settings?.handleListModels(message);
                 return;
             }
+            // Delegate mention-related commands
+            if (await this._mentions?.handle(message)) { return; }
 
             // History page commands
             if (message.command === 'loadHistory') {

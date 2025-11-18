@@ -27,22 +27,31 @@ export function getHistoryHtml(): string {
         /* soft glowing background layer */
         .hx-search .back { position: absolute; inset: 0; background: rgba(255,255,255,0.05); border-radius: 28px; filter: blur(20px); transition: background .3s ease, filter .3s ease; }
         .hx-search .wrap:hover .back { background: rgba(255,255,255,0.10); filter: blur(24px); }
-        .hx-input { position: relative; width: 100%; padding: 14px 16px 14px 48px; background: #0b0b0c; color: #e5e7eb; border: 1px solid rgba(255,255,255,0.08); border-radius: 28px; outline: none; font-size: 13px; transition: background .25s ease, border-color .25s ease, box-shadow .25s ease; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(255,255,255,0.06), 0 6px 18px rgba(0,0,0,0.25); }
-        .hx-input:focus {  background: #0b0b0c; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 2px rgba(255,255,255,0.14), 0 8px 22px rgba(0,0,0,0.3); }
+        .hx-input { position: relative; width: 100%; padding: 14px 16px 14px 48px; background: #0b0b0c; color: #e5e7eb; border: 1px solid rgba(255,255,255,0.08); border-radius: 28px; outline: none; font-size: 13px; }
+        /* Neutral focus for search: no glow/border change */
+        .hx-input:focus,
+        .hx-input:focus-visible { outline: none; box-shadow: none; border-color: rgba(255,255,255,0.08); background: #0b0b0c; }
         .hx-input::placeholder { color:rgba(154, 160, 166, 0.2); }
         .hx-search .icon { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #9ca3af; transition: color .25s ease; z-index: 10; opacity: 0.9; }
         .hx-search .wrap:hover .icon { color: #d1d5db; opacity: 1; }
         /* Filters */
         .hx-filters { position: relative; z-index: 10; display: flex; gap: 12px; padding: 0 24px 16px; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); }
-        .hx-select { flex: 1; padding: 12px 14px; background: #0b0b0c; color: #fff; border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; font-size: 13px; box-shadow: inset 0 0 0 0 rgba(251,191,36,0); appearance: none; -webkit-appearance: none; color-scheme: dark; }
-        .hx-select:focus { outline: none; border-color: rgba(251,191,36,0.6); box-shadow: 0 0 0 2px rgba(251,191,36,0.4); background: #0f0f10; }
+        .hx-select { flex: 1; padding: 12px 14px; background: #0b0b0c; color: #fff; border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; font-size: 13px; appearance: none; -webkit-appearance: none; color-scheme: dark; }
+        /* Neutral focus: no yellow outline/border */
+        .hx-select:focus,
+        .hx-select:focus-visible { outline: none; border-color: rgba(255,255,255,0.12); box-shadow: none; background: #0b0b0c; }
         /* Ensure the dropdown list matches dark theme in Chromium-based webviews */
         .hx-select option, .hx-select optgroup { background: #0b0b0c; color: #e5e7eb; }
         /* Keep dropdown options same color on hover/selection */
+        .hx-select option,
+        .hx-select optgroup { background: #0b0b0c !important; color: #e5e7eb !important; }
         .hx-select option:hover,
         .hx-select option:checked,
         .hx-select option:focus,
         .hx-select option:active { background: #0b0b0c !important; color: #e5e7eb !important; }
+        /* Suppress OS selection highlight where supported */
+        .hx-select option::selection { background: transparent; color: inherit; }
+        .hx-select option::-moz-selection { background: transparent; color: inherit; }
         /* List */
         .hx-list { position: relative; z-index: 10; flex: 1; overflow-y: auto; padding: 16px 24px 24px; }
         .hx-card-wrap { position: relative; margin: 12px 0; }
