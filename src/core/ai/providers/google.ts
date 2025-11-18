@@ -9,7 +9,7 @@ export async function generateWithGoogle(
     config: ProviderConfig,
     _context: vscode.ExtensionContext
 ): Promise<string> {
-    const maxRetries = 3;
+    const maxRetries = 10;
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
