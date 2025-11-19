@@ -1,3 +1,5 @@
+import { initMentionsUI } from './mentions.js';
+
 export function initChatUI(vscode) {
     const messagesEl = document.getElementById('messages');
     const inputEl = document.getElementById('chatInput');
@@ -14,6 +16,8 @@ export function initChatUI(vscode) {
     const modelDropdown = document.getElementById('modelDropdown');
     const modelLabel = document.getElementById('modelLabel');
     const mentionBtn = document.getElementById('mentionBtn');
+    const mentionMenu = document.getElementById('mentionMenu');
+    const mentionPickFiles = document.getElementById('mentionPickFiles');
     const micBtn = document.getElementById('micBtn');
     const settingsBtn = document.getElementById('settingsBtn');
 
@@ -105,6 +109,19 @@ export function initChatUI(vscode) {
         inputEl.style.height = "";
     }
 
+    function insertAtCursor(text) {
+        if (!inputEl) return;
+        const start = inputEl.selectionStart ?? inputEl.value.length;
+        const end = inputEl.selectionEnd ?? inputEl.value.length;
+        const before = inputEl.value.slice(0, start);
+        const after = inputEl.value.slice(end);
+        inputEl.value = `${before}${text}${after}`;
+        const pos = start + text.length;
+        try { inputEl.selectionStart = inputEl.selectionEnd = pos; } catch(_) {}
+        inputEl.dispatchEvent(new Event('input'));
+        inputEl.focus();
+    }
+
     function renderSession(sessionId, messages) {
         if (!messagesEl) {
             return;
@@ -182,6 +199,15 @@ export function initChatUI(vscode) {
         } catch (_) { /* no-op */ }
     }
 
+    // Mentions module
+    const mentions = initMentionsUI(vscode, {
+        inputEl,
+        mentionBtn,
+        menuEl: mentionMenu,
+        pickFilesEl: mentionPickFiles,
+        insertAtCursor,
+    });
+
     function applyMode(mode) {
         selectedMode = mode;
         if (modeLabel) modeLabel.textContent = mode === 'code' ? 'Code' : 'Chat';
@@ -244,15 +270,19 @@ export function initChatUI(vscode) {
             modelDropdown.classList.remove('visible');
             showModelMenu = false;
         }
+        // mention menu handled by mentions.js
     });
+    // Escape and outside click handled by mentions.js
 
-    // Plus, Mention, Mic, Settings placeholders
+    // Plus, Mic, Settings placeholders (Mention handled by mentions.js)
     addBtn?.addEventListener('click', () => {
         try { vscode.postMessage({ command: 'quickActions' }); } catch (_) {}
     });
-    mentionBtn?.addEventListener('click', () => {
-        try { inputEl?.focus(); document.execCommand?.('insertText', false, '@'); } catch (_) {}
-    });
+    // Mention UI fully handled by mentions.js
+
+    // Pass-through to mentions module
+    function setMentionRecentNames(names) { mentions.setRecentNames(names); }
+    function setPickerItems(items) { mentions.setPickerItems?.(items); }
     micBtn?.addEventListener('click', () => {
         try { vscode.postMessage({ command: 'voiceInput' }); } catch (_) {}
     });
@@ -309,5 +339,8 @@ export function initChatUI(vscode) {
         showChatArea,
         getActiveSessionId: () => activeSessionId,
         isBusy: () => isBusy,
+        insertAtCursor,
+        setMentionRecentNames,
+        setPickerItems,
     };
 }

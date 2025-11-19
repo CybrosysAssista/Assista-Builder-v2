@@ -4,8 +4,6 @@ export function initHistoryUI(vscode) {
     const listEl = document.getElementById('historyList');
     const emptyEl = document.getElementById('historyEmpty');
     const searchEl = document.getElementById('historySearch');
-    const workspaceEl = document.getElementById('historyWorkspace');
-    const sortEl = document.getElementById('historySort');
     const doneBtn = document.getElementById('historyDoneBtn');
     const messagesEl = document.getElementById('messages');
     const inputBar = document.querySelector('.input-bar');
@@ -51,7 +49,7 @@ export function initHistoryUI(vscode) {
         if (settingsPage) settingsPage.style.display = 'none';
         historyPage.style.display = 'block';
         // Ensure it stacks on top
-        try { historyPage.style.zIndex = '9999'; historyPage.style.position = historyPage.style.position || 'relative'; } catch (_) {}
+        try { historyPage.style.zIndex = '9999'; historyPage.style.position = historyPage.style.position || 'relative'; } catch (_) { }
         // Normalize scroll immediately and after layout
         resetScrollPositions();
         requestAnimationFrame(resetScrollPositions);
@@ -69,14 +67,82 @@ export function initHistoryUI(vscode) {
         inputBar && (inputBar.style.display = '');
     }
 
+    // Dropdown State
+    let currentWorkspace = 'all';
+    let currentSort = 'recent';
+
+    // Helper to setup custom dropdown
+    function setupDropdown(wrapId, btnId, onSelect) {
+        const wrap = document.getElementById(wrapId);
+        const btn = document.getElementById(btnId);
+        if (!wrap || !btn) return;
+
+        const menu = wrap.querySelector('.hx-dd-menu');
+        const label = btn.querySelector('.label');
+
+        // Toggle
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Close others
+            document.querySelectorAll('.hx-dd-menu').forEach(m => {
+                if (m !== menu) m.classList.remove('show');
+            });
+            document.querySelectorAll('.hx-dd-wrap').forEach(w => {
+                if (w !== wrap) w.classList.remove('open');
+            });
+
+            menu.classList.toggle('show');
+            wrap.classList.toggle('open');
+        });
+
+        // Select
+        menu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const item = e.target.closest('.hx-dd-item');
+            if (!item) return;
+
+            const val = item.dataset.value;
+            const text = item.textContent;
+
+            // Update UI
+            label.textContent = text;
+            menu.querySelectorAll('.hx-dd-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+
+            // Close
+            menu.classList.remove('show');
+            wrap.classList.remove('open');
+
+            // Callback
+            onSelect(val);
+        });
+    }
+
+    // Setup Dropdowns
+    setupDropdown('ddWorkspace', 'btnWorkspace', (val) => {
+        currentWorkspace = val;
+        render();
+    });
+
+    setupDropdown('ddSort', 'btnSort', (val) => {
+        currentSort = val;
+        render();
+    });
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.hx-dd-menu').forEach(m => m.classList.remove('show'));
+        document.querySelectorAll('.hx-dd-wrap').forEach(w => w.classList.remove('open'));
+    });
+
     /** RENDER HISTORY */
     function render() {
         if (!listEl || !emptyEl) return;
         listEl.innerHTML = '';
 
         const term = (searchEl?.value || '').toLowerCase();
-        const ws = workspaceEl?.value || 'all';
-        const sort = sortEl?.value || 'recent';
+        const ws = currentWorkspace;
+        const sort = currentSort;
 
         let filtered = items.filter(it => {
             const matches = !term || (it.preview || it.title || '').toLowerCase().includes(term);
@@ -214,8 +280,8 @@ export function initHistoryUI(vscode) {
                 // Fallback: proceed if overlay missing
                 items = items.filter(x => String(x.id) !== String(id));
                 render();
-                try { vscode.postMessage({ command: "deleteSession", id }); } catch (_) {}
-                try { setTimeout(() => vscode.postMessage({ command: "loadHistory" }), 50); } catch (_) {}
+                try { vscode.postMessage({ command: "deleteSession", id }); } catch (_) { }
+                try { setTimeout(() => vscode.postMessage({ command: "loadHistory" }), 50); } catch (_) { }
             }
         }
     }, true);
@@ -235,15 +301,15 @@ export function initHistoryUI(vscode) {
             if (!id) return;
             items = items.filter(x => String(x.id) !== String(id));
             render();
-            try { vscode.postMessage({ command: 'deleteSession', id }); } catch (_) {}
-            try { setTimeout(() => vscode.postMessage({ command: 'loadHistory' }), 50); } catch (_) {}
+            try { vscode.postMessage({ command: 'deleteSession', id }); } catch (_) { }
+            try { setTimeout(() => vscode.postMessage({ command: 'loadHistory' }), 50); } catch (_) { }
         });
     }
 
     /** FILTERS */
     searchEl?.addEventListener('input', render);
-    workspaceEl?.addEventListener('change', render);
-    sortEl?.addEventListener('change', render);
+    // workspaceEl?.addEventListener('change', render); // REMOVED
+    // sortEl?.addEventListener('change', render); // REMOVED
     doneBtn?.addEventListener('click', closeHistory);
 
     /** EXPORT */

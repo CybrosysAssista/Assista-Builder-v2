@@ -7,7 +7,7 @@ export async function applyPatchTool(
   patch: string
 ): Promise<string> {
   const workspace = vscode.workspace.workspaceFolders?.[0];
-  if (!workspace) throw new Error("No workspace open");
+  if (!workspace) { throw new Error("No workspace open"); }
 
   const fileUri = vscode.Uri.joinPath(workspace.uri, path);
 
