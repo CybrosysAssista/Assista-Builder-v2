@@ -26,7 +26,7 @@ export function getSettingsModalHtml(): string {
         .header h1 { font-size: 24px; font-weight: 400; color: #cccccc; margin: 0; flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 {{ ... }}
         .header-buttons .btn { white-space: nowrap; }
-        .btn { padding: 8px 16px; border: none; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .btn { padding: 8px 16px; border: none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; }
         .btn.btn-save { background-color: #0e639c; color: white; }
         .btn.btn-done { background-color: #3c3c3c; color: #cccccc; }
         .section { margin-bottom: 30px; }
@@ -45,7 +45,7 @@ export function getSettingsModalHtml(): string {
         .checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; cursor: pointer; }
         .info-text { font-size: 12px; color: #888; margin-top: 5px; }
         .info-box { background-color: #252526; padding: 15px; border-radius: 4px; margin-top: 15px; font-size: 12px; line-height: 1.6; color: #cccccc; }
-        select, input[type="text"], input[type="password"] { width: 100%; padding: 8px 12px; background-color: #3c3c3c; border: 1px solid #3c3c3c; color: #cccccc; border-radius: 3px; font-size: 13px; outline: none; }
+        select, input[type="text"], input[type="password"] { width: 100%; padding: 8px 12px; background-color: #3c3c3c; border: 1px solid #3c3c3c; color: #cccccc; border-radius: 10px; font-size: 13px; outline: none; }
         /* Neutral focus for Settings fields: no colored outline/border */
         select:focus, select:focus-visible,
         input[type="text"]:focus, input[type="text"]:focus-visible,

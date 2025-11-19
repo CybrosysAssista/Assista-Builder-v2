@@ -57,12 +57,23 @@ export class SettingsController {
         await config.update('activeProvider', activeProvider, vscode.ConfigurationTarget.Global);
       }
 
+
+      // Save or delete Google API key
       if (googleKey) {
         await this.context.secrets.store('assistaX.apiKey.google', googleKey);
+      } else {
+        // User cleared the key - delete it from storage
+        await this.context.secrets.delete('assistaX.apiKey.google');
       }
+
+      // Save or delete OpenRouter API key
       if (openrouterKey) {
         await this.context.secrets.store('assistaX.apiKey.openrouter', openrouterKey);
+      } else {
+        // User cleared the key - delete it from storage
+        await this.context.secrets.delete('assistaX.apiKey.openrouter');
       }
+
 
       const hasGoogleKey = !!(await this.context.secrets.get('assistaX.apiKey.google'));
       const hasOpenrouterKey = !!(await this.context.secrets.get('assistaX.apiKey.openrouter'));
