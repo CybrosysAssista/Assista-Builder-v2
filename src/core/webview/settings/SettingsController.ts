@@ -13,13 +13,17 @@ export class SettingsController {
     const googleModel = providers?.google?.model || '';
     const openrouterModel = providers?.openrouter?.model || '';
 
-    const hasGoogleKey = !!(await this.context.secrets.get('assistaX.apiKey.google'));
-    const hasOpenrouterKey = !!(await this.context.secrets.get('assistaX.apiKey.openrouter'));
+    const googleKey = (await this.context.secrets.get('assistaX.apiKey.google')) || '';
+    const openrouterKey = (await this.context.secrets.get('assistaX.apiKey.openrouter')) || '';
+    const hasGoogleKey = !!googleKey;
+    const hasOpenrouterKey = !!openrouterKey;
 
     this.postMessage('settingsData', {
       activeProvider,
       googleModel,
       openrouterModel,
+      googleKey,
+      openrouterKey,
       hasGoogleKey,
       hasOpenrouterKey,
     });
@@ -87,13 +91,16 @@ export class SettingsController {
       if (provider === 'openrouter') {
         const baseUrl = config.get<string>('providers.openrouter.customUrl', 'https://openrouter.ai/api/v1') || 'https://openrouter.ai/api/v1';
         const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.openrouter')) || '';
-        if (!key) { throw new Error('OpenRouter API key is required to list models.'); }
 
+        // OpenRouter allows listing models without an API key
         const url = `${baseUrl.replace(/\/$/, '')}/models`;
         const headers: Record<string, string> = {
-          'Authorization': `Bearer ${key}`,
           'Accept': 'application/json',
         };
+        if (key) {
+          headers['Authorization'] = `Bearer ${key}`;
+        }
+
         // Optional custom headers same as completions
         const referer = config.get<string>('openrouterHeaders.referer', 'https://assista-x.vscode')!;
         const title = config.get<string>('openrouterHeaders.title', 'Assista X Extension')!;

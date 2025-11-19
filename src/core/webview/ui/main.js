@@ -63,12 +63,49 @@ window.addEventListener('message', (event) => {
         case 'historyDeleted':
             // No-op: optimistic UI already removed the item. Could show a toast here.
             break;
+        case 'mentionInsert': {
+            const payload = message.payload || {};
+            const text = String(payload.text || '');
+            if (text && typeof chat.insertAtCursor === 'function') {
+                chat.insertAtCursor(text + ' ');
+            }
+            break;
+        }
+        case 'mentionRecentFilesData': {
+            const payload = message.payload || {};
+            const names = Array.isArray(payload.names) ? payload.names : [];
+            if (typeof chat.setMentionRecentNames === 'function') {
+                chat.setMentionRecentNames(names);
+            }
+            break;
+        }
+        case 'mentionActiveFileData': {
+            const payload = message.payload || {};
+            const name = String(payload.name || '');
+            if (name && typeof chat.setMentionRecentNames === 'function') {
+                chat.setMentionRecentNames([name]);
+            }
+            break;
+        }
+        case 'mentionWorkspaceItems': {
+            const payload = message.payload || {};
+            const items = Array.isArray(payload.items) ? payload.items : [];
+            // Forward to mentions UI via chat instance wrapper
+            if (typeof chat.setMentionRecentNames === 'function') {
+                // no-op to keep existing API stable
+            }
+            try {
+                // access mentions via closure: we exported setPickerItems on chat init
+                chat.setPickerItems?.(items);
+            } catch (_) { }
+            break;
+        }
         case 'historyDeleteFailed': {
             // Reload authoritative list and notify user
             vscode.postMessage({ command: 'loadHistory' });
             const payload = message.payload || {};
             if (payload && payload.error) {
-                try { alert('Delete failed: ' + String(payload.error)); } catch (_) {}
+                try { alert('Delete failed: ' + String(payload.error)); } catch (_) { }
             }
             break;
         }
@@ -80,9 +117,9 @@ window.addEventListener('message', (event) => {
             break;
         case 'settingsSaved': {
             const payload = message.payload || {};
-            if (payload.success) {
-                settings.closeSettings();
-            }
+            // if (payload.success) {
+            //     settings.closeSettings();
+            // }
             break;
         }
         default:
