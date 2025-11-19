@@ -23,12 +23,18 @@ export function getHtmlForWebview(
     : ['src', 'core', 'webview', 'ui', 'main.js'];
 
   const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...scriptPath));
+  const iconsFilesBase = webview.asWebviewUri(
+    vscode.Uri.joinPath(extensionUri, 'media', 'icons', 'file_icons', 'files')
+  );
+  const iconsFoldersBase = webview.asWebviewUri(
+    vscode.Uri.joinPath(extensionUri, 'media', 'icons', 'file_icons', 'folders')
+  );
 
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Assista X</title>
     <style>
@@ -235,6 +241,32 @@ export function getHtmlForWebview(
       .send-btn { padding: 6px; border-radius: 9999px; }
       .send-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
       .icon-svg { width: 16px; height: 16px; display: inline-block; }
+      /* Mention dropdown */
+      .mention-menu { position: fixed; z-index: 10000; display: none; width: 260px; color: var(--vscode-editor-foreground); max-width: calc(100vw - 16px); }
+      .mention-card { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12)); border-radius: 10px; box-shadow: 0 16px 40px rgba(0,0,0,0.35); overflow: hidden; max-height: min(60vh, 380px); }
+      .mention-card .title { padding: 8px 12px; font-size: 12px; color: var(--vscode-descriptionForeground); border-bottom: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.08)); }
+      .mention-card .item { padding: 10px 12px; cursor: pointer; font-size: 13px; }
+      .mention-card .item:hover { background: rgba(255,255,255,0.06); }
+      .mention-panel { display: none; border-top: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.08)); }
+      .mention-panel.inline-mode .mention-search { display: none; }
+      .mention-search { padding: 8px 12px; }
+      .mention-search input { width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4)); background: var(--vscode-input-background); color: inherit; font-size: 12px; }
+      .mention-list { max-height: 240px; overflow-y: auto; overflow-x: hidden; }
+      .mention-list .row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; width: 100%; min-width: 0; box-sizing: border-box; }
+      .mention-list .row:hover { background: rgba(255,255,255,0.06); }
+      .mention-list .empty { padding: 12px; text-align: center; font-size: 12px; color: var(--vscode-descriptionForeground); }
+      .mention-list .label { font-size: 13px; flex: 0 0 auto; }
+      /* Left/start ellipsis for the path: RTL outer + LTR inner preserves character order */
+      .mention-list .desc { font-size: 11px; opacity: .7; margin-left: 6px; flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; direction: rtl; }
+      .mention-list .desc > span { direction: ltr; unicode-bidi: plaintext; }
+      .file-icon { width: 16px; height: 16px; flex: 0 0 16px; object-fit: contain; opacity: .95; }
+      /* Custom tooltip for full paths (no border, slightly darker background) */
+      .mention-tooltip {
+        position: fixed; z-index: 10001; display: none; padding: 6px 8px; font-size: 11px; border-radius: 6px;
+        background: rgba(0,0,0,0.85); color: var(--vscode-editor-foreground);
+        border: none; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+        max-width: 70vw; pointer-events: none; white-space: pre; overflow-wrap: anywhere;
+      }
       textarea {
         flex: 1;
         resize: none;
@@ -246,9 +278,12 @@ export function getHtmlForWebview(
         color: inherit;
         background: var(--vscode-input-background);
       }
-      textarea:focus {
-        outline: 1px solid var(--vscode-focusBorder);
-        border-color: var(--vscode-focusBorder);
+      /* Neutral focus for chat textarea: no colored outline/border */
+      textarea:focus,
+      textarea:focus-visible {
+        outline: none;
+        border-color: var(--vscode-input-border, rgba(128,128,128,0.4));
+        box-shadow: none;
       }
       button {
         border: none;
@@ -498,8 +533,29 @@ export function getHtmlForWebview(
             </button>
           </div>
         </div>
+        <!-- Mention dropdown, positioned by chat.js near the input caret/button -->
+        <div id="mentionMenu" class="mention-menu" role="menu" aria-hidden="true">
+          <div class="mention-card">
+            <div id="mentionDefaultSection">
+              <div class="item" id="mentionRecent1" role="menuitem" style="display:none;">Recent: (1)</div>
+              <div class="item" id="mentionRecent2" role="menuitem" style="display:none;">Recent: (2)</div>
+              <div class="item" id="mentionRecent3" role="menuitem" style="display:none;">Recent: (3)</div>
+              <div class="item" id="mentionPickFiles" role="menuitem">Files & Folders</div>
+            </div>
+            <div id="mentionPickerPanel" class="mention-panel">
+              <div class="mention-search" style="display:flex; align-items:center; gap:8px;">
+                <input id="mentionPickerSearch" type="text" placeholder="Search files and folders..." />
+              </div>
+              <div id="mentionPickerList" class="mention-list" role="listbox"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+    <script nonce="${nonce}" type="module">
+      window.__ASSISTA_ICON_FILES_BASE__ = '${iconsFilesBase}';
+      window.__ASSISTA_ICON_FOLDERS_BASE__ = '${iconsFoldersBase}';
+    </script>
     <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
   </body>
 </html>`;

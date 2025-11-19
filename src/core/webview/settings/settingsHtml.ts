@@ -1,6 +1,6 @@
 export function getSettingsModalHtml(): string {
-  // Wrapped in a container so we can show/hide it inside the webview
-  return `
+    // Wrapped in a container so we can show/hide it inside the webview
+    return `
     <div id="settingsPage" style="display:none">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -46,7 +46,16 @@ export function getSettingsModalHtml(): string {
         .info-text { font-size: 12px; color: #888; margin-top: 5px; }
         .info-box { background-color: #252526; padding: 15px; border-radius: 4px; margin-top: 15px; font-size: 12px; line-height: 1.6; color: #cccccc; }
         select, input[type="text"], input[type="password"] { width: 100%; padding: 8px 12px; background-color: #3c3c3c; border: 1px solid #3c3c3c; color: #cccccc; border-radius: 3px; font-size: 13px; outline: none; }
-        select:focus, input:focus { border-color: #007acc; }
+        /* Neutral focus for Settings fields: no colored outline/border */
+        select:focus, select:focus-visible,
+        input[type="text"]:focus, input[type="text"]:focus-visible,
+        input[type="password"]:focus, input[type="password"]:focus-visible {
+          outline: none;
+          border-color: #3c3c3c;
+          box-shadow: none;
+          background-color: #3c3c3c;
+        }
+        /* focus style intentionally neutralized via rules above */
 
         /* Subheading for active section (text only) */
         .subheader { display: flex; align-items: center; height: 32px; padding: 0 12px; color: #cccccc; background-color: #1f1f1f; margin-bottom: 5px; }
@@ -109,7 +118,7 @@ export function getSettingsModalHtml(): string {
 
             <div class="section">
               <div class="section-title" id="apiKeyLabel">OpenRouter API Key</div>
-              <input type="password" id="apiKey" placeholder="••••••••••••••••••••••••••••••••" />
+              <input type="password" id="apiKey"  />
               <div class="info-text">API keys are stored securely in VSCode's Secret Storage</div>
             </div>
 
