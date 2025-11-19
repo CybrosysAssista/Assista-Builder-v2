@@ -1,6 +1,6 @@
 export function getSettingsModalHtml(): string {
-  // Wrapped in a container so we can show/hide it inside the webview
-  return `
+    // Wrapped in a container so we can show/hide it inside the webview
+    return `
     <div id="settingsPage" style="display:none">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -118,7 +118,7 @@ export function getSettingsModalHtml(): string {
 
             <div class="section">
               <div class="section-title" id="apiKeyLabel">OpenRouter API Key</div>
-              <input type="password" id="apiKey" />
+              <input type="password" id="apiKey"  />
               <div class="info-text">API keys are stored securely in VSCode's Secret Storage</div>
             </div>
 

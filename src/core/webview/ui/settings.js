@@ -244,6 +244,18 @@ export function initSettingsUI(vscode) {
             const activeProvider = data.activeProvider || 'google';
             if (providerSelect) providerSelect.value = activeProvider;
             updateProviderUiLabels(activeProvider);
+
+            // Load and display the saved API key for the active provider
+            if (apiKeyInput) {
+                if (activeProvider === 'google' && data.googleKey) {
+                    apiKeyInput.value = data.googleKey;
+                } else if (activeProvider === 'openrouter' && data.openrouterKey) {
+                    apiKeyInput.value = data.openrouterKey;
+                } else {
+                    apiKeyInput.value = '';
+                }
+            }
+
             // Initialize custom URL field visibility on load
             updateCustomUrlVisibility();
             if (modelSelect) {
@@ -271,6 +283,9 @@ export function initSettingsUI(vscode) {
             debounceRequestModelList(50);
             try { wireSettingsSidebar(); } catch (_) { }
             try { startSidebarObserver(); } catch (_) { }
+
+            // Disable save button since settings are freshly loaded (no changes yet)
+            disableSaveBtn();
         },
         applyModelList(payload = {}) {
             const { models } = payload;

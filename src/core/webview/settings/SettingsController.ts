@@ -13,13 +13,17 @@ export class SettingsController {
     const googleModel = providers?.google?.model || '';
     const openrouterModel = providers?.openrouter?.model || '';
 
-    const hasGoogleKey = !!(await this.context.secrets.get('assistaX.apiKey.google'));
-    const hasOpenrouterKey = !!(await this.context.secrets.get('assistaX.apiKey.openrouter'));
+    const googleKey = (await this.context.secrets.get('assistaX.apiKey.google')) || '';
+    const openrouterKey = (await this.context.secrets.get('assistaX.apiKey.openrouter')) || '';
+    const hasGoogleKey = !!googleKey;
+    const hasOpenrouterKey = !!openrouterKey;
 
     this.postMessage('settingsData', {
       activeProvider,
       googleModel,
       openrouterModel,
+      googleKey,
+      openrouterKey,
       hasGoogleKey,
       hasOpenrouterKey,
     });
