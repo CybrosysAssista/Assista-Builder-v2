@@ -4,8 +4,8 @@ import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSes
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
 import { HistoryController } from './history/HistoryController.js';
+import { runAgent } from "../ai/agent/agent.js";
 import { MentionController } from './mentions/MentionController.js';
-import { runAgent } from "../ai/agent.js";
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaXView';
@@ -49,7 +49,6 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         });
 
         webviewView.webview.onDidReceiveMessage(async (message) => {
-            try { console.log('[AssistaX] onDidReceiveMessage', message); } catch {}
             if (!message) {
                 return;
             }

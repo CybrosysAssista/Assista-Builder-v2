@@ -81,7 +81,7 @@ export async function generateWithOpenAICompat(
     }
 
     // Fetch with retries and timeout for 429/5xx
-    const maxRetries = 3;
+    const maxRetries = 10;
     let lastErr: any = null;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         const controller = new AbortController();
