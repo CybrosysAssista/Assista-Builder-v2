@@ -1,50 +1,18 @@
+import { z } from "zod";
 import { TOOL_REGISTRY, type ToolFn } from '../../tools/registry.js';
+
+export interface ToolResult {
+    success: boolean;
+    output?: any;
+    error?: string;
+}
 
 export interface ToolCall {
     name: string;
     args?: any[];
+    id?: string;
 }
 
-export function extractToolCall(content: string): ToolCall | null {
-    if (!content || typeof content !== 'string') return null;
-
-    try {
-        const p = JSON.parse(content.trim());
-        const call = p?.toolCall ?? p?.tool_call ?? null;
-        if (call && typeof call.name === 'string') {
-            return call;
-        }
-    } catch {}
-
-    const jsonMatch = content.match(/\{\s*"toolCall"\s*:\s*\{[^}]*"name"\s*:\s*"[^"]+"[^}]*\}\s*\}/);
-    if (jsonMatch) {
-        try {
-            const p = JSON.parse(jsonMatch[0]);
-            const call = p?.toolCall ?? p?.tool_call ?? null;
-            if (call && typeof call.name === 'string') {
-                return call;
-            }
-        } catch {}
-    }
-
-    if (content.includes('toolCall') || content.includes('tool_call')) {
-        const anyJsonMatch = content.match(/\{[\s\S]{0,500}\}/);
-        if (anyJsonMatch) {
-            try {
-                const p = JSON.parse(anyJsonMatch[0]);
-                const call = p?.toolCall ?? p?.tool_call ?? null;
-                if (call && typeof call.name === 'string') {
-                    const knownTools = Object.keys(TOOL_REGISTRY);
-                    if (knownTools.includes(call.name)) {
-                        return call;
-                    }
-                }
-            } catch {}
-        }
-    }
-
-    return null;
-}
 
 export function validateToolCall(call: ToolCall): string | null {
     if (!call || typeof call.name !== 'string') {
@@ -53,8 +21,8 @@ export function validateToolCall(call: ToolCall): string | null {
     if (call.args && !Array.isArray(call.args)) {
         return 'Invalid toolCall: "args" must be an array if present.';
     }
-    const rawFn = (TOOL_REGISTRY as any)[call.name];
-    if (typeof rawFn !== 'function') {
+    const tool = TOOL_REGISTRY[call.name];
+    if (!tool || typeof tool.fn !== "function") {
         return `Unknown tool requested by assistant: ${call.name}. Available tools: ${Object.keys(TOOL_REGISTRY).join(', ')}`;
     }
     const argsContainUndefined = (call.args ?? []).some(a => a === undefined);
@@ -64,38 +32,80 @@ export function validateToolCall(call: ToolCall): string | null {
     return null;
 }
 
-export async function executeToolCall(call: ToolCall): Promise<any> {
-    const validationError = validateToolCall(call);
-    if (validationError) {
-        return { 
-            __toolError: true,
-            error: validationError,
-            toolCall: call
+export async function executeToolCall(call: ToolCall): Promise<ToolResult> {
+    const tool = TOOL_REGISTRY[call.name];
+    if (!tool) {
+        return {
+            success: false,
+            error: `Unknown tool: ${call.name}`
         };
     }
-    
-    const fn = (TOOL_REGISTRY as any)[call.name] as ToolFn;
+
+    // 1️⃣ Validate args
+    let args = call.args ?? [];
+    // If provider sent object → convert to array (OpenAI sends objects)
+    if (!Array.isArray(args) && typeof args === "object") {
+        args = [args];
+    }
+
+    // 2️⃣ Schema validation (if defined)
+    if (tool.schema) {
+        try {
+            args = [tool.schema.parse(args[0])]; // schema forces object-mode
+        } catch (err: any) {
+            return {
+                success: false,
+                error: `Invalid arguments for ${call.name}: ${err.message}`
+            };
+        }
+    }
+
+    // 3️⃣ Execute tool safely
     try {
-        return await fn(...(call.args ?? []));
-    } catch (err) {
-        return { 
-            __toolError: true,
-            error: String(err),
-            toolCall: call
+        let result = await tool.fn.apply(null, args);
+
+        // ensure JSON-safe output
+        if (typeof result === "function") {
+            throw new Error("Tool returned a function — invalid output");
+        }
+        if (typeof result === "bigint") {
+            result = result.toString();
+        }
+
+        const MAX_SIZE = 200_000; // 200 KB text limit for model safety
+        let outputString = JSON.stringify(result);
+        if (outputString.length > MAX_SIZE) {
+            outputString = outputString.slice(0, MAX_SIZE) + "...[TRUNCATED]";
+        }
+
+        return {
+            success: true,
+            output: JSON.parse(outputString)
+        };
+    } catch (err: any) {
+        return {
+            success: false,
+            error: err?.message ?? String(err)
         };
     }
 }
 
-export function makeToolResultMessage(name: string, toolResult: any) {
-    if (toolResult && typeof toolResult === 'object' && toolResult.__toolError) {
+export function makeToolResultMessage(name: string, toolResult: ToolResult, id?: string) {
+    if (!toolResult.success) {
         return {
-            role: 'system' as const,
-            content: `Tool ${name} encountered an error: ${toolResult.error || 'Unknown error'}`
+            role: "tool" as const,
+            content: JSON.stringify({ error: toolResult.error }),
+            tool_call_id: id,
+            name
         };
     }
-    
+
     return {
-        role: 'system' as const,
-        content: `Tool ${name} returned:\n${typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2)}`
+        role: "tool" as const,
+        content: typeof toolResult.output === "string"
+            ? toolResult.output
+            : JSON.stringify(toolResult.output),
+        tool_call_id: id,
+        name
     };
 }

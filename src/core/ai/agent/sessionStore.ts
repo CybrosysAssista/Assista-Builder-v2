@@ -28,17 +28,13 @@ export {
 export async function persistAssistantReply(
     context: vscode.ExtensionContext,
     previousHistory: ChatMessage[],
-    newMessages: ChatMessage[],
-    assistantResponse: any
+    newUserMessages: ChatMessage[],
+    finalAssistant: { role: "assistant"; content: string }
 ): Promise<void> {
-    const assistantContent = typeof assistantResponse === 'string'
-        ? assistantResponse
-        : JSON.stringify(assistantResponse, null, 2);
-
-    const updated: ChatMessage[] = [
+    const updatedHistory: ChatMessage[] = [
         ...previousHistory,
-        ...newMessages,
-        { role: 'assistant', content: assistantContent },
+        ...newUserMessages,
+        finalAssistant
     ];
-    await writeSessionMessages(context, updated);
+    await writeSessionMessages(context, updatedHistory);
 }

@@ -233,6 +233,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "lint": "eslint . --ext .ts,.js",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test"
   },
@@ -253,6 +254,7 @@
     "@google/generative-ai": "^0.20.0",
     "@xmldom/xmldom": "^0.8.11",
     "diff": "^7.0.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "zod": "^4.1.12"
   }
 }
