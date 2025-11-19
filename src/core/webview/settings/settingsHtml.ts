@@ -118,7 +118,7 @@ export function getSettingsModalHtml(): string {
 
             <div class="section">
               <div class="section-title" id="apiKeyLabel">OpenRouter API Key</div>
-              <input type="password" id="apiKey" placeholder="••••••••••••••••••••••••••••••••" />
+              <input type="password" id="apiKey" />
               <div class="info-text">API keys are stored securely in VSCode's Secret Storage</div>
             </div>
 

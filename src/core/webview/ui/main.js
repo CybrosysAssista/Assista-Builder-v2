@@ -97,7 +97,7 @@ window.addEventListener('message', (event) => {
             try {
                 // access mentions via closure: we exported setPickerItems on chat init
                 chat.setPickerItems?.(items);
-            } catch (_) {}
+            } catch (_) { }
             break;
         }
         case 'historyDeleteFailed': {
@@ -105,7 +105,7 @@ window.addEventListener('message', (event) => {
             vscode.postMessage({ command: 'loadHistory' });
             const payload = message.payload || {};
             if (payload && payload.error) {
-                try { alert('Delete failed: ' + String(payload.error)); } catch (_) {}
+                try { alert('Delete failed: ' + String(payload.error)); } catch (_) { }
             }
             break;
         }
@@ -117,9 +117,9 @@ window.addEventListener('message', (event) => {
             break;
         case 'settingsSaved': {
             const payload = message.payload || {};
-            if (payload.success) {
-                settings.closeSettings();
-            }
+            // if (payload.success) {
+            //     settings.closeSettings();
+            // }
             break;
         }
         default:
