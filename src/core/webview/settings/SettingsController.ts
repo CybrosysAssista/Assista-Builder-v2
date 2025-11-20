@@ -12,20 +12,32 @@ export class SettingsController {
     const activeProvider = config.get<string>('activeProvider') || 'google';
     const googleModel = providers?.google?.model || '';
     const openrouterModel = providers?.openrouter?.model || '';
+    const openaiModel = providers?.openai?.model || '';
+    const anthropicModel = providers?.anthropic?.model || '';
 
     const googleKey = (await this.context.secrets.get('assistaX.apiKey.google')) || '';
     const openrouterKey = (await this.context.secrets.get('assistaX.apiKey.openrouter')) || '';
+    const openaiKey = (await this.context.secrets.get('assistaX.apiKey.openai')) || '';
+    const anthropicKey = (await this.context.secrets.get('assistaX.apiKey.anthropic')) || '';
     const hasGoogleKey = !!googleKey;
     const hasOpenrouterKey = !!openrouterKey;
+    const hasOpenaiKey = !!openaiKey;
+    const hasAnthropicKey = !!anthropicKey;
 
     this.postMessage('settingsData', {
       activeProvider,
       googleModel,
       openrouterModel,
+      openaiModel,
+      anthropicModel,
       googleKey,
       openrouterKey,
+      openaiKey,
+      anthropicKey,
       hasGoogleKey,
       hasOpenrouterKey,
+      hasOpenaiKey,
+      hasAnthropicKey,
     });
   }
 
@@ -34,8 +46,12 @@ export class SettingsController {
       const activeProvider = typeof message.activeProvider === 'string' ? message.activeProvider : 'google';
       const googleKey = typeof message.googleKey === 'string' ? message.googleKey.trim() : '';
       const openrouterKey = typeof message.openrouterKey === 'string' ? message.openrouterKey.trim() : '';
+      const openaiKey = typeof message.openaiKey === 'string' ? message.openaiKey.trim() : '';
+      const anthropicKey = typeof message.anthropicKey === 'string' ? message.anthropicKey.trim() : '';
       const googleModel = typeof message.googleModel === 'string' ? message.googleModel.trim() : '';
       const openrouterModel = typeof message.openrouterModel === 'string' ? message.openrouterModel.trim() : '';
+      const openaiModel = typeof message.openaiModel === 'string' ? message.openaiModel.trim() : '';
+      const anthropicModel = typeof message.anthropicModel === 'string' ? message.anthropicModel.trim() : '';
 
       const config = vscode.workspace.getConfiguration('assistaX');
       const providers = config.get<any>('providers', {});
@@ -43,6 +59,8 @@ export class SettingsController {
 
       nextProviders.google = { ...(nextProviders.google || {}) };
       nextProviders.openrouter = { ...(nextProviders.openrouter || {}) };
+      nextProviders.openai = { ...(nextProviders.openai || {}) };
+      nextProviders.anthropic = { ...(nextProviders.anthropic || {}) };
 
       if (googleModel) {
         nextProviders.google.model = googleModel;
@@ -50,10 +68,16 @@ export class SettingsController {
       if (openrouterModel) {
         nextProviders.openrouter.model = openrouterModel;
       }
+      if (openaiModel) {
+        nextProviders.openai.model = openaiModel;
+      }
+      if (anthropicModel) {
+        nextProviders.anthropic.model = anthropicModel;
+      }
 
       await config.update('providers', nextProviders, vscode.ConfigurationTarget.Global);
 
-      if (activeProvider === 'google' || activeProvider === 'openrouter') {
+      if (['google', 'openrouter', 'openai', 'anthropic'].includes(activeProvider)) {
         await config.update('activeProvider', activeProvider, vscode.ConfigurationTarget.Global);
       }
 
@@ -73,15 +97,25 @@ export class SettingsController {
         // User cleared the key - delete it from storage
         await this.context.secrets.delete('assistaX.apiKey.openrouter');
       }
+      if (openaiKey) {
+        await this.context.secrets.store('assistaX.apiKey.openai', openaiKey);
+      }
+      if (anthropicKey) {
+        await this.context.secrets.store('assistaX.apiKey.anthropic', anthropicKey);
+      }
 
 
       const hasGoogleKey = !!(await this.context.secrets.get('assistaX.apiKey.google'));
       const hasOpenrouterKey = !!(await this.context.secrets.get('assistaX.apiKey.openrouter'));
+      const hasOpenaiKey = !!(await this.context.secrets.get('assistaX.apiKey.openai'));
+      const hasAnthropicKey = !!(await this.context.secrets.get('assistaX.apiKey.anthropic'));
 
       this.postMessage('settingsSaved', {
         success: true,
         hasGoogleKey,
         hasOpenrouterKey,
+        hasOpenaiKey,
+        hasAnthropicKey,
       });
     } catch (error: any) {
       this.postMessage('settingsSaved', {
@@ -186,26 +220,32 @@ export class SettingsController {
           .sort((a, b) => a.id.localeCompare(b.id));
       } else if (provider === 'anthropic') {
         const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.anthropic')) || '';
-        if (!key) { throw new Error('Anthropic API key is required to list models.'); }
-        const resp = await fetch('https://api.anthropic.com/v1/models', {
-          method: 'GET',
-          headers: {
-            'x-api-key': key,
-            'anthropic-version': '2023-06-01',
-            'Accept': 'application/json',
-          },
-        });
-        if (!resp.ok) {
-          const detail = await resp.text().catch(() => '');
-          throw new Error(`Anthropic models error (${resp.status} ${resp.statusText})${detail ? `: ${detail}` : ''}`);
+
+        // Try to fetch from API
+        try {
+          const resp = await fetch('https://api.anthropic.com/v1/models', {
+            method: 'GET',
+            headers: {
+              'x-api-key': key || 'dummy-key',
+              'anthropic-version': '2023-06-01',
+              'Accept': 'application/json',
+            },
+          });
+
+          if (resp.ok) {
+            const json: any = await resp.json();
+            const items: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json?.models) ? json.models : [];
+            if (items.length > 0) {
+              const seen = new Set<string>();
+              models = items
+                .map((m: any) => ({ id: String(m?.id || ''), name: String(m?.display_name || m?.name || m?.id || '') }))
+                .filter((m) => !!m.id && !seen.has(m.id) && (seen.add(m.id), true))
+                .sort((a, b) => a.id.localeCompare(b.id));
+            }
+          }
+        } catch (apiError) {
+          // API endpoint doesn't exist or failed
         }
-        const json: any = await resp.json();
-        const items: any[] = Array.isArray(json?.data) ? json.data : [];
-        const seen = new Set<string>();
-        models = items
-          .map((m: any) => ({ id: String(m?.id || ''), name: String(m?.display_name || m?.id || '') }))
-          .filter((m) => !!m.id && !seen.has(m.id) && (seen.add(m.id), true))
-          .sort((a, b) => a.id.localeCompare(b.id));
       } else if (provider === 'mistral') {
         const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.mistral')) || '';
         if (!key) { throw new Error('Mistral API key is required to list models.'); }
