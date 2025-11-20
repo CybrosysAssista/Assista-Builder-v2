@@ -1,12 +1,38 @@
-// src/core/tools/createFolderTool.ts
 import * as vscode from "vscode";
 
-export async function createFolderTool(path: string): Promise<string> {
-  const workspace = vscode.workspace.workspaceFolders?.[0];
-  if (!workspace) throw new Error("No workspace open");
+let genai: any;
+async function getGenai() {
+  if (!genai) {
+    genai = await import("@google/genai");
+  }
+  return genai;
+}
 
-  const folderUri = vscode.Uri.joinPath(workspace.uri, path);
+export async function createFolderTool(path: string): Promise<{ status: string; folder: string }> {
+  const folderUri = vscode.Uri.joinPath(
+    vscode.workspace.workspaceFolders![0].uri,
+    path
+  );
   await vscode.workspace.fs.createDirectory(folderUri);
 
-  return `create_folder: created ${path}`;
+  return { status: "success", folder: path };
+}
+
+export async function getCreateFolderToolDeclaration() {
+  const { Type } = await getGenai();
+
+  return {
+    name: "createFolderTool",
+    description: "Create a folder.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        path: {
+          type: Type.STRING,
+          description: "The path to the folder to create.",
+        },
+      },
+      required: ["path"],
+    },
+  };
 }

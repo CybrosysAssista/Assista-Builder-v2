@@ -1,15 +1,22 @@
-// src/core/tools/applyPatchTool.ts
 import * as vscode from "vscode";
 import { applyPatch } from "diff";
+
+let genai: any;
+async function getGenai() {
+  if (!genai) {
+    genai = await import("@google/genai");
+  }
+  return genai;
+}
 
 export async function applyPatchTool(
   path: string,
   patch: string
-): Promise<string> {
-  const workspace = vscode.workspace.workspaceFolders?.[0];
-  if (!workspace) { throw new Error("No workspace open"); }
-
-  const fileUri = vscode.Uri.joinPath(workspace.uri, path);
+): Promise<{ status: string; file: string }> {
+  const fileUri = vscode.Uri.joinPath(
+    vscode.workspace.workspaceFolders![0].uri,
+    path
+  );
 
   let original = "";
   try {
@@ -25,6 +32,29 @@ export async function applyPatchTool(
   }
 
   await vscode.workspace.fs.writeFile(fileUri, Buffer.from(updated, "utf8"));
-  return `apply_patch: updated ${path}`;
+  return { status: "success", file: path };
+}
+
+export async function getApplyPatchToolDeclaration() {
+  const { Type } = await getGenai();
+
+  return {
+    name: "applyPatchTool",
+    description: "Apply a patch to a file.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        path: {
+          type: Type.STRING,
+          description: "The path to the file to apply the patch to.",
+        },
+        patch: {
+          type: Type.STRING,
+          description: "The patch to apply to the file.",
+        },
+      },
+      required: ["path", "patch"],
+    },
+  };
 }
 
