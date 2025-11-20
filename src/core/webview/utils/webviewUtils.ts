@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { getSettingsModalHtml } from '../settings/settingsHtml.js';
 import { getHistoryHtml } from '../history/historyHtml.js';
+import { getWelcomeHtml } from '../welcome/welcomeHtml.js';
 
 function getNonce(): string {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -23,6 +24,19 @@ export function getHtmlForWebview(
     : ['src', 'core', 'webview', 'ui', 'main.js'];
 
   const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...scriptPath));
+  const welcomeCssOut = vscode.Uri.joinPath(extensionUri, 'out', 'core', 'webview', 'welcome', 'welcome.css').fsPath;
+  const welcomeCssPath = fs.existsSync(welcomeCssOut)
+    ? ['out', 'core', 'webview', 'welcome', 'welcome.css']
+    : ['src', 'core', 'webview', 'welcome', 'welcome.css'];
+  const welcomeCssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...welcomeCssPath));
+  // Welcome assets
+  const welcomeBase = ['media', 'icons', 'welcome_screen'];
+  const welcomeLogo = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...welcomeBase, 'Assista Logo.svg'));
+  const welcomePlus = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...welcomeBase, 'Upload Media.svg'));
+  const welcomeSubmit = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...welcomeBase, 'Submit.svg'));
+  const welcomeCode = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...welcomeBase, 'Code.svg'));
+  const welcomeModel = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...welcomeBase, 'Model.svg'));
+  const welcomeDropdown = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...welcomeBase, 'Dropdown.svg'));
   const iconsFilesBase = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, 'media', 'icons', 'file_icons', 'files')
   );
@@ -37,6 +51,7 @@ export function getHtmlForWebview(
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Assista X</title>
+    <link rel="stylesheet" href="${welcomeCssUri}">
     <style>
       :root {
         color-scheme: var(--vscode-color-scheme, dark light);
@@ -474,11 +489,58 @@ export function getHtmlForWebview(
       .expandable { cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 13px; margin-top: 15px; padding: 8px 0; }
       .arrow { transition: transform 0.2s; }
       .arrow.expanded { transform: rotate(90deg); }
+
+      /* Responsive Design for Chat Interface */
+      @media (max-width: 400px) {
+        .input-bar { padding: 8px; }
+        .chatbox { border-radius: 8px; }
+        .chatbox textarea { padding: 8px 10px 6px 10px; font-size: 12px; }
+        .chatbox-toolbar { padding: 0 6px 6px 6px; }
+        .chatbox-toolbar .left,
+        .chatbox-toolbar .right { gap: 4px; }
+        .chip-btn { font-size: 11px; padding: 2px 3px; gap: 3px; }
+        .icon-btn { padding: 4px; }
+        .icon-svg { width: 14px; height: 14px; }
+        .chatbox-toolbar .right .icon-svg { width: 12px; height: 12px; }
+        .dropdown { width: 200px; margin-bottom: 6px; }
+        .dropdown .section-title { font-size: 10px; padding: 6px 8px; }
+        .dropdown button.item { padding: 6px 8px; font-size: 12px; }
+        .message { padding: 10px 12px; max-width: 90%; font-size: 13px; }
+        #messages { padding: 12px 8px; gap: 6px; }
+        .mention-menu { width: 220px; }
+        .mention-card { max-height: min(50vh, 300px); }
+      }
+
+      @media (max-width: 280px) {
+        .input-bar { padding: 6px; }
+        .chatbox { border-radius: 6px; }
+        .chatbox textarea { padding: 6px 8px 4px 8px; font-size: 11px; min-height: 36px; }
+        .chatbox-toolbar { padding: 0 4px 4px 4px; }
+        .chatbox-toolbar .left,
+        .chatbox-toolbar .right { gap: 3px; }
+        .chip-btn { font-size: 10px; padding: 1px 2px; gap: 2px; }
+        .chip-btn span { display: none; } /* Hide text labels on very small screens */
+        .icon-btn { padding: 3px; }
+        .icon-svg { width: 12px; height: 12px; }
+        .chatbox-toolbar .right .icon-svg { width: 10px; height: 10px; }
+        .dropdown { width: 160px; }
+        .dropdown button.item { padding: 5px 6px; font-size: 11px; }
+        .message { padding: 8px 10px; max-width: 95%; font-size: 12px; border-radius: 8px; }
+        #messages { padding: 8px 6px; gap: 4px; }
+        .mention-menu { width: 180px; }
+      }
     </style>
   </head>
   <body>
     
-    <div id="welcomeScreen" style="display:none;" aria-hidden="true"></div>
+    <div id="welcomeScreen" style="display:none;" aria-hidden="true">${getWelcomeHtml({
+    logo: String(welcomeLogo),
+    plus: String(welcomePlus),
+    submit: String(welcomeSubmit),
+    code: String(welcomeCode),
+    model: String(welcomeModel),
+    dropdown: String(welcomeDropdown),
+  })}</div>
     <div id="messages"></div>
     ${getSettingsModalHtml()}
     ${getHistoryHtml()}
