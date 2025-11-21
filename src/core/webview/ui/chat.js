@@ -98,7 +98,8 @@ export function initChatUI(vscode) {
         });
 
         // Custom Syntax Highlighting
-        container.querySelectorAll("pre code").forEach((block) => {
+        // Apply to ALL code blocks (inline and block)
+        container.querySelectorAll("code").forEach((block) => {
             // If already highlighted by VS Code (has spans), skip or maybe force?
             // User says "no color", so likely no spans. 
             // We'll apply our simple highlighter if it looks like plain text.

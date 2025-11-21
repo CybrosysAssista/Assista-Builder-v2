@@ -234,17 +234,18 @@ export function getHtmlForWebview(
       }
       .message.markdown code {
         font-family: "Fira Code", "Ubuntu Mono", monospace !important;
-        background: transparent;
-        padding: 0;
-        border-radius: 0;
-        font-size: 9px !important;
+        background: rgba(255,255,255,0.08); /* Subtle background for inline code */
+        padding: 0.2em 0.4em;
+        border-radius: 4px;
+        font-size: 11px !important; /* Slightly larger for readability */
+        color: #FFAB70; /* Orange color for inline code */
       }
       .message.markdown pre code {
         padding: 0;
         background: transparent;
-        font-size: 9px !important;
+        font-size: 9px !important; /* Keep block code small as requested */
         white-space: pre;
-        color: inherit;
+        color: inherit; /* Inherit syntax highlighting colors */
       }
 
       /* Syntax Highlighting - Specific Mapping from User */
