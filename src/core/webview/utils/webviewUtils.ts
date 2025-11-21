@@ -66,9 +66,8 @@ export function getHtmlForWebview(
         flex-direction: column;
         height: 100vh;
       }
-      /* Force VS Code UI font in chat area */
+      /* Force VS Code UI font in chat area (but not messages) */
       #messages,
-      #messages .message,
       .chatbox textarea,
       .chatbox-toolbar,
       .chip-btn,
@@ -106,70 +105,180 @@ export function getHtmlForWebview(
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 12px;
       }
-      .message-row {
+      /* User message container - right aligned with flex */
+      .message-row:has(.message.user) {
         display: flex;
+        padding: 10px;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
       }
+      /* AI message container - left aligned, with background and rounded corners */
+      /* AI message container - left aligned, with background and rounded corners */
+      .message-row:has(.message.ai) {
+        display: flex;
+        padding: 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        max-width: fit-content;
+        border-radius: 0 16px 16px 16px;
+        border: 0.5px solid #2A2A2A;
+        background: #1F1F1F;
+        font-family: "Ubuntu Mono", monospace !important;
+        color: #CDCDCD;
+        font-size: 13px;
+        line-height: 16px;
+      }
+      /* System and error message containers */
+      .message-row:has(.message.system),
+      .message-row:has(.message.error) {
+        display: flex;
+        justify-content: center;
+      }
+      /* User message bubble - compact, pill-shaped, auto-width */
       .message.user {
-        margin-left: auto;
-        background: var(--vscode-button-background);
-        color: var(--vscode-button-foreground);
-      }
-      .message.ai {
-        margin-right: auto;
-        background: var(--vscode-editorWidget-background);
-      }
-      .message.system {
-        margin: 0 auto;
-        background: transparent;
-        color: var(--vscode-descriptionForeground);
-      }
-      .message.error {
-        margin: 0 auto;
-        background: rgba(255, 0, 0, 0.15);
-        color: var(--vscode-errorForeground);
-      }
-      .message {
-        padding: 12px 16px;
-        border-radius: 12px;
-        max-width: 80%;
+        background: rgba(188, 132, 135, 0.05);
+        color: var(--vscode-editor-foreground);
+        border: 0.5px solid rgba(188, 132, 135, 0.50);
+        border-radius: 16px 0 16px 16px;
+        padding: 8px 16px;
+        max-width: fit-content;
         word-break: break-word;
         white-space: pre-wrap;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        font-family: "Ubuntu Mono", monospace !important;
+        font-size: 13px;
+        font-weight: 400;
+        line-height: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      }
+      /* AI message - full width, no bubble background */
+      .message.ai {
+        background: transparent;
+        color: #CDCDCD;
+        font-family: "Ubuntu Mono", monospace !important;
+        font-size: 13px;
+        font-style: normal;
+        font-weight: 400;
+        line-height: 16px;
+        padding: 0;
+        border-radius: 0;
+        width: 100%;
+        max-width: 100%;
+        word-break: break-word;
+        white-space: normal;
+        box-shadow: none;
+        align-self: stretch;
+      }
+      /* System messages */
+      .message.system {
+        background: transparent;
+        color: var(--vscode-descriptionForeground);
+        padding: 8px 12px;
+        border-radius: 8px;
+        max-width: 80%;
+        font-size: 12px;
+        text-align: center;
+      }
+      /* Error messages */
+      .message.error {
+        background: rgba(255, 0, 0, 0.1);
+        color: var(--vscode-errorForeground);
+        border: 1px solid var(--vscode-errorForeground, rgba(255,0,0,0.3));
+        padding: 10px 14px;
+        border-radius: 8px;
+        max-width: 80%;
+        font-size: 13px;
       }
       .message.markdown {
         white-space: normal;
-        line-height: 1.5;
+        line-height: 1.6;
+        font-family: "Ubuntu Mono", monospace !important;
+        color: #CDCDCD;
+        font-size: 13px;
+      }
+      /* Force ALL markdown content to have the same size */
+      .message.markdown * {
+        font-size: 13px !important;
+        line-height: 1.6 !important;
+        font-family: "Ubuntu Mono", monospace !important;
       }
       .message.markdown p {
-        margin: 0 0 0.65em;
+        margin: 0 0 0.8em;
       }
       .message.markdown p:last-child {
         margin-bottom: 0;
       }
       .message.markdown pre {
-        background: var(--vscode-editor-background);
-        color: inherit;
-        padding: 12px;
+        background: #252F23; /* Dark Green background */
+        color: #E1E4E8; /* Default text color */
+        padding: 8px 12px;
         border-radius: 8px;
         overflow-x: auto;
-        margin: 0.75em 0;
-        font-size: 12px;
-        line-height: 1.45;
+        margin: 0.85em 0;
+        font-size: 9px !important;
+        line-height: 150%;
+        border: 1px solid #30363d;
+        font-family: "Fira Code", "Ubuntu Mono", monospace !important;
+        white-space: pre;
+        word-break: normal;
+        overflow-wrap: normal;
+        /* max-height removed to show full content */
+        
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        align-self: stretch;
       }
       .message.markdown code {
-        font-family: var(--vscode-editor-font-family, "SFMono-Regular", Consolas, "Liberation Mono", monospace);
-        background: var(--vscode-editor-background);
-        padding: 0.1em 0.35em;
-        border-radius: 4px;
-        font-size: 0.95em;
+        font-family: "Fira Code", "Ubuntu Mono", monospace !important;
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+        font-size: 9px !important;
       }
       .message.markdown pre code {
         padding: 0;
         background: transparent;
-        font-size: 12px;
+        font-size: 9px !important;
+        white-space: pre;
+        color: inherit;
       }
+
+      /* Syntax Highlighting - Specific Mapping from User */
+      /* Keywords (Pink) */
+      .hljs-keyword, .hljs-selector-tag, .hljs-tag { color: #F97583 !important; }
+      
+      /* Strings (Light Blue) */
+      .hljs-string, .hljs-template-tag { color: #9ECBFF !important; }
+      
+      /* Classes / Interfaces / Functions (Purple) - "navitem" */
+      .hljs-title, .hljs-title.class_, .hljs-function, .hljs-section { color: #B392F0 !important; }
+      
+      /* Object Keys / Properties / Attributes (Orange) - "lable" */
+      .hljs-attr, .hljs-attribute, .hljs-variable.constant_, .hljs-property { color: #FFAB70 !important; }
+      
+      /* Types / Built-ins (Blue) - "string" */
+      .hljs-type, .hljs-built_in, .hljs-literal { color: #79B8FF !important; }
+      
+      /* Variables / Parameters / Default (Light Gray) */
+      .hljs-variable, .hljs-params, .hljs-operator, .hljs-punctuation { color: #E1E4E8 !important; }
+      
+      /* Comments (Gray) */
+      .hljs-comment, .hljs-quote { color: #6A737D !important; font-style: italic; }
+      
+      /* Numbers (Orange - usually same as constants) */
+      .hljs-number { color: #FFAB70 !important; }
+
+      /* Fallback for other renderers */
+      .token.keyword { color: #F97583 !important; }
+      .token.string { color: #9ECBFF !important; }
+      .token.class-name, .token.function { color: #B392F0 !important; }
+      .token.property, .token.attr-name { color: #FFAB70 !important; }
+      .token.builtin, .token.type-alias { color: #79B8FF !important; }
+      .token.comment { color: #6A737D !important; }
       .message.markdown ul,
       .message.markdown ol {
         padding-left: 1.4em;
