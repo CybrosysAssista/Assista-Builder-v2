@@ -76,24 +76,30 @@ export function initChatUI(vscode) {
         });
 
         // Convert JSON tool calls to code blocks
-        // Check direct text nodes and P tags
-        Array.from(container.childNodes).forEach(node => {
-            const isToolCall = node.textContent.includes('"toolCall":') || node.textContent.includes("'toolCall':");
-            if (isToolCall) {
-                // If it's a text node or P tag, wrap it
-                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0) {
-                    const pre = document.createElement("pre");
-                    const code = document.createElement("code");
-                    code.textContent = node.textContent;
-                    pre.appendChild(code);
-                    node.replaceWith(pre);
-                } else if (node.tagName === "P") {
-                    const pre = document.createElement("pre");
-                    const code = document.createElement("code");
-                    code.textContent = node.textContent;
-                    pre.appendChild(code);
-                    node.replaceWith(pre);
-                }
+        // Use TreeWalker to find ALL text nodes containing "toolCall":
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        const nodesToWrap = [];
+        while (node = walker.nextNode()) {
+            if (node.textContent.includes('"toolCall":') || node.textContent.includes("'toolCall':")) {
+                nodesToWrap.push(node);
+            }
+        }
+
+        nodesToWrap.forEach(node => {
+            // If parent is already pre/code, skip
+            if (node.parentNode.nodeName === 'PRE' || node.parentNode.nodeName === 'CODE') return;
+
+            const pre = document.createElement("pre");
+            const code = document.createElement("code");
+            code.textContent = node.textContent;
+            pre.appendChild(code);
+
+            // If parent is P and this is the only child, replace parent
+            if (node.parentNode.nodeName === 'P' && node.parentNode.childNodes.length === 1) {
+                node.parentNode.replaceWith(pre);
+            } else {
+                node.replaceWith(pre);
             }
         });
 
