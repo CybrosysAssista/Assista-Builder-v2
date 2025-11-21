@@ -4,7 +4,7 @@ import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSes
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
 import { HistoryController } from './history/HistoryController.js';
-import { runAgent } from "../ai/agent/agent.js";
+import { runAgent } from "../ai/agent.js";
 import { MentionController } from './mentions/MentionController.js';
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
