@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import type { ProviderAdapter } from './base-provider.js';
+import type { ProviderAdapter } from './base.js';
 import type { InternalMessage, ToolDefinition, NormalizedEvent } from '../agent/types.js';
-import { ProviderConfig } from '../ai/providers/types.js';
-import { convertInternalMessagesToGemini } from '../transform/gemini-format.js';
+import { ProviderConfig } from './types.js';
+import { convertInternalMessagesToGemini } from '../format/gemini-format.js';
 
 export class GeminiAdapter implements ProviderAdapter {
   name = 'gemini';

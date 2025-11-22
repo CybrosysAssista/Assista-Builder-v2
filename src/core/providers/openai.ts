@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import type { ProviderAdapter } from './base-provider.js';
+import type { ProviderAdapter } from './base.js';
 import type { InternalMessage, ToolDefinition, NormalizedEvent } from '../agent/types.js';
-import { ProviderConfig } from '../ai/providers/types.js';
-import { convertInternalToOpenAI } from '../transform/openai-format.js';
+import { ProviderConfig } from './types.js';
+import { convertInternalToOpenAI } from '../format/openai-format.js';
 
 function getApiUrl(provider: string, config: ProviderConfig): string {
   switch (provider) {

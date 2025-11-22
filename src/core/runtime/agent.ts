@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { readSessionMessages, clearActiveSession, writeSessionMessages } from './sessionManager.js';
-import { getActiveProviderConfig } from '../services/configService.js';
+import { getActiveProviderConfig } from '../config/configService.js';
 import { getSystemInstruction } from './prompts/systemPrompts.js';
 import { createProvider } from '../providers/factory.js';
 import { runAgentOrchestrator } from '../agent/orchestrator.js';

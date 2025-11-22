@@ -1,6 +1,6 @@
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
-import { ALL_TOOLS } from './index.js';
-import { validateToolArgs, executeToolWithLock } from './utils.js';
+import { ALL_TOOLS } from './registry.js';
+import { validateToolArgs, executeToolWithLock } from './toolUtils.js';
 
 /**
  * Find a tool by name

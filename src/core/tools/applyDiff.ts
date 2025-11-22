@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
-import { validateWorkspacePath, resolveWorkspacePath } from './utils.js';
+import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
 
 interface ApplyDiffArgs {
   path: string;

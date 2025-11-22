@@ -3,7 +3,7 @@ import { readFileTool } from './readFile.js';
 import { writeFileTool } from './writeFile.js';
 import { applyDiffTool } from './applyDiff.js';
 import { createFolderTool } from './createFolder.js';
-import { findToolByName, executeToolByName as executeTool } from './executor.js';
+import { findToolByName, executeToolByName as executeTool } from './toolExecutor.js';
 
 /**
  * All available tools

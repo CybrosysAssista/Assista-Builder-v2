@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import type { ProviderAdapter } from './base-provider.js';
-import { ProviderConfig } from '../ai/providers/types.js';
-import { GeminiAdapter } from './gemini-adapter.js';
-import { OpenAIAdapter } from './openai-adapter.js';
+import type { ProviderAdapter } from './base.js';
+import { ProviderConfig } from './types.js';
+import { GeminiAdapter } from './gemini.js';
+import { OpenAIAdapter } from './openai.js';
 
 /**
  * Create a provider adapter based on provider name

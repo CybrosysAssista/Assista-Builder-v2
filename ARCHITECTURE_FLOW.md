@@ -47,6 +47,10 @@ This document explains the complete flow of a user message from input to respons
 ┌─────────────────────────────────────────────────────────────────┐
 │              orchestrator.ts - runAgent()                       │
 │  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Initialize:                                              │  │
+│  │  • Add user message to internalMessages                   │  │
+│  │  • Reset session if requested                             │  │
+│  │                                                            │  │
 │  │  WHILE LOOP (max 8 iterations)                            │  │
 │  │                                                            │  │
 │  │  1. Build Request: adapter.buildRequest()                 │  │
@@ -58,18 +62,24 @@ This document explains the complete flow of a user message from input to respons
 │  │     • Yields NormalizedEvent objects                      │  │
 │  │                                                            │  │
 │  │  3. Process Stream Events:                                │  │
-│  │     • 'text' → Accumulate in finalResponse                │  │
-│  │     • 'tool_call' → Collect tool calls                    │  │
+│  │     • 'text' → Accumulate in finalResponse, add to       │  │
+│  │       assistantContent                                     │  │
+│  │     • 'reasoning' → Accumulate in finalResponse, add to  │  │
+│  │       assistantContent (if supported)                      │  │
+│  │     • 'tool_call' → Collect tool calls, add to            │  │
+│  │       assistantContent                                     │  │
 │  │     • 'usage' → Log token usage                           │  │
 │  │     • 'error' → Throw error                                │  │
 │  │     • 'end' → Stream complete                             │  │
 │  │                                                            │  │
-│  │  4. IF tool calls exist:                                  │  │
+│  │  4. Add assistant content to internalMessages             │  │
+│  │                                                            │  │
+│  │  5. IF tool calls exist:                                  │  │
 │  │     • Execute each tool: executeToolByName()              │  │
 │  │     • Add tool results to internalMessages               │  │
 │  │     • Continue loop (send results back to model)          │  │
 │  │                                                            │  │
-│  │  5. IF no tool calls:                                     │  │
+│  │  6. IF no tool calls:                                     │  │
 │  │     • Return finalResponse                                │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └───────────────────────────┬─────────────────────────────────────┘
@@ -241,6 +251,9 @@ private async handleUserMessage(text: string) {
        internalHistory
    );
    ```
+   - Orchestrator adds user message to internalMessages
+   - Orchestrator manages the conversation loop and tool execution
+   - Returns final response string
 
 7. **Save Session:**
    ```typescript
@@ -252,6 +265,8 @@ private async handleUserMessage(text: string) {
    const updatedSessionHistory = convertInternalToSession(updatedInternalHistory);
    await writeSessionMessages(context, updatedSessionHistory);
    ```
+   - Note: The orchestrator already manages internalMessages during execution
+   - This step reconstructs the full history for persistence
 
 **Data Transformation:**
 ```
@@ -280,6 +295,18 @@ Persisted to VS Code Storage
 ```typescript
 const systemInstruction = params.config?.systemInstruction || '';
 let internalMessages: InternalMessage[] = [...sessionHistory];
+
+// Reset session if requested
+if (params.reset) {
+    internalMessages = [];
+}
+
+// Add user message
+internalMessages.push({
+    role: 'user',
+    content: [{ type: 'text', text: params.contents }],
+});
+
 const tools = ALL_TOOLS; // All available tools from registry
 let iterations = 0;
 let finalResponse = '';
@@ -349,6 +376,7 @@ while (true) {
 
 **Event Types:**
 - `{ type: 'text', text: string }` - Text chunk from model
+- `{ type: 'reasoning', text: string }` - Reasoning/thinking text (if supported by provider)
 - `{ type: 'tool_call', id: string, name: string, args: string }` - Tool call request
 - `{ type: 'usage', inputTokens: number, outputTokens: number }` - Token usage
 - `{ type: 'error', error: string, message: string }` - Error occurred
@@ -364,6 +392,12 @@ for await (const event of stream) {
         case 'text':
             finalResponse += event.text;
             assistantContent.push({ type: 'text', text: event.text });
+            break;
+            
+        case 'reasoning':
+            // Include reasoning in response
+            finalResponse += event.text;
+            assistantContent.push({ type: 'reasoning', text: event.text });
             break;
             
         case 'tool_call':
@@ -390,6 +424,14 @@ for await (const event of stream) {
         case 'end':
             break;
     }
+}
+
+// Add assistant content to messages after stream processing
+if (assistantContent.length > 0) {
+    internalMessages.push({
+        role: 'assistant',
+        content: assistantContent,
+    });
 }
 ```
 
@@ -520,8 +562,10 @@ return finalResponse.trim();
 **buildRequest():**
 1. Dynamically imports `@google/genai`
 2. Converts `InternalMessage[]` → Gemini `Content[]` via `convertInternalMessagesToGemini()`
+   - Builds `toolIdToName` mapping to track tool_use_id → tool name relationships
+   - This mapping is used when converting tool_result blocks back to Gemini format
 3. Converts tools to `functionDeclarations` format
-4. Returns request payload
+4. Returns request payload (includes `toolIdToName` mapping for response processing)
 
 **createMessageStream():**
 1. Calls `this.client.models.generateContentStream(requestPayload)`
@@ -529,7 +573,7 @@ return finalResponse.trim();
 3. Yields `NormalizedEvent` objects:
    - `functionCall` parts → `{ type: 'tool_call', ... }`
    - `text` parts → `{ type: 'text', ... }`
-   - Usage metadata → `{ type: 'usage', ... }`
+   - Usage metadata → `{ type: 'usage', ... }` (yielded at end of stream)
 4. Handles retries (up to 5 attempts with exponential backoff)
 
 #### OpenAI Adapter
@@ -546,10 +590,11 @@ return finalResponse.trim();
 2. Reads Server-Sent Events (SSE) stream
 3. Parses JSON chunks from `data: {...}` lines
 4. Yields `NormalizedEvent` objects:
-   - `delta.tool_calls` → `{ type: 'tool_call', ... }`
+   - `delta.tool_calls` → `{ type: 'tool_call', ... }` (accumulated across chunks)
    - `delta.content` → `{ type: 'text', ... }`
    - `usage` → `{ type: 'usage', ... }`
-5. Handles retries and errors
+5. Handles retries (up to 10 attempts with exponential backoff) and errors
+6. Finalizes tool calls at end of stream
 
 ---
 
@@ -644,7 +689,7 @@ Part =
 ```typescript
 NormalizedEvent =
     | { type: 'text', text: string }
-    | { type: 'reasoning', text: string }
+    | { type: 'reasoning', text: string }  // Reasoning/thinking blocks (provider-dependent)
     | { type: 'tool_call', id: string, name: string, args: string }
     | { type: 'usage', inputTokens: number, outputTokens: number, cost?: number }
     | { type: 'error', error: string, message: string }
@@ -709,11 +754,14 @@ ToolResult = {
        │   │   └─ fetch(url, { method: 'POST', body: ... }) [OpenAI]
        │   │
        │   ├─ [FOR EACH EVENT IN STREAM]
-       │   │   ├─ event.type === 'text' → accumulate finalResponse
-       │   │   ├─ event.type === 'tool_call' → collect toolCalls
+       │   │   ├─ event.type === 'text' → accumulate finalResponse, add to assistantContent
+       │   │   ├─ event.type === 'reasoning' → accumulate finalResponse, add to assistantContent
+       │   │   ├─ event.type === 'tool_call' → collect toolCalls, add to assistantContent
        │   │   ├─ event.type === 'usage' → log usage
        │   │   ├─ event.type === 'error' → throw error
        │   │   └─ event.type === 'end' → break
+       │   │
+       │   ├─ Add assistant content to internalMessages (if any)
        │   │
        │   ├─ IF toolCalls.length > 0:
        │   │   ├─ [FOR EACH toolCall]
@@ -931,9 +979,11 @@ interface ProviderAdapter {
 
 ### Retry Logic
 
-- **Provider Adapters:** Retry up to 5 times with exponential backoff
+- **Provider Adapters:** 
+  - OpenAI Adapter: Retry up to 10 times with exponential backoff
+  - Gemini Adapter: Retry up to 5 times with exponential backoff
 - **Tool Execution:** No retries (failures are returned as tool results)
-- **Orchestrator:** MAX_TOOL_ITERATIONS guard prevents infinite loops
+- **Orchestrator:** MAX_TOOL_ITERATIONS (8) guard prevents infinite loops
 
 ---
 

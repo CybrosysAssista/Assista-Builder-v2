@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../ai/sessionManager.js';
+import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../runtime/sessionManager.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
 import { HistoryController } from './history/HistoryController.js';
-import { runAgent } from "../ai/agent.js";
+import { runAgent } from "../runtime/agent.js";
 import { MentionController } from './mentions/MentionController.js';
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {

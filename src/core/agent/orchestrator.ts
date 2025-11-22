@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import type { ProviderAdapter } from '../providers/base-provider.js';
+import type { ProviderAdapter } from '../providers/base.js';
 import type { InternalMessage } from './types.js';
-import { ALL_TOOLS, executeToolByName, findToolByName } from '../tools/index.js';
-import { safeParseJson } from '../tools/utils.js';
+import { ALL_TOOLS, executeToolByName, findToolByName } from '../tools/registry.js';
+import { safeParseJson } from '../tools/toolUtils.js';
 import { log } from 'console';
 
 const MAX_TOOL_ITERATIONS = 8;
