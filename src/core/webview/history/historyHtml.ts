@@ -128,7 +128,7 @@ export function getHistoryHtml(): string {
             background: rgba(255,255,255,0.04); 
             border: 1px solid rgba(255,255,255,0.08); 
             border-radius: 8px; 
-            padding: 12px 16px;
+            padding: 12px 16px 12px 8px;
             cursor: pointer;
             transition: background 0.2s;
             display: flex;
@@ -137,7 +137,8 @@ export function getHistoryHtml(): string {
         }
         .hx-card:hover { background: rgba(255,255,255,0.08); }
         
-        .hx-card-content { flex: 1; min-width: 0; display: flex; align-items: center; gap: 16px; position: relative; }
+        .hx-card-content { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; position: relative; }
+        .hx-dot { display: none; }
         .hx-main { flex: 1; min-width: 0; }
         .hx-msg { 
             font-size: 13px; 

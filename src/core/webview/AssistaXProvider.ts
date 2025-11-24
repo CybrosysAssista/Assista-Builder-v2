@@ -80,6 +80,18 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 await this._settings?.handleListModels(message);
                 return;
             }
+
+            if (message.command === 'openExternalUrl') {
+                const url = typeof message.url === 'string' ? message.url : '';
+                if (url) {
+                    try {
+                        await vscode.env.openExternal(vscode.Uri.parse(url));
+                    } catch (error) {
+                        console.error('[AssistaX] Failed to open external URL:', error);
+                    }
+                }
+                return;
+            }
             // Delegate mention-related commands
             if (await this._mentions?.handle(message)) { return; }
 

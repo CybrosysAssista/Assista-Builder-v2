@@ -8,6 +8,7 @@ export function initSettingsUI(vscode) {
     const settingsSaveBtn = document.getElementById('settingsSaveBtn');
     const settingsDoneBtn = document.getElementById('settingsDoneBtn');
     const apiKeyLabel = document.getElementById('apiKeyLabel');
+    const getApiKeyBtn = document.getElementById('getApiKeyBtn');
     const docLink = document.getElementById('docLink');
     const messagesEl = document.getElementById('messages');
     const inputBar = document.querySelector('.input-bar');
@@ -38,16 +39,44 @@ export function initSettingsUI(vscode) {
     function updateProviderUiLabels(provider) {
         if (!apiKeyLabel) return;
         const map = {
-            google: { label: 'Gemini API Key', doc: 'https://ai.google.dev/docs', text: 'Google AI documentation' },
-            openrouter: { label: 'OpenRouter API Key', doc: 'https://openrouter.ai/docs', text: 'OpenRouter documentation' },
-            openai: { label: 'OpenAI API Key', doc: 'https://platform.openai.com/docs', text: 'OpenAI documentation' },
-            anthropic: { label: 'Anthropic API Key', doc: 'https://docs.anthropic.com', text: 'Anthropic documentation' },
+            google: {
+                label: 'Gemini API Key',
+                doc: 'https://ai.google.dev/docs',
+                text: 'Google AI documentation',
+                apiUrl: 'https://aistudio.google.com/app/apikey',
+                btnText: 'Get Gemini API'
+            },
+            openrouter: {
+                label: 'OpenRouter API Key',
+                doc: 'https://openrouter.ai/docs',
+                text: 'OpenRouter documentation',
+                apiUrl: 'https://openrouter.ai/keys',
+                btnText: 'Get OpenRouter API'
+            },
+            openai: {
+                label: 'OpenAI API Key',
+                doc: 'https://platform.openai.com/docs',
+                text: 'OpenAI documentation',
+                apiUrl: 'https://platform.openai.com/api-keys',
+                btnText: 'Get OpenAI API'
+            },
+            anthropic: {
+                label: 'Anthropic API Key',
+                doc: 'https://docs.anthropic.com',
+                text: 'Anthropic documentation',
+                apiUrl: 'https://console.anthropic.com/settings/keys',
+                btnText: 'Get Anthropic API'
+            },
         };
         const cfg = map[provider] || map.openrouter;
         apiKeyLabel.textContent = cfg.label;
         if (docLink) {
             docLink.textContent = cfg.text;
             docLink.href = cfg.doc;
+        }
+        if (getApiKeyBtn) {
+            getApiKeyBtn.textContent = cfg.btnText;
+            getApiKeyBtn.dataset.apiUrl = cfg.apiUrl;
         }
     }
 
@@ -280,6 +309,14 @@ export function initSettingsUI(vscode) {
     settingsSaveBtn?.addEventListener('click', (e) => {
         e.preventDefault();
         saveSettings();
+    });
+
+    getApiKeyBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        const apiUrl = getApiKeyBtn.dataset.apiUrl;
+        if (apiUrl) {
+            vscode.postMessage({ command: 'openExternalUrl', url: apiUrl });
+        }
     });
 
     settingsDoneBtn?.addEventListener('click', (e) => {

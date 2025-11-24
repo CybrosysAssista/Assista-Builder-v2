@@ -253,12 +253,14 @@ export function initHistoryUI(vscode) {
                 copyBtn.className = 'hx-action';
                 copyBtn.dataset.action = 'copy';
                 copyBtn.dataset.id = String(it.id);
+                copyBtn.title = 'Copy prompt';
                 copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/><rect x="2" y="2" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/></svg>`;
 
                 const delBtn = document.createElement('button');
                 delBtn.className = 'hx-action';
                 delBtn.dataset.action = 'delete';
                 delBtn.dataset.id = String(it.id);
+                delBtn.title = 'Delete conversation';
                 delBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 6l1-2h6l1 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 
                 actions.appendChild(copyBtn);
@@ -272,8 +274,24 @@ export function initHistoryUI(vscode) {
                 const meta = document.createElement('div');
                 meta.className = 'hx-meta';
 
+                // Format timestamp like "10 JUL 2025, 09:15 PM"
+                const date = new Date(it.updatedAt || 0);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                const year = date.getFullYear();
+                let hours = date.getHours();
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12 || 12;
+                const formattedTime = `${day} ${month} ${year}, ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+
                 const timeEl = document.createElement('div');
-                timeEl.innerHTML = new Date(it.updatedAt || 0).toLocaleString();
+                timeEl.innerHTML = `
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 4px; vertical-align: middle;">
+                        <path d="M4 8C1.79086 8 0 6.20912 0 4C0 1.79086 1.79086 0 4 0C6.20912 0 8 1.79086 8 4C8 6.20912 6.20912 8 4 8ZM4 7.2C5.76732 7.2 7.2 5.76732 7.2 4C7.2 2.23269 5.76732 0.8 4 0.8C2.23269 0.8 0.8 2.23269 0.8 4C0.8 5.76732 2.23269 7.2 4 7.2ZM4.4 4H6V4.8H3.6V2H4.4V4Z" fill="#CDCDCD"/>
+                    </svg>
+                    <span style="vertical-align: middle;">${formattedTime}</span>
+                `;
 
                 meta.appendChild(timeEl);
 

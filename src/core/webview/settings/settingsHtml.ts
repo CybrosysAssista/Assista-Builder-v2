@@ -29,6 +29,10 @@ export function getSettingsModalHtml(): string {
         .btn { padding: 8px 16px; border: none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; }
         .btn.btn-save { background-color: #0e639c; color: white; }
         .btn.btn-done { background-color: #3c3c3c; color: #cccccc; }
+        .btn.btn-get-api { background-color: transparent; border: 1px solid #3c3c3c; color: #cccccc; padding: 8px 16px; white-space: nowrap; }
+        .btn.btn-get-api:hover { background-color: #2a2a2a; border-color: #4a4a4a; }
+        .api-key-row { display: flex; gap: 10px; align-items: center; }
+        .api-key-row input[type="password"] { flex: 1; }
         .section { margin-bottom: 30px; }
         /* Ensure content aligns with subheader padding */
         .content-body { padding: 0 12px; }
@@ -159,7 +163,10 @@ export function getSettingsModalHtml(): string {
 
             <div class="section">
               <div class="section-title" id="apiKeyLabel">OpenRouter API Key</div>
-              <input type="password" id="apiKey"  />
+              <div class="api-key-row">
+                <input type="password" id="apiKey"  />
+                <button class="btn btn-get-api" id="getApiKeyBtn">Get OpenRouter API</button>
+              </div>
               <div class="info-text">API keys are stored securely in VSCode's Secret Storage</div>
             </div>
 
