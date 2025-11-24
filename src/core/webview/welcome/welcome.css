@@ -1,0 +1,296 @@
+#welcomeScreen {
+    --welcome-fg: #d1d5db;
+    --welcome-muted: #9ca3af;
+    --welcome-bg: #1e1e1e;
+}
+
+#welcomeScreen {
+    display: none;
+}
+
+#welcomeScreen.active {
+    display: flex;
+}
+
+#welcomeScreen {
+    min-height: calc(100vh - 0px);
+    align-items: center;
+    justify-content: center;
+    background: var(--welcome-bg);
+    color: var(--welcome-fg);
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+#welcomeScreen .welcome-container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 600px;
+}
+
+#welcomeScreen .welcome-logo {
+    width: 56px;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 6px 24px rgba(255, 105, 180, 0.3));
+}
+
+#welcomeScreen .welcome-greeting {
+    font-size: 20px;
+    font-weight: 700;
+    color: #e5c0c9;
+    margin-top: 4px;
+}
+
+#welcomeScreen .welcome-tagline {
+    font-size: 13px;
+    color: var(--welcome-muted);
+    margin-bottom: 12px;
+}
+
+#welcomeScreen .welcome-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 9999px;
+    padding: 6px 10px;
+    width: 100%;
+    max-width: 520px;
+}
+
+#welcomeScreen .welcome-input input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--welcome-fg);
+    font-size: 13px;
+    padding: 6px;
+    min-width: 0;
+}
+
+#welcomeScreen .welcome-icon-btn {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+#welcomeScreen .welcome-icon-btn img {
+    width: 16px;
+    height: 16px;
+    opacity: .9;
+}
+
+#welcomeScreen .welcome-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#welcomeScreen .menu {
+    position: relative;
+}
+
+#welcomeScreen .chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #cbd5e1;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+#welcomeScreen .chip-icon {
+    width: 14px;
+    height: 14px;
+    opacity: .9;
+}
+
+#welcomeScreen .dropdown-icon {
+    width: 12px;
+    height: 12px;
+    opacity: .7;
+}
+
+#welcomeScreen .dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    bottom: auto;
+    left: 0;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, .35);
+    display: none;
+    width: auto;
+    min-width: fit-content;
+    overflow: hidden;
+    z-index: 10000;
+}
+
+#welcomeScreen .dropdown.visible {
+    display: block;
+}
+
+#welcomeScreen .dropdown .item {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    color: #e5e7eb;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+#welcomeScreen .dropdown .item:hover {
+    background: #373737;
+}
+
+/* Responsive Design for Small Screens */
+@media (max-width: 400px) {
+    #welcomeScreen .welcome-logo {
+        width: 40px;
+    }
+
+    #welcomeScreen .welcome-greeting {
+        font-size: 16px;
+    }
+
+    #welcomeScreen .welcome-tagline {
+        font-size: 11px;
+    }
+
+    #welcomeScreen .welcome-input {
+        padding: 4px 8px;
+        gap: 6px;
+    }
+
+    #welcomeScreen .welcome-input input {
+        font-size: 12px;
+        padding: 4px;
+    }
+
+    #welcomeScreen .welcome-icon-btn {
+        width: 24px;
+        height: 24px;
+    }
+
+    #welcomeScreen .welcome-icon-btn img {
+        width: 14px;
+        height: 14px;
+    }
+
+    #welcomeScreen .welcome-actions {
+        gap: 6px;
+    }
+
+    #welcomeScreen .chip-btn {
+        font-size: 11px;
+        padding: 4px 8px;
+        gap: 4px;
+    }
+
+    #welcomeScreen .chip-icon {
+        width: 12px;
+        height: 12px;
+    }
+
+    #welcomeScreen .dropdown-icon {
+        width: 10px;
+        height: 10px;
+    }
+
+    #welcomeScreen .dropdown .item {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 280px) {
+    #welcomeScreen {
+        padding: 8px;
+    }
+
+    #welcomeScreen .welcome-container {
+        gap: 8px;
+    }
+
+    #welcomeScreen .welcome-logo {
+        width: 32px;
+    }
+
+    #welcomeScreen .welcome-greeting {
+        font-size: 14px;
+    }
+
+    #welcomeScreen .welcome-tagline {
+        font-size: 10px;
+        margin-bottom: 8px;
+    }
+
+    #welcomeScreen .welcome-input {
+        padding: 3px 6px;
+        gap: 4px;
+    }
+
+    #welcomeScreen .welcome-input input {
+        font-size: 11px;
+    }
+
+    #welcomeScreen .welcome-icon-btn {
+        width: 20px;
+        height: 20px;
+    }
+
+    #welcomeScreen .welcome-icon-btn img {
+        width: 12px;
+        height: 12px;
+    }
+
+    #welcomeScreen .welcome-actions {
+        gap: 4px;
+        margin-top: 6px;
+    }
+
+    #welcomeScreen .chip-btn {
+        font-size: 10px;
+        padding: 3px 6px;
+        gap: 3px;
+    }
+
+    #welcomeScreen .chip-icon {
+        width: 10px;
+        height: 10px;
+    }
+
+    #welcomeScreen .dropdown-icon {
+        width: 8px;
+        height: 8px;
+    }
+}

@@ -74,6 +74,83 @@ export function initChatUI(vscode) {
         container.querySelectorAll("table").forEach((table) => {
             table.setAttribute("role", "table");
         });
+
+        // Convert JSON tool calls to code blocks
+        // Use TreeWalker to find ALL text nodes containing "toolCall":
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        const nodesToWrap = [];
+        while (node = walker.nextNode()) {
+            if (node.textContent.includes('"toolCall":') || node.textContent.includes("'toolCall':")) {
+                nodesToWrap.push(node);
+            }
+        }
+
+        nodesToWrap.forEach(node => {
+            // If parent is already pre/code, skip
+            if (node.parentNode.nodeName === 'PRE' || node.parentNode.nodeName === 'CODE') return;
+
+            const pre = document.createElement("pre");
+            const code = document.createElement("code");
+            code.textContent = node.textContent;
+            pre.appendChild(code);
+
+            // If parent is P and this is the only child, replace parent
+            if (node.parentNode.nodeName === 'P' && node.parentNode.childNodes.length === 1) {
+                node.parentNode.replaceWith(pre);
+            } else {
+                node.replaceWith(pre);
+            }
+        });
+
+        // Custom Syntax Highlighting
+        // Apply to ALL code blocks (inline and block)
+        container.querySelectorAll("code").forEach((block) => {
+            // If already highlighted by VS Code (has spans), skip or maybe force?
+            // User says "no color", so likely no spans. 
+            // We'll apply our simple highlighter if it looks like plain text.
+            if (block.children.length > 0) return;
+
+            let text = block.textContent;
+
+            // Escape HTML
+            text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+            const tokens = [];
+            const save = (cls, match) => {
+                tokens.push({ cls, val: match });
+                return `@@@TOKEN${tokens.length - 1}@@@`; // Use chars not matched by \w
+            };
+
+            // 1. Strings (Double and Single quotes)
+            text = text.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, m => save('hljs-string', m));
+
+            // 2. Comments (Python # and JS //)
+            text = text.replace(/(\/\/.*$|#.*$)/gm, m => save('hljs-comment', m));
+
+            // 3. Keywords
+            const kws = "import|from|class|def|return|if|else|elif|for|while|try|except|with|as|pass|print|const|let|var|function|async|await|new|this|export|default|public|private|protected|interface|type|module|true|false|null";
+            text = text.replace(new RegExp(`\\b(${kws})\\b`, 'g'), m => save('hljs-keyword', m));
+
+            // 4. Functions (word followed by paren)
+            text = text.replace(/(\w+)(?=\()/g, m => save('hljs-function', m));
+
+            // 5. Numbers
+            text = text.replace(/\b(\d+)\b/g, m => save('hljs-number', m));
+
+            // 6. Attributes/Properties (simple heuristic: .word)
+            text = text.replace(/(\.\w+)/g, m => save('hljs-attr', m));
+
+            // Restore tokens
+            tokens.forEach((token, i) => {
+                const placeholder = `@@@TOKEN${i}@@@`;
+                // Replace all occurrences of the placeholder
+                text = text.split(placeholder).join(`<span class="${token.cls}">${token.val}</span>`);
+            });
+
+            block.innerHTML = text;
+            block.classList.add("hljs");
+        });
     }
 
     function appendMessage(text, sender, html) {
@@ -117,7 +194,7 @@ export function initChatUI(vscode) {
         const after = inputEl.value.slice(end);
         inputEl.value = `${before}${text}${after}`;
         const pos = start + text.length;
-        try { inputEl.selectionStart = inputEl.selectionEnd = pos; } catch(_) {}
+        try { inputEl.selectionStart = inputEl.selectionEnd = pos; } catch (_) { }
         inputEl.dispatchEvent(new Event('input'));
         inputEl.focus();
     }
@@ -249,7 +326,7 @@ export function initChatUI(vscode) {
         const action = btn.getAttribute('data-action');
         if (action === 'custom-api') {
             // Open Settings so the user can enter a custom API key
-            try { vscode.postMessage({ command: 'loadSettings' }); } catch (_) {}
+            try { vscode.postMessage({ command: 'loadSettings' }); } catch (_) { }
             closeMenus();
             return;
         }
@@ -276,7 +353,7 @@ export function initChatUI(vscode) {
 
     // Plus, Mic, Settings placeholders (Mention handled by mentions.js)
     addBtn?.addEventListener('click', () => {
-        try { vscode.postMessage({ command: 'quickActions' }); } catch (_) {}
+        try { vscode.postMessage({ command: 'quickActions' }); } catch (_) { }
     });
     // Mention UI fully handled by mentions.js
 
@@ -284,10 +361,10 @@ export function initChatUI(vscode) {
     function setMentionRecentNames(names) { mentions.setRecentNames(names); }
     function setPickerItems(items) { mentions.setPickerItems?.(items); }
     micBtn?.addEventListener('click', () => {
-        try { vscode.postMessage({ command: 'voiceInput' }); } catch (_) {}
+        try { vscode.postMessage({ command: 'voiceInput' }); } catch (_) { }
     });
     settingsBtn?.addEventListener('click', () => {
-        try { vscode.postMessage({ command: 'loadSettings' }); } catch (_) {}
+        try { vscode.postMessage({ command: 'loadSettings' }); } catch (_) { }
     });
 
     // Ctrl+L to focus input
@@ -321,7 +398,7 @@ export function initChatUI(vscode) {
             }
         });
         // Initialize disabled state
-        try { if (sendBtn) sendBtn.disabled = !inputEl.value.trim(); } catch(_) {}
+        try { if (sendBtn) sendBtn.disabled = !inputEl.value.trim(); } catch (_) { }
     }
 
     if (stopBtn) {

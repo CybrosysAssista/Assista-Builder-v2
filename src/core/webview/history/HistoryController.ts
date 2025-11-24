@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ChatMessage, ChatSession, getAllSessions, getActiveSession, switchActiveSession, deleteSession } from '../../ai/sessionManager.js';
+import { ChatMessage, ChatSession, getAllSessions, getActiveSession, switchActiveSession, deleteSession } from '../../runtime/sessionManager.js';
 
 export class HistoryController {
   constructor(
