@@ -35,13 +35,13 @@ export async function runAgentOrchestrator(
   });
 
   const tools = ALL_TOOLS;
-  let iterations = 0;
+  // let iterations = 0;
   let finalResponse = '';
 
   while (true) {
-    if (++iterations > MAX_TOOL_ITERATIONS) {
-      throw new Error(`Too many tool iterations (${MAX_TOOL_ITERATIONS}). Possible infinite loop.`);
-    }
+    // if (++iterations > MAX_TOOL_ITERATIONS) {
+    //   throw new Error(`Too many tool iterations (${MAX_TOOL_ITERATIONS}). Possible infinite loop.`);
+    // }
 
     // Build request
     const providerRequest = await adapter.buildRequest(
@@ -60,8 +60,8 @@ export async function runAgentOrchestrator(
     console.log('[Assista X] Starting to process stream...');
     // Process stream
     for await (const event of stream) {
-      console.log('[Assista X] Event:', event);
-      console.log('[Assista X] Event type:', event.type);
+      // console.log('[Assista X] Event:', event);
+      // console.log('[Assista X] Event type:', event.type);
       switch (event.type) {
         case 'text':
           finalResponse += event.text;
