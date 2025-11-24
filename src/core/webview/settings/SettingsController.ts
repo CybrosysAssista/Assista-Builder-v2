@@ -276,4 +276,42 @@ export class SettingsController {
       this.postMessage('modelsError', { error: error?.message || String(error) || 'Failed to list models.' });
     }
   }
+
+  public async handleFetchUsage(message: any) {
+    try {
+      const provider = typeof message.provider === 'string' ? message.provider : 'openrouter';
+
+      if (provider === 'openrouter') {
+        const key = (await this.context.secrets.get('assistaX.apiKey.openrouter')) || '';
+        if (!key) {
+          this.postMessage('usageData', { error: 'No API key found' });
+          return;
+        }
+
+        const resp = await fetch('https://openrouter.ai/api/v1/auth/key', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${key}` }
+        });
+
+        if (resp.ok) {
+          const json: any = await resp.json();
+          // OpenRouter response structure: { data: { label: string, usage: number, limit: number | null, is_free_tier: boolean } }
+          const data = json?.data;
+          this.postMessage('usageData', {
+            provider,
+            usage: data?.usage || 0,
+            limit: data?.limit,
+            label: data?.label,
+            isFreeTier: data?.is_free_tier
+          });
+        } else {
+          this.postMessage('usageData', { error: 'Failed to fetch usage' });
+        }
+      } else {
+        this.postMessage('usageData', { error: 'Usage check not supported for this provider' });
+      }
+    } catch (error: any) {
+      this.postMessage('usageData', { error: error.message });
+    }
+  }
 }

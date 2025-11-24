@@ -7,6 +7,7 @@ export function initSettingsUI(vscode) {
     const modelDropdownList = document.getElementById('modelDropdownList'); // New dropdown element
     const settingsSaveBtn = document.getElementById('settingsSaveBtn');
     const settingsDoneBtn = document.getElementById('settingsDoneBtn');
+    const settingsBackBtn = document.getElementById('settingsBackBtn');
     const apiKeyLabel = document.getElementById('apiKeyLabel');
     const getApiKeyBtn = document.getElementById('getApiKeyBtn');
     const docLink = document.getElementById('docLink');
@@ -113,6 +114,9 @@ export function initSettingsUI(vscode) {
         if (sectionName === 'general') {
             general.style.display = 'block';
             if (items[1]) items[1].classList.add('active');
+            // Fetch usage data for the active provider (defaulting to openrouter for credits check)
+            const provider = document.getElementById('provider')?.value || 'openrouter';
+            vscode.postMessage({ command: 'fetchUsage', provider });
         } else {
             providers.style.display = 'block';
             if (items[0]) items[0].classList.add('active');
@@ -330,6 +334,17 @@ export function initSettingsUI(vscode) {
         }
     });
 
+    settingsBackBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Check if there are unsaved changes (Save button is enabled)
+        if (settingsSaveBtn && !settingsSaveBtn.disabled) {
+            // Show unsaved changes modal
+            if (unsavedChangesModal) unsavedChangesModal.style.display = 'flex';
+        } else {
+            closeSettings();
+        }
+    });
+
     // Modal Event Listeners
     cancelDiscardBtn?.addEventListener('click', () => {
         if (unsavedChangesModal) unsavedChangesModal.style.display = 'none';
@@ -504,5 +519,35 @@ export function initSettingsUI(vscode) {
         },
         requestModelList,
         updateProviderUiLabels,
+        applyUsageData(data) {
+            if (data.error) return;
+
+            const { usage, limit, label } = data;
+            const creditsEl = document.querySelector('.usage-stats .usage-label span:last-child');
+            const progressBar = document.querySelector('.progress-fill');
+            const badge = document.querySelector('.badge');
+
+            if (creditsEl) {
+                // OpenRouter usage is typically in USD
+                const usageVal = Number(usage) || 0;
+                const limitVal = Number(limit) || 0;
+                // If limit is 0 or null, it might be unlimited or prepaid.
+                // Display as $X.XX used
+                if (limitVal > 0) {
+                    creditsEl.textContent = `$${usageVal.toFixed(2)} / $${limitVal.toFixed(2)}`;
+                    if (progressBar) {
+                        const pct = Math.min(100, (usageVal / limitVal) * 100);
+                        progressBar.style.width = `${pct}%`;
+                    }
+                } else {
+                    creditsEl.textContent = `$${usageVal.toFixed(2)} Used`;
+                    if (progressBar) progressBar.style.width = '100%';
+                }
+            }
+
+            if (badge && label) {
+                badge.textContent = label;
+            }
+        }
     };
 }

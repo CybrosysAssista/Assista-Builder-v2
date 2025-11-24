@@ -112,6 +112,9 @@ window.addEventListener('message', (event) => {
         case 'modelsError':
             settings.handleModelsError();
             break;
+        case 'usageData':
+            settings.applyUsageData(message.payload || {});
+            break;
         case 'settingsSaved': {
             const payload = message.payload || {};
             // if (payload.success) {

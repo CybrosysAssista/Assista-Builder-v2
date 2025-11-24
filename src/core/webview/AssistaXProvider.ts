@@ -81,6 +81,11 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
+            if (message.command === 'fetchUsage') {
+                await this._settings?.handleFetchUsage(message);
+                return;
+            }
+
             if (message.command === 'openExternalUrl') {
                 const url = typeof message.url === 'string' ? message.url : '';
                 if (url) {
