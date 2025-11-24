@@ -1,6 +1,6 @@
 export function getSettingsModalHtml(): string {
-    // Wrapped in a container so we can show/hide it inside the webview
-    return `
+  // Wrapped in a container so we can show/hide it inside the webview
+  return `
     <div id="settingsPage" style="display:none">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -26,9 +26,13 @@ export function getSettingsModalHtml(): string {
         .header h1 { font-size: 24px; font-weight: 400; color: #cccccc; margin: 0; flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 {{ ... }}
         .header-buttons .btn { white-space: nowrap; }
-        .btn { padding: 8px 16px; border: none; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .btn { padding: 8px 16px; border: none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; }
         .btn.btn-save { background-color: #0e639c; color: white; }
         .btn.btn-done { background-color: #3c3c3c; color: #cccccc; }
+        .btn.btn-get-api { background-color: transparent; border: 1px solid #3c3c3c; color: #cccccc; padding: 8px 16px; white-space: nowrap; }
+        .btn.btn-get-api:hover { background-color: #2a2a2a; border-color: #4a4a4a; }
+        .api-key-row { display: flex; gap: 10px; align-items: center; }
+        .api-key-row input[type="password"] { flex: 1; }
         .section { margin-bottom: 30px; }
         /* Ensure content aligns with subheader padding */
         .content-body { padding: 0 12px; }
@@ -45,7 +49,7 @@ export function getSettingsModalHtml(): string {
         .checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; cursor: pointer; }
         .info-text { font-size: 12px; color: #888; margin-top: 5px; }
         .info-box { background-color: #252526; padding: 15px; border-radius: 4px; margin-top: 15px; font-size: 12px; line-height: 1.6; color: #cccccc; }
-        select, input[type="text"], input[type="password"] { width: 100%; padding: 8px 12px; background-color: #3c3c3c; border: 1px solid #3c3c3c; color: #cccccc; border-radius: 3px; font-size: 13px; outline: none; }
+        select, input[type="text"], input[type="password"] { width: 100%; padding: 8px 12px; background-color: #3c3c3c; border: 1px solid #3c3c3c; color: #cccccc; border-radius: 10px; font-size: 13px; outline: none; }
         /* Neutral focus for Settings fields: no colored outline/border */
         select:focus, select:focus-visible,
         input[type="text"]:focus, input[type="text"]:focus-visible,
@@ -56,6 +60,41 @@ export function getSettingsModalHtml(): string {
           background-color: #3c3c3c;
         }
         /* focus style intentionally neutralized via rules above */
+
+        /* Model dropdown list styles */
+        .model-dropdown-list {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          max-height: 300px;
+          overflow-y: auto;
+          background-color: #2d2d2d;
+          border: 1px solid #3c3c3c;
+          border-radius: 3px;
+          margin-top: 4px;
+          z-index: 1000;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .model-dropdown-item {
+          padding: 8px 12px;
+          cursor: pointer;
+          font-size: 13px;
+          color: #cccccc;
+          transition: background-color 0.15s;
+        }
+        .model-dropdown-item:hover {
+          background-color: #3c3c3c;
+        }
+        .model-dropdown-item.selected {
+          background-color: #094771;
+        }
+        .model-dropdown-empty {
+          padding: 12px;
+          text-align: center;
+          color: #888;
+          font-size: 12px;
+        }
 
         /* Subheading for active section (text only) */
         .subheader { display: flex; align-items: center; height: 32px; padding: 0 12px; color: #cccccc; background-color: #1f1f1f; margin-bottom: 5px; }
@@ -71,6 +110,16 @@ export function getSettingsModalHtml(): string {
           .settings-container { padding: 20px 16px; }
           .header { flex-direction: row; align-items: center; }
         }
+
+        /* Confirm overlay (Unsaved Changes) */
+        .stx-confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 99999; }
+        .stx-confirm { width: 520px; max-width: calc(100% - 24px); background: #1f1f1f; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; color: #e5e7eb; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+        .stx-confirm .hd { padding: 16px 20px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; gap: 8px; align-items: center; }
+        .stx-confirm .bd { padding: 16px 20px; color: #cbd5e1; }
+        .stx-confirm .ft { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
+        .stx-btn { padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: #e5e7eb; cursor: pointer; }
+        .stx-btn:hover { background: rgba(255,255,255,0.1); }
+        .stx-btn.primary { background: #0e639c; border-color: #0b4f7a; color: #fff; }
       </style>
       <div class="header">
         <h1>Settings</h1>
@@ -109,16 +158,15 @@ export function getSettingsModalHtml(): string {
                 <option value="anthropic">Anthropic</option>
                 <option value="openai">OpenAI</option>
                 <option value="google">Google (Gemini)</option>
-                <option value="azure">Azure OpenAI</option>
-                <option value="cohere">Cohere</option>
-                <option value="huggingface">HuggingFace</option>
-                <option value="mistral">Mistral AI</option>
               </select>
             </div>
 
             <div class="section">
               <div class="section-title" id="apiKeyLabel">OpenRouter API Key</div>
-              <input type="password" id="apiKey"  />
+              <div class="api-key-row">
+                <input type="password" id="apiKey"  />
+                <button class="btn btn-get-api" id="getApiKeyBtn">Get OpenRouter API</button>
+              </div>
               <div class="info-text">API keys are stored securely in VSCode's Secret Storage</div>
             </div>
 
@@ -131,7 +179,12 @@ export function getSettingsModalHtml(): string {
 
             <div class="section">
               <div class="section-title">Model</div>
-              <select id="model"></select>
+              <div style="position: relative;">
+                <input type="text" id="model"  autocomplete="off" />
+                <div id="modelDropdownList" class="model-dropdown-list" style="display: none;">
+                  <!-- Model items will be populated here by JavaScript -->
+                </div>
+              </div>
               <div class="error-message" id="errorMessage" style="display: none;">✕ The model ID you provided is not available. Please choose a different model.</div>
               
             </div>
@@ -146,6 +199,19 @@ export function getSettingsModalHtml(): string {
           </div>
         </div>
       </div>
+
+      <!-- Unsaved Changes Modal -->
+      <div id="unsavedChangesModal" class="stx-confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="unsavedTitle">
+        <div class="stx-confirm">
+          <div class="hd" id="unsavedTitle">Unsaved Changes</div>
+          <div class="bd">Do you want to discard changes and continue?</div>
+          <div class="ft">
+            <button id="cancelDiscardBtn" class="stx-btn" type="button">Cancel</button>
+            <button id="confirmDiscardBtn" class="stx-btn primary" type="button">Discard changes</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   `;
 }
