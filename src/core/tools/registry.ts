@@ -1,43 +1,32 @@
-// src/core/tools/registry.ts
-import { z } from "zod";
-import { readFileTool } from "./readFileTool.js";
-import { writeFileTool } from "./writeFileTool.js";
-import { applyPatchTool } from "./applyPatchTool.js";
-import { createFolderTool } from "./createFolderTool.js";
+import type { ToolDefinition, ToolResult } from '../agent/types.js';
+import { readFileTool } from './readFile.js';
+import { writeFileTool } from './writeFile.js';
+import { applyDiffTool } from './applyDiff.js';
+import { createFolderTool } from './createFolder.js';
+import { findToolByName, executeToolByName as executeTool } from './toolExecutor.js';
 
-export type ToolFn = (...args: any[]) => Promise<any> | any;
+/**
+ * All available tools
+ */
+export const ALL_TOOLS: ToolDefinition[] = [
+  readFileTool,
+  writeFileTool,
+  applyDiffTool,
+  createFolderTool,
+];
 
-export interface ToolRegistration {
-    fn: ToolFn;
-    schema?: z.ZodTypeAny;
-}
+/**
+ * Find a tool by name
+ */
+export { findToolByName };
 
-export const TOOL_REGISTRY: Record<string, ToolRegistration> = {
-  read_file: {
-    fn: readFileTool,
-    schema: z.object({
-      path: z.string(),
-      encoding: z.string().optional()
-    })
-  },
-  write_file: {
-    fn: writeFileTool,
-    schema: z.object({
-      path: z.string(),
-      content: z.string()
-    })
-  },
-  apply_patch: {
-    fn: applyPatchTool,
-    schema: z.object({
-      path: z.string(),
-      patch: z.string()
-    })
-  },
-  create_folder: {
-    fn: createFolderTool,
-    schema: z.object({
-      path: z.string()
-    })
-  },
-};
+/**
+ * Execute a tool by name with validation
+ */
+export { executeTool as executeToolByName };
+
+/**
+ * Re-export tool definitions for convenience
+ */
+export { readFileTool, writeFileTool, applyDiffTool, createFolderTool };
+
