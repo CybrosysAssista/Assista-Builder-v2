@@ -3,10 +3,13 @@ export function initSettingsUI(vscode) {
     const historyPage = document.getElementById('historyPage');
     const providerSelect = document.getElementById('provider');
     const apiKeyInput = document.getElementById('apiKey');
-    const modelSelect = document.getElementById('model');
+    const modelInput = document.getElementById('model'); // Changed from modelSelect to modelInput
+    const modelDropdownList = document.getElementById('modelDropdownList'); // New dropdown element
     const settingsSaveBtn = document.getElementById('settingsSaveBtn');
     const settingsDoneBtn = document.getElementById('settingsDoneBtn');
+    const settingsBackBtn = document.getElementById('settingsBackBtn');
     const apiKeyLabel = document.getElementById('apiKeyLabel');
+    const getApiKeyBtn = document.getElementById('getApiKeyBtn');
     const docLink = document.getElementById('docLink');
     const messagesEl = document.getElementById('messages');
     const inputBar = document.querySelector('.input-bar');
@@ -15,31 +18,66 @@ export function initSettingsUI(vscode) {
     const customUrlField = document.getElementById('customUrlField');
     const baseUrlInput = document.getElementById('baseUrl');
 
+    // Unsaved Changes Modal Elements
+    const unsavedChangesModal = document.getElementById('unsavedChangesModal');
+    const cancelDiscardBtn = document.getElementById('cancelDiscardBtn');
+    const confirmDiscardBtn = document.getElementById('confirmDiscardBtn');
+
     let requestModelsTimer;
     let sidebarResizeObserver;
     // Track the model that should be selected (from saved settings or user's choice)
     let desiredModelId = '';
     const DEFAULT_MODELS = { google: 'gemini-2.5-flash' };
+    // Keep saved keys in memory (from settingsData) to rehydrate input when switching providers
+    const SAVED_KEYS = { google: '', openrouter: '', openai: '', anthropic: '' };
+    // Keep saved models in memory to rehydrate input when switching providers
+    const SAVED_MODELS = { google: '', openrouter: '', openai: '', anthropic: '' };
+    // Store all available models for filtering
+    let allModels = [];
     // Track prior scroll state and lock scrolling while Settings is open
     let prevScrollTop = 0;
 
     function updateProviderUiLabels(provider) {
         if (!apiKeyLabel) return;
         const map = {
-            google: { label: 'Gemini API Key', doc: 'https://ai.google.dev/docs', text: 'Google AI documentation' },
-            openrouter: { label: 'OpenRouter API Key', doc: 'https://openrouter.ai/docs', text: 'OpenRouter documentation' },
-            openai: { label: 'OpenAI API Key', doc: 'https://platform.openai.com/docs', text: 'OpenAI documentation' },
-            anthropic: { label: 'Anthropic API Key', doc: 'https://docs.anthropic.com', text: 'Anthropic documentation' },
-            azure: { label: 'Azure OpenAI API Key', doc: 'https://learn.microsoft.com/azure/ai-services/openai', text: 'Azure OpenAI documentation' },
-            cohere: { label: 'Cohere API Key', doc: 'https://docs.cohere.com', text: 'Cohere documentation' },
-            huggingface: { label: 'HuggingFace API Key', doc: 'https://huggingface.co/docs', text: 'HuggingFace documentation' },
-            mistral: { label: 'Mistral AI API Key', doc: 'https://docs.mistral.ai', text: 'Mistral AI documentation' },
+            google: {
+                label: 'Gemini API Key',
+                doc: 'https://ai.google.dev/docs',
+                text: 'Google AI documentation',
+                apiUrl: 'https://aistudio.google.com/app/apikey',
+                btnText: 'Get Gemini API'
+            },
+            openrouter: {
+                label: 'OpenRouter API Key',
+                doc: 'https://openrouter.ai/docs',
+                text: 'OpenRouter documentation',
+                apiUrl: 'https://openrouter.ai/keys',
+                btnText: 'Get OpenRouter API'
+            },
+            openai: {
+                label: 'OpenAI API Key',
+                doc: 'https://platform.openai.com/docs',
+                text: 'OpenAI documentation',
+                apiUrl: 'https://platform.openai.com/api-keys',
+                btnText: 'Get OpenAI API'
+            },
+            anthropic: {
+                label: 'Anthropic API Key',
+                doc: 'https://docs.anthropic.com',
+                text: 'Anthropic documentation',
+                apiUrl: 'https://console.anthropic.com/settings/keys',
+                btnText: 'Get Anthropic API'
+            },
         };
         const cfg = map[provider] || map.openrouter;
         apiKeyLabel.textContent = cfg.label;
         if (docLink) {
             docLink.textContent = cfg.text;
             docLink.href = cfg.doc;
+        }
+        if (getApiKeyBtn) {
+            getApiKeyBtn.textContent = cfg.btnText;
+            getApiKeyBtn.dataset.apiUrl = cfg.apiUrl;
         }
     }
 
@@ -52,8 +90,8 @@ export function initSettingsUI(vscode) {
 
     function requestModelList() {
         const provider = String(providerSelect?.value || '');
-        if (!provider || !modelSelect) return;
-        try { modelSelect.innerHTML = ''; modelSelect.disabled = true; } catch (_) { }
+        if (!provider || !modelInput) return;
+        // Don't disable the input - keep it always working
         const apiKey = String(apiKeyInput?.value || '');
         setTimeout(() => {
             vscode.postMessage({ command: 'listModels', provider, apiKey });
@@ -76,6 +114,9 @@ export function initSettingsUI(vscode) {
         if (sectionName === 'general') {
             general.style.display = 'block';
             if (items[1]) items[1].classList.add('active');
+            // Fetch usage data for the active provider (defaulting to openrouter for credits check)
+            const provider = document.getElementById('provider')?.value || 'openrouter';
+            vscode.postMessage({ command: 'fetchUsage', provider });
         } else {
             providers.style.display = 'block';
             if (items[0]) items[0].classList.add('active');
@@ -112,6 +153,80 @@ export function initSettingsUI(vscode) {
             });
             sidebarResizeObserver.observe(frame);
         } catch (_) { /* no-op */ }
+    }
+
+    // Filter and render models in dropdown based on search query
+    function filterAndRenderModels(query = '') {
+        if (!modelDropdownList) return;
+
+        const searchTerm = query.toLowerCase().trim();
+        const filtered = searchTerm
+            ? allModels.filter(m => m.id.toLowerCase().includes(searchTerm))
+            : allModels;
+
+        modelDropdownList.innerHTML = '';
+
+        if (filtered.length === 0) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'model-dropdown-empty';
+            emptyDiv.textContent = searchTerm ? 'No models found' : 'No models available';
+            modelDropdownList.appendChild(emptyDiv);
+            return;
+        }
+
+        filtered.forEach(model => {
+            const item = document.createElement('div');
+            item.className = 'model-dropdown-item';
+            item.textContent = model.id;
+            item.dataset.modelId = model.id;
+
+            // Highlight if it matches current input value
+            if (modelInput && model.id === modelInput.value) {
+                item.classList.add('selected');
+            }
+
+            item.addEventListener('click', () => selectModel(model.id));
+            modelDropdownList.appendChild(item);
+        });
+    }
+
+    // Select a model from dropdown
+    function selectModel(modelId) {
+        if (modelInput) {
+            modelInput.value = modelId;
+            desiredModelId = modelId;
+            enableSaveBtn();
+        }
+        hideModelDropdown();
+    }
+
+    // Show model dropdown
+    function showModelDropdown() {
+        if (!modelDropdownList) return;
+
+        // If models haven't been loaded yet, request them
+        if (allModels.length === 0) {
+            requestModelList();
+            // Show a loading message
+            modelDropdownList.innerHTML = '';
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'model-dropdown-empty';
+            loadingDiv.textContent = 'Loading models...';
+            modelDropdownList.appendChild(loadingDiv);
+            modelDropdownList.style.display = 'block';
+            return;
+        }
+
+        // Models are loaded, show them
+        filterAndRenderModels(modelInput?.value || '');
+        modelDropdownList.style.display = 'block';
+    }
+
+    // Hide model dropdown
+    function hideModelDropdown() {
+        if (modelDropdownList) {
+            modelDropdownList.style.display = 'none';
+        }
     }
 
     function openSettings() {
@@ -173,7 +288,7 @@ export function initSettingsUI(vscode) {
 
     function saveSettings() {
         const provider = String(providerSelect?.value || 'google');
-        const model = String(modelSelect?.value || '');
+        const model = String(modelInput?.value || '');
         const key = String(apiKeyInput?.value || '');
         const payload = { command: 'saveSettings', activeProvider: provider };
         if (provider === 'google') {
@@ -182,6 +297,12 @@ export function initSettingsUI(vscode) {
         } else if (provider === 'openrouter') {
             payload['openrouterModel'] = model;
             if (key) payload['openrouterKey'] = key;
+        } else if (provider === 'openai') {
+            payload['openaiModel'] = model;
+            if (key) payload['openaiKey'] = key;
+        } else if (provider === 'anthropic') {
+            payload['anthropicModel'] = model;
+            if (key) payload['anthropicKey'] = key;
         }
         vscode.postMessage(payload);
 
@@ -194,9 +315,47 @@ export function initSettingsUI(vscode) {
         saveSettings();
     });
 
+    getApiKeyBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        const apiUrl = getApiKeyBtn.dataset.apiUrl;
+        if (apiUrl) {
+            vscode.postMessage({ command: 'openExternalUrl', url: apiUrl });
+        }
+    });
+
     settingsDoneBtn?.addEventListener('click', (e) => {
         e.preventDefault();
+        // Check if there are unsaved changes (Save button is enabled)
+        if (settingsSaveBtn && !settingsSaveBtn.disabled) {
+            // Show unsaved changes modal
+            if (unsavedChangesModal) unsavedChangesModal.style.display = 'flex';
+        } else {
+            closeSettings();
+        }
+    });
+
+    settingsBackBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Check if there are unsaved changes (Save button is enabled)
+        if (settingsSaveBtn && !settingsSaveBtn.disabled) {
+            // Show unsaved changes modal
+            if (unsavedChangesModal) unsavedChangesModal.style.display = 'flex';
+        } else {
+            closeSettings();
+        }
+    });
+
+    // Modal Event Listeners
+    cancelDiscardBtn?.addEventListener('click', () => {
+        if (unsavedChangesModal) unsavedChangesModal.style.display = 'none';
+    });
+
+    confirmDiscardBtn?.addEventListener('click', () => {
+        if (unsavedChangesModal) unsavedChangesModal.style.display = 'none';
+        // Discard changes by simply closing settings (changes are not saved)
         closeSettings();
+        // Reload settings to ensure UI is reset next time it opens
+        vscode.postMessage({ command: 'loadSettings' });
     });
 
     providerSelect?.addEventListener('change', () => {
@@ -204,10 +363,30 @@ export function initSettingsUI(vscode) {
         const provider = String(providerSelect.value);
         updateProviderUiLabels(provider);
         updateCustomUrlVisibility();
-        // If switching to Google and no desired model yet, prefer the default
-        if (provider === 'google' && !desiredModelId) {
-            desiredModelId = DEFAULT_MODELS.google;
-        }
+
+        // Swap API key field to saved key for selected provider
+        try {
+            if (apiKeyInput) {
+                const k = SAVED_KEYS[provider] || '';
+                apiKeyInput.value = k;
+            }
+        } catch (_) { }
+
+        // Swap model field to saved model for selected provider
+        try {
+            if (modelInput) {
+                const savedModel = SAVED_MODELS[provider] || '';
+                const defaultModel = (provider === 'google' && !savedModel) ? DEFAULT_MODELS.google : '';
+                const modelToShow = savedModel || defaultModel;
+
+                modelInput.value = modelToShow;
+                desiredModelId = modelToShow;
+
+                // Clear allModels to force reload for new provider
+                allModels = [];
+            }
+        } catch (_) { }
+
         debounceRequestModelList();
     });
 
@@ -229,12 +408,31 @@ export function initSettingsUI(vscode) {
         enableSaveBtn();
     });
 
-    // Track user's model selection so it persists across list refreshes and reopen
-    modelSelect?.addEventListener('change', () => {
+    // Model input: filter on typing
+    modelInput?.addEventListener('input', () => {
         enableSaveBtn(); // Enable save on change
-        try {
-            desiredModelId = String(modelSelect.value || '');
-        } catch (_) { /* no-op */ }
+        const query = modelInput.value || '';
+        filterAndRenderModels(query);
+        showModelDropdown();
+    });
+
+    // Model input: show dropdown on focus
+    modelInput?.addEventListener('focus', () => {
+        showModelDropdown();
+    });
+
+    // Model input: hide dropdown on blur (with delay to allow click on dropdown item)
+    modelInput?.addEventListener('blur', () => {
+        setTimeout(() => hideModelDropdown(), 200);
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('mousedown', (e) => {
+        if (modelInput && modelDropdownList &&
+            !modelInput.contains(e.target) &&
+            !modelDropdownList.contains(e.target)) {
+            hideModelDropdown();
+        }
     });
 
     return {
@@ -245,39 +443,31 @@ export function initSettingsUI(vscode) {
             if (providerSelect) providerSelect.value = activeProvider;
             updateProviderUiLabels(activeProvider);
 
-            // Load and display the saved API key for the active provider
-            if (apiKeyInput) {
-                if (activeProvider === 'google' && data.googleKey) {
-                    apiKeyInput.value = data.googleKey;
-                } else if (activeProvider === 'openrouter' && data.openrouterKey) {
-                    apiKeyInput.value = data.openrouterKey;
-                } else {
-                    apiKeyInput.value = '';
-                }
-            }
+            // Persist saved keys in memory and set input for the active provider
+            SAVED_KEYS.google = String(data.googleKey || '');
+            SAVED_KEYS.openrouter = String(data.openrouterKey || '');
+            SAVED_KEYS.openai = String(data.openaiKey || '');
+            SAVED_KEYS.anthropic = String(data.anthropicKey || '');
+            if (apiKeyInput) { apiKeyInput.value = SAVED_KEYS[activeProvider] || ''; }
+
+            // Persist saved models in memory for all providers
+            SAVED_MODELS.google = String(data.googleModel || '');
+            SAVED_MODELS.openrouter = String(data.openrouterModel || '');
+            SAVED_MODELS.openai = String(data.openaiModel || '');
+            SAVED_MODELS.anthropic = String(data.anthropicModel || '');
 
             // Initialize custom URL field visibility on load
             updateCustomUrlVisibility();
-            if (modelSelect) {
-                const model = activeProvider === 'google' ? (data.googleModel || '') :
-                    activeProvider === 'openrouter' ? (data.openrouterModel || '') : '';
+            if (modelInput) {
+                const model = SAVED_MODELS[activeProvider] || '';
                 // Remember desired model to keep it selected after models list loads
                 desiredModelId = model || '';
                 if (!desiredModelId && activeProvider === 'google') {
                     desiredModelId = DEFAULT_MODELS.google;
                 }
-                let option = modelSelect.querySelector(`option[value="${model}"]`);
-                if (!option && model) {
-                    modelSelect.innerHTML = '';
-                    const opt = document.createElement('option');
-                    opt.value = model;
-                    opt.textContent = model;
-                    modelSelect.appendChild(opt);
-                }
-                const toSelect = desiredModelId || model;
-                if (toSelect) {
-                    const exists = !!modelSelect.querySelector(`option[value="${toSelect}"]`);
-                    if (exists) modelSelect.value = toSelect;
+                // Set the input value if we have a model
+                if (model) {
+                    modelInput.value = model;
                 }
             }
             debounceRequestModelList(50);
@@ -289,31 +479,75 @@ export function initSettingsUI(vscode) {
         },
         applyModelList(payload = {}) {
             const { models } = payload;
-            if (!Array.isArray(models) || !modelSelect) return;
-            modelSelect.innerHTML = '';
-            models.forEach((m) => {
-                if (!m || !m.id) return;
-                const opt = document.createElement('option');
-                opt.value = m.id;
-                opt.textContent = m.id;
-                modelSelect.appendChild(opt);
-            });
-            try { modelSelect.disabled = false; } catch (_) { }
-            // After repopulating, reselect the desired model if it exists
+            if (!Array.isArray(models) || !modelInput) return;
+
+            // Store all models for filtering
+            allModels = models.filter(m => m && m.id);
+
+            // After repopulating, set the desired model if it exists
             const provider = String(providerSelect?.value || '');
+            const currentValue = modelInput.value || '';
             let target = desiredModelId;
             if (!target && provider === 'google') {
                 target = DEFAULT_MODELS.google;
             }
+
+            // Only update the input value if it's different from current
             if (target) {
-                const exists = !!modelSelect.querySelector(`option[value="${target}"]`);
-                if (exists) modelSelect.value = target;
+                const exists = allModels.some(m => m.id === target);
+                if (exists && currentValue !== target) {
+                    modelInput.value = target;
+                } else if (!exists && allModels.length > 0 && currentValue !== allModels[0].id) {
+                    // If desired model doesn't exist, set first model
+                    modelInput.value = allModels[0].id;
+                }
+            } else if (allModels.length > 0 && !currentValue) {
+                // No target and input is empty, set first model
+                modelInput.value = allModels[0].id;
+            }
+
+            // Render the dropdown content
+            filterAndRenderModels('');
+
+            // If dropdown is currently visible (user is waiting), update it with the loaded models
+            if (modelDropdownList && modelDropdownList.style.display === 'block') {
+                filterAndRenderModels(modelInput?.value || '');
             }
         },
         handleModelsError() {
-            try { modelSelect.disabled = false; } catch (_) { }
+            allModels = [];
         },
         requestModelList,
         updateProviderUiLabels,
+        applyUsageData(data) {
+            if (data.error) return;
+
+            const { usage, limit, label } = data;
+            const creditsEl = document.querySelector('.usage-stats .usage-label span:last-child');
+            const progressBar = document.querySelector('.progress-fill');
+            const badge = document.querySelector('.badge');
+
+            if (creditsEl) {
+                // OpenRouter usage is typically in USD
+                const usageVal = Number(usage) || 0;
+                const limitVal = Number(limit) || 0;
+                // If limit is 0 or null, it might be unlimited or prepaid.
+                // Display as $X.XX used
+                if (limitVal > 0) {
+                    creditsEl.textContent = `$${usageVal.toFixed(2)} / $${limitVal.toFixed(2)}`;
+                    if (progressBar) {
+                        const pct = Math.min(100, (usageVal / limitVal) * 100);
+                        progressBar.style.width = `${pct}%`;
+                    }
+                } else {
+                    creditsEl.textContent = `$${usageVal.toFixed(2)} Used`;
+                    if (progressBar) progressBar.style.width = '100%';
+                }
+            }
+
+            if (badge && label) {
+                badge.textContent = label;
+            }
+        }
     };
 }

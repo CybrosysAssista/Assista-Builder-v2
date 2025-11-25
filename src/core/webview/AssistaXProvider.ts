@@ -81,6 +81,23 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 await this._settings?.handleListModels(message);
                 return;
             }
+
+            if (message.command === 'fetchUsage') {
+                await this._settings?.handleFetchUsage(message);
+                return;
+            }
+
+            if (message.command === 'openExternalUrl') {
+                const url = typeof message.url === 'string' ? message.url : '';
+                if (url) {
+                    try {
+                        await vscode.env.openExternal(vscode.Uri.parse(url));
+                    } catch (error) {
+                        console.error('[AssistaX] Failed to open external URL:', error);
+                    }
+                }
+                return;
+            }
             // Delegate mention-related commands
             if (await this._mentions?.handle(message)) { return; }
 
@@ -90,9 +107,13 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 return;
             }
             if (message.command === 'deleteSession') {
-                try { console.log('[AssistaX] deleteSession received for', message?.id); } catch {}
-                try { vscode.window.showInformationMessage(`Deleting chat: ${String(message?.id || '')}`); } catch {}
+                try { console.log('[AssistaX] deleteSession received for', message?.id); } catch { }
+                try { vscode.window.showInformationMessage(`Deleting chat: ${String(message?.id || '')}`); } catch { }
                 await this._history?.handleDeleteSession(message);
+                return;
+            }
+            if (message.command === 'clearAllHistory') {
+                await this._history?.handleClearAllHistory();
                 return;
             }
             if (message.command === 'openSession') {
@@ -120,7 +141,11 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             this._history?.handleLoadHistory();
         }
 
-        void this.syncActiveSession();
+        // Don't auto-sync session on load - let welcome screen stay visible
+        // Sessions will be loaded only when user explicitly:
+        // 1. Opens a session from history
+        // 2. Sends a message (which triggers sync after message is sent)
+        // void this.syncActiveSession();
         void this.flushPendingHydration();
     }
 
@@ -290,7 +315,11 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
     private async syncActiveSession(): Promise<void> {
         try {
             const session = await getActiveSession(this._context);
-            await this.queueHydration(session.id, session.messages);
+            // Only hydrate if the session has messages
+            // This prevents auto-loading empty sessions and keeps welcome screen visible
+            if (session.messages && session.messages.length > 0) {
+                await this.queueHydration(session.id, session.messages);
+            }
         } catch (error) {
             console.warn('[AssistaX] Failed to load current chat session:', error);
         }

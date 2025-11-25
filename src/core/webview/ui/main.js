@@ -1,12 +1,14 @@
 import { initChatUI } from './chat.js';
 import { initSettingsUI } from './settings.js';
 import { initHistoryUI } from './history.js';
+import { initWelcomeUI } from './welcome.js';
 
 const vscode = acquireVsCodeApi();
 
 const chat = initChatUI(vscode);
 const settings = initSettingsUI(vscode);
 const history = initHistoryUI(vscode);
+const welcome = initWelcomeUI(vscode, { insertAtCursor: chat.insertAtCursor });
 
 const bootState = typeof vscode.getState === 'function' ? vscode.getState() : undefined;
 if (bootState && Array.isArray(bootState.messages)) {
@@ -38,9 +40,11 @@ window.addEventListener('message', (event) => {
             chat.toggleBusy(false);
             break;
         case 'showSettings':
+            if (welcome && typeof welcome.hideWelcome === 'function') welcome.hideWelcome();
             settings.openSettings();
             break;
         case 'showHistory':
+            if (welcome && typeof welcome.hideWelcome === 'function') welcome.hideWelcome();
             history.openHistory();
             break;
         case 'sessionHydrated': {
@@ -74,30 +78,23 @@ window.addEventListener('message', (event) => {
         case 'mentionRecentFilesData': {
             const payload = message.payload || {};
             const names = Array.isArray(payload.names) ? payload.names : [];
-            if (typeof chat.setMentionRecentNames === 'function') {
-                chat.setMentionRecentNames(names);
-            }
+            if (typeof chat.setMentionRecentNames === 'function') chat.setMentionRecentNames(names);
+            if (typeof welcome.setMentionRecentNames === 'function') welcome.setMentionRecentNames(names);
             break;
         }
         case 'mentionActiveFileData': {
             const payload = message.payload || {};
             const name = String(payload.name || '');
-            if (name && typeof chat.setMentionRecentNames === 'function') {
-                chat.setMentionRecentNames([name]);
-            }
+            if (name && typeof chat.setMentionRecentNames === 'function') chat.setMentionRecentNames([name]);
+            if (name && typeof welcome.setMentionRecentNames === 'function') welcome.setMentionRecentNames([name]);
             break;
         }
         case 'mentionWorkspaceItems': {
             const payload = message.payload || {};
             const items = Array.isArray(payload.items) ? payload.items : [];
             // Forward to mentions UI via chat instance wrapper
-            if (typeof chat.setMentionRecentNames === 'function') {
-                // no-op to keep existing API stable
-            }
-            try {
-                // access mentions via closure: we exported setPickerItems on chat init
-                chat.setPickerItems?.(items);
-            } catch (_) { }
+            try { chat.setPickerItems?.(items); } catch (_) { }
+            try { welcome.setPickerItems?.(items); } catch (_) { }
             break;
         }
         case 'historyDeleteFailed': {
@@ -114,6 +111,9 @@ window.addEventListener('message', (event) => {
             break;
         case 'modelsError':
             settings.handleModelsError();
+            break;
+        case 'usageData':
+            settings.applyUsageData(message.payload || {});
             break;
         case 'settingsSaved': {
             const payload = message.payload || {};
