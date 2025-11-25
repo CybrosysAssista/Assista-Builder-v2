@@ -53,6 +53,7 @@ export function getHtmlForWebview(
     <title>Assista X</title>
     <link rel="stylesheet" href="${welcomeCssUri}">
     <style>
+
       :root {
         color-scheme: var(--vscode-color-scheme, dark light);
       }
@@ -127,7 +128,7 @@ export function getHtmlForWebview(
         border-radius: 0 16px 16px 16px;
         border: 0.5px solid #2A2A2A;
         background: #1F1F1F;
-        font-family: "Ubuntu Mono", monospace !important;
+        font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
         color: #CDCDCD;
         font-size: 13px;
         line-height: 16px;
@@ -148,7 +149,7 @@ export function getHtmlForWebview(
         max-width: fit-content;
         word-break: break-word;
         white-space: pre-wrap;
-        font-family: "Ubuntu Mono", monospace !important;
+        font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
         font-size: 13px;
         font-weight: 400;
         line-height: 16px;
@@ -158,7 +159,7 @@ export function getHtmlForWebview(
       .message.ai {
         background: transparent;
         color: #CDCDCD;
-        font-family: "Ubuntu Mono", monospace !important;
+        font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
         font-size: 13px;
         font-style: normal;
         font-weight: 400;
@@ -195,7 +196,7 @@ export function getHtmlForWebview(
       .message.markdown {
         white-space: normal;
         line-height: 1.6;
-        font-family: "Ubuntu Mono", monospace !important;
+        font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
         color: #CDCDCD;
         font-size: 13px;
       }
@@ -203,7 +204,6 @@ export function getHtmlForWebview(
       .message.markdown * {
         font-size: 13px !important;
         line-height: 1.6 !important;
-        font-family: "Ubuntu Mono", monospace !important;
       }
       .message.markdown p {
         margin: 0 0 0.8em;
@@ -212,20 +212,19 @@ export function getHtmlForWebview(
         margin-bottom: 0;
       }
       .message.markdown pre {
-        background: #252F23; /* Dark Green background */
-        color: #E1E4E8; /* Default text color */
-        padding: 8px 12px;
+        background: var(--vscode-textCodeBlock-background, rgba(255, 255, 255, 0.05));
+        color: var(--vscode-editor-foreground, #E1E4E8);
+        padding: 12px;
         border-radius: 8px;
         overflow-x: auto;
         margin: 0.85em 0;
-        font-size: 9px !important;
-        line-height: 150%;
-        border: 1px solid #30363d;
-        font-family: "Fira Code", "Ubuntu Mono", monospace !important;
+        font-size: var(--vscode-editor-font-size, 13px) !important;
+        line-height: 1.5;
+        border: 1px solid var(--vscode-widget-border, rgba(255,255,255,0.1));
+        font-family: var(--vscode-editor-font-family, "Fira Code", monospace);
         white-space: pre;
         word-break: normal;
         overflow-wrap: normal;
-        /* max-height removed to show full content */
         
         display: flex;
         flex-direction: column;
@@ -233,17 +232,17 @@ export function getHtmlForWebview(
         align-self: stretch;
       }
       .message.markdown code {
-        font-family: "Fira Code", "Ubuntu Mono", monospace !important;
+        font-family: var(--vscode-editor-font-family, "Fira Code", monospace);
         background: rgba(255,255,255,0.08); /* Subtle background for inline code */
         padding: 0.2em 0.4em;
         border-radius: 4px;
-        font-size: 11px !important; /* Slightly larger for readability */
+        font-size: var(--vscode-editor-font-size, 13px) !important;
         color: #FFAB70; /* Orange color for inline code */
       }
       .message.markdown pre code {
         padding: 0;
         background: transparent;
-        font-size: 9px !important; /* Keep block code small as requested */
+        font-size: inherit !important;
         white-space: pre;
         color: inherit; /* Inherit syntax highlighting colors */
       }
@@ -360,8 +359,9 @@ export function getHtmlForWebview(
       .dropdown { position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; width: 260px; background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12)); border-radius: 8px; box-shadow: 0 16px 40px rgba(0,0,0,0.35); display: none; overflow: hidden; z-index: 9999; }
       .dropdown.visible { display: block; }
       .dropdown .section-title { padding: 8px 10px; font-size: 11px; color: var(--vscode-descriptionForeground); border-bottom: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.08)); }
-      .dropdown button.item { width: 100%; text-align: left; padding: 8px 10px; background: transparent; color: inherit; border: none; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+      .dropdown button.item { width: 100%; text-align: left; padding: 8px 10px; background: transparent; color: inherit; border: none; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; cursor: pointer; }
       .dropdown button.item:hover { background: rgba(255,255,255,0.06); }
+      .dropdown button.item .desc { display: block; opacity: 0.6; font-size: 11px; line-height: 1.3; }
       .dropdown .item.custom { border-top: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.08)); justify-content: flex-start; gap: 8px; }
       .send-btn { padding: 6px; border-radius: 9999px; }
       .send-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
@@ -667,11 +667,11 @@ export function getHtmlForWebview(
                     <polyline points="8 6 2 12 8 18"/>
                   </svg>
                 </span>
-                <span id="modeLabel">Code</span>
+                <span id="modeLabel">Agent</span>
               </button>
               <div class="dropdown" id="modeDropdown">
-                <button class="item" data-mode="code"><span>Code</span><span class="desc" style="opacity:.6;font-size:11px">Cascade can write and edit code</span></button>
-                <button class="item" data-mode="chat"><span>Chat</span><span class="desc" style="opacity:.6;font-size:11px">Chat with Cascade</span></button>
+                <button class="item" data-mode="code"><span>Agent</span><span class="desc" style="opacity:.6;font-size:11px">Assista can write and edit code</span></button>
+                <button class="item" data-mode="chat"><span>Chat</span><span class="desc" style="opacity:.6;font-size:11px">Chat with Assista</span></button>
               </div>
             </div>
             <div class="menu" id="modelMenu">

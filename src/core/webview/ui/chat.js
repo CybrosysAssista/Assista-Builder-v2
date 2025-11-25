@@ -260,6 +260,19 @@ export function initChatUI(vscode) {
             return;
         }
 
+        // Close any open overlays (History/Settings) to show the chat area
+        const historyPage = document.getElementById('historyPage');
+        const settingsPage = document.getElementById('settingsPage');
+        const messagesEl = document.getElementById('messages');
+        const inputBar = document.querySelector('.input-bar');
+
+        if (historyPage) historyPage.style.display = 'none';
+        if (settingsPage) settingsPage.style.display = 'none';
+
+        // Ensure messages and input bar are visible
+        if (messagesEl) messagesEl.style.display = '';
+        if (inputBar) inputBar.style.display = '';
+
         appendMessage(text, "user");
         clearInput();
         toggleBusy(true);
@@ -287,7 +300,7 @@ export function initChatUI(vscode) {
 
     function applyMode(mode) {
         selectedMode = mode;
-        if (modeLabel) modeLabel.textContent = mode === 'code' ? 'Code' : 'Chat';
+        if (modeLabel) modeLabel.textContent = mode === 'code' ? 'Agent' : 'Chat';
         // Optional: inform host of mode change in the future
     }
 

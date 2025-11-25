@@ -12,8 +12,13 @@ export function initHistoryUI(vscode) {
     const confirmCancelBtn = document.getElementById('hxConfirmCancel');
     const confirmDeleteBtn = document.getElementById('hxConfirmDelete');
 
+    const clearAllBtn = document.getElementById('historyClearAllBtn');
+    const confirmTitle = document.getElementById('hxConfirmTitle');
+    const confirmDesc = document.getElementById('hxConfirmDesc');
+
     let items = [];
     let pendingDeleteId = null;
+    let isClearAll = false;
 
     // Centralized scroll reset used in multiple places
     function resetScrollPositions() {
@@ -181,11 +186,16 @@ export function initHistoryUI(vscode) {
         else if (sort === 'oldest') filtered.sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
         else if (sort === 'tokens') filtered.sort((a, b) => (b.tokensApprox || 0) - (a.tokensApprox || 0));
 
+        // Limit to 30 most recent conversations
+        filtered = filtered.slice(0, 30);
+
         if (!filtered.length) {
             emptyEl.style.display = 'flex';
+            listEl.style.display = 'none';
             return;
         }
         emptyEl.style.display = 'none';
+        listEl.style.display = 'block';
 
         /** GROUP BY TIME PERIOD */
         const groups = {};
@@ -342,6 +352,9 @@ export function initHistoryUI(vscode) {
         if (action === "delete") {
             // Open in-webview confirmation modal
             pendingDeleteId = id;
+            isClearAll = false;
+            if (confirmTitle) confirmTitle.textContent = 'Delete Conversation';
+            if (confirmDesc) confirmDesc.textContent = 'Are you sure you want to delete this conversation?';
             if (confirmOverlay) {
                 confirmOverlay.style.display = 'flex';
             } else {
@@ -354,22 +367,44 @@ export function initHistoryUI(vscode) {
         }
     }, true);
 
+    // Clear All Handler
+    clearAllBtn?.addEventListener('click', () => {
+        if (items.length === 0) return; // Nothing to clear
+        isClearAll = true;
+        pendingDeleteId = null;
+        if (confirmTitle) confirmTitle.textContent = 'Clear All History';
+        if (confirmDesc) confirmDesc.textContent = 'Are you sure you want to delete all conversations? This action cannot be undone.';
+        if (confirmOverlay) confirmOverlay.style.display = 'flex';
+    });
+
     // Hook up confirmation modal buttons (once)
     if (confirmCancelBtn) {
         confirmCancelBtn.addEventListener('click', () => {
             pendingDeleteId = null;
+            isClearAll = false;
             if (confirmOverlay) confirmOverlay.style.display = 'none';
         });
     }
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', () => {
-            const id = pendingDeleteId;
+            if (isClearAll) {
+                items = [];
+                render();
+                try { vscode.postMessage({ command: 'clearAllHistory' }); } catch (_) { }
+            } else {
+                const id = pendingDeleteId;
+                if (!id) {
+                    if (confirmOverlay) confirmOverlay.style.display = 'none';
+                    return;
+                }
+                items = items.filter(x => String(x.id) !== String(id));
+                render();
+                try { vscode.postMessage({ command: 'deleteSession', id }); } catch (_) { }
+            }
+
             pendingDeleteId = null;
+            isClearAll = false;
             if (confirmOverlay) confirmOverlay.style.display = 'none';
-            if (!id) return;
-            items = items.filter(x => String(x.id) !== String(id));
-            render();
-            try { vscode.postMessage({ command: 'deleteSession', id }); } catch (_) { }
             try { setTimeout(() => vscode.postMessage({ command: 'loadHistory' }), 50); } catch (_) { }
         });
     }
