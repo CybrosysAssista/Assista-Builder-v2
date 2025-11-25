@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { ProviderAdapter } from '../providers/base.js';
 import type { InternalMessage } from './types.js';
-import { ALL_TOOLS, executeToolByName, findToolByName } from '../tools/registry.js';
+import { ALL_TOOLS, executeToolByName, findToolByName, readFileTool } from '../tools/registry.js';
 import { safeParseJson } from '../tools/toolUtils.js';
 import { log } from 'console';
 
@@ -34,7 +34,9 @@ export async function runAgentOrchestrator(
     content: [{ type: 'text', text: params.contents }],
   });
 
-  const tools = ALL_TOOLS;
+  // Filter tools based on mode: chat = read_file only, agent = all tools
+  const mode = params.config?.mode || 'agent';
+  const tools = mode === 'chat' ? [readFileTool] : ALL_TOOLS;
   // let iterations = 0;
   let finalResponse = '';
 

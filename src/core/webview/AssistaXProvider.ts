@@ -58,7 +58,8 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 if (!text) {
                     return;
                 }
-                await this.handleUserMessage(text);
+                const mode = typeof message.mode === 'string' ? message.mode : 'agent';
+                await this.handleUserMessage(text, mode);
                 return;
             }
 
@@ -232,10 +233,10 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         this._view.webview.postMessage({ type, text });
     }
 
-    private async handleUserMessage(text: string) {
+    private async handleUserMessage(text: string, mode: string = 'agent') {
         try {
             const startTime = Date.now();
-            const response = await runAgent({ contents: text }, this._context);
+            const response = await runAgent({ contents: text, mode }, this._context);
             const elapsed = Date.now() - startTime;
             console.log(`[AssistaX] Total completion time taken in ${elapsed}ms`);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);

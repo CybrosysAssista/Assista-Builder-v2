@@ -221,7 +221,7 @@ export function getHtmlForWebview(
       }
       .chatbox-toolbar .left,
       .chatbox-toolbar .right { display: flex; align-items: center; gap: 8px; }
-      /* Tighter spacing between Code chip and Model chip */
+      /* Tighter spacing between Mode chip and Model chip */
       .chatbox-toolbar .left { gap: 6px; }
       /* Tighter spacing on the right icon cluster */
       .chatbox-toolbar .right { gap: 6px; }
@@ -495,11 +495,11 @@ export function getHtmlForWebview(
                     <polyline points="8 6 2 12 8 18"/>
                   </svg>
                 </span>
-                <span id="modeLabel">Code</span>
+                <span id="modeLabel">Agent</span>
               </button>
               <div class="dropdown" id="modeDropdown">
-                <button class="item" data-mode="code"><span>Code</span><span class="desc" style="opacity:.6;font-size:11px">Cascade can write and edit code</span></button>
                 <button class="item" data-mode="chat"><span>Chat</span><span class="desc" style="opacity:.6;font-size:11px">Chat with Cascade</span></button>
+                <button class="item" data-mode="agent"><span>Agent</span><span class="desc" style="opacity:.6;font-size:11px">Cascade can write and edit code</span></button>
               </div>
             </div>
             <div class="menu" id="modelMenu">
