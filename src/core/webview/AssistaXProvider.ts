@@ -111,6 +111,10 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 await this._history?.handleDeleteSession(message);
                 return;
             }
+            if (message.command === 'clearAllHistory') {
+                await this._history?.handleClearAllHistory();
+                return;
+            }
             if (message.command === 'openSession') {
                 // Switch active session and hydrate webview
                 const id = typeof message.id === 'string' ? message.id : '';

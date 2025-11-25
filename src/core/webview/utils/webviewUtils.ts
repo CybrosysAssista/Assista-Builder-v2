@@ -359,8 +359,9 @@ export function getHtmlForWebview(
       .dropdown { position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; width: 260px; background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12)); border-radius: 8px; box-shadow: 0 16px 40px rgba(0,0,0,0.35); display: none; overflow: hidden; z-index: 9999; }
       .dropdown.visible { display: block; }
       .dropdown .section-title { padding: 8px 10px; font-size: 11px; color: var(--vscode-descriptionForeground); border-bottom: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.08)); }
-      .dropdown button.item { width: 100%; text-align: left; padding: 8px 10px; background: transparent; color: inherit; border: none; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+      .dropdown button.item { width: 100%; text-align: left; padding: 8px 10px; background: transparent; color: inherit; border: none; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; cursor: pointer; }
       .dropdown button.item:hover { background: rgba(255,255,255,0.06); }
+      .dropdown button.item .desc { display: block; opacity: 0.6; font-size: 11px; line-height: 1.3; }
       .dropdown .item.custom { border-top: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.08)); justify-content: flex-start; gap: 8px; }
       .send-btn { padding: 6px; border-radius: 9999px; }
       .send-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
@@ -666,11 +667,11 @@ export function getHtmlForWebview(
                     <polyline points="8 6 2 12 8 18"/>
                   </svg>
                 </span>
-                <span id="modeLabel">Code</span>
+                <span id="modeLabel">Agent</span>
               </button>
               <div class="dropdown" id="modeDropdown">
-                <button class="item" data-mode="code"><span>Code</span><span class="desc" style="opacity:.6;font-size:11px">Cascade can write and edit code</span></button>
-                <button class="item" data-mode="chat"><span>Chat</span><span class="desc" style="opacity:.6;font-size:11px">Chat with Cascade</span></button>
+                <button class="item" data-mode="code"><span>Agent</span><span class="desc" style="opacity:.6;font-size:11px">Assista can write and edit code</span></button>
+                <button class="item" data-mode="chat"><span>Chat</span><span class="desc" style="opacity:.6;font-size:11px">Chat with Assista</span></button>
               </div>
             </div>
             <div class="menu" id="modelMenu">

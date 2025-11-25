@@ -194,12 +194,33 @@ export function getHistoryHtml(): string {
             background: rgba(255,255,255,0.1); 
         }
         
-        .empty-state { height: 200px; display: none; align-items: center; justify-content: center; color: var(--vscode-descriptionForeground); }
+        .empty-state { flex: 1; display: none; align-items: center; justify-content: center; color: var(--vscode-descriptionForeground); }
 
         /* Scrollbar */
         .hx-list::-webkit-scrollbar { width: 6px; }
         .hx-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         
+        /* Clear All Button */
+        .hx-clear-btn {
+            position: absolute;
+            top: 16px;
+            right: 24px;
+            background: transparent;
+            border: none;
+            color: var(--vscode-descriptionForeground);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .hx-clear-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--vscode-errorForeground);
+        }
+
         /* Confirm Modal */
         .hx-confirm-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
         .hx-confirm { width: 400px; background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-widget-border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
@@ -220,6 +241,15 @@ export function getHistoryHtml(): string {
             <span>Back</span>
           </button>
           
+          <button class="hx-clear-btn" id="historyClearAllBtn" title="Clear All History">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+          </button>
+
           <div>
             <div class="hx-title">Chat History</div>
             <div class="hx-sub">Your conversation timeline</div>

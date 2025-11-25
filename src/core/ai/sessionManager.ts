@@ -73,9 +73,10 @@ async function persist(context: vscode.ExtensionContext, state: SessionState): P
             session.title = deriveTitle(session.messages);
         }
     }
-    const activeId = sessionsWithMessages.some((session) => session.id === state.activeSessionId)
-        ? state.activeSessionId
-        : undefined;
+
+    // Always persist the active session ID, even if the session is empty
+    // This is crucial for new chat sessions that haven't received messages yet
+    const activeId = state.activeSessionId;
 
     await Promise.all([
         writePersistedSessions(context, deepClone(sessionsWithMessages)),
@@ -227,4 +228,12 @@ export function trimHistory(messages: ChatMessage[]): ChatMessage[] {
         return deepClone(filtered);
     }
     return deepClone(filtered.slice(filtered.length - MAX_HISTORY_MESSAGES));
+}
+
+export async function clearAllSessions(context: vscode.ExtensionContext): Promise<void> {
+    const state = await ensureLoaded(context);
+    const session = createSession();
+    state.sessions = [session];
+    state.activeSessionId = session.id;
+    await persist(context, state);
 }

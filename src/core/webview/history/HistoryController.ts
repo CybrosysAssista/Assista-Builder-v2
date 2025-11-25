@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { ChatMessage, ChatSession, getAllSessions, getActiveSession, switchActiveSession, deleteSession } from '../../ai/sessionManager.js';
+import { ChatMessage, ChatSession, getAllSessions, getActiveSession, switchActiveSession, deleteSession, clearAllSessions } from '../../ai/sessionManager.js';
 
 export class HistoryController {
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly postMessage: (type: string, payload?: any) => void,
-  ) {}
+  ) { }
 
   public async handleLoadHistory(_message?: any) {
     const sessions: ChatSession[] = await getAllSessions(this.context);
@@ -42,6 +42,16 @@ export class HistoryController {
       await this.handleLoadHistory();
     } catch (err: any) {
       this.postMessage('historyDeleteFailed', { id, error: String(err?.message || err || 'Unknown error') });
+    }
+  }
+
+  public async handleClearAllHistory() {
+    try {
+      await clearAllSessions(this.context);
+      this.postMessage('historyCleared');
+      await this.handleLoadHistory();
+    } catch (err: any) {
+      this.postMessage('historyClearFailed', { error: String(err?.message || err || 'Unknown error') });
     }
   }
 }
