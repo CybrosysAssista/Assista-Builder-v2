@@ -24,7 +24,7 @@ export function initChatUI(vscode) {
     let isBusy = false;
     let activeSessionId;
     // Local UI state (vanilla JS equivalent of React state)
-    let selectedMode = 'code';
+    let selectedMode = 'agent';
     let selectedModel = 'gpt5-low';
     let showModeMenu = false;
     let showModelMenu = false;
@@ -277,7 +277,7 @@ export function initChatUI(vscode) {
         clearInput();
         toggleBusy(true);
 
-        vscode.postMessage({ command: "userMessage", text });
+        vscode.postMessage({ command: "userMessage", text, mode: selectedMode });
     }
 
     // --- New UI: toolbar behaviors ---
@@ -300,7 +300,7 @@ export function initChatUI(vscode) {
 
     function applyMode(mode) {
         selectedMode = mode;
-        if (modeLabel) modeLabel.textContent = mode === 'code' ? 'Agent' : 'Chat';
+        if (modeLabel) modeLabel.textContent = mode === 'agent' ? 'Agent' : 'Chat';
         // Optional: inform host of mode change in the future
     }
 

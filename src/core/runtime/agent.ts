@@ -67,8 +67,9 @@ export async function runAgent(params: any = {}, context: vscode.ExtensionContex
   // Convert session history to internal format
   const internalHistory = convertSessionToInternal(sessionHistory);
 
-  // Get system instruction
-  const systemInstruction = getSystemInstruction(customInstructions);
+  // Get system instruction with mode
+  const mode = params.mode || 'agent';
+  const systemInstruction = getSystemInstruction(customInstructions, mode);
 
   // Run orchestrator
   const userContent = typeof params.contents === 'string' ? params.contents : String(params.contents || '');
@@ -78,6 +79,7 @@ export async function runAgent(params: any = {}, context: vscode.ExtensionContex
     config: {
       ...params.config,
       systemInstruction,
+      mode: params.mode || 'agent',
     },
     reset: cfg.resetSession,
   };
