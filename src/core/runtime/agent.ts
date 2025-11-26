@@ -6,6 +6,7 @@ import { createProvider } from '../providers/factory.js';
 import { runAgentOrchestrator } from '../agent/orchestrator.js';
 import type { InternalMessage } from '../agent/types.js';
 import type { ChatMessage, ChatRole } from './sessions/types.js';
+import { OdooEnvironmentService } from '../utils/odooDetection.js';
 
 /**
  * Convert session messages to internal message format
@@ -45,7 +46,11 @@ function convertInternalToSession(internalMessages: InternalMessage[]): ChatMess
     });
 }
 
-export async function runAgent(params: any = {}, context: vscode.ExtensionContext): Promise<string> {
+export async function runAgent(
+  params: any = {},
+  context: vscode.ExtensionContext,
+  odooEnvService: OdooEnvironmentService
+): Promise<string> {
   if (!context) { throw new Error("Extension context is required."); }
 
   const cfg = params.config ?? {};
@@ -67,10 +72,12 @@ export async function runAgent(params: any = {}, context: vscode.ExtensionContex
   // Convert session history to internal format
   const internalHistory = convertSessionToInternal(sessionHistory);
 
-  // Get system instruction with mode
+  // Get environment and system instruction with mode
   const mode = params.mode || 'agent';
-  const systemInstruction = getSystemInstruction(customInstructions, mode);
-
+  const environment = await odooEnvService.getEnvironment();
+  const systemInstruction = getSystemInstruction(customInstructions, mode, environment);
+  // console.log('environment', environment);
+  // console.log('systemInstruction', systemInstruction);
   // Run orchestrator
   const userContent = typeof params.contents === 'string' ? params.contents : String(params.contents || '');
 

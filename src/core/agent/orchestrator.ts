@@ -5,7 +5,7 @@ import { ALL_TOOLS, executeToolByName, findToolByName, readFileTool } from '../t
 import { safeParseJson } from '../tools/toolUtils.js';
 import { log } from 'console';
 
-const MAX_TOOL_ITERATIONS = 8;
+// const MAX_TOOL_ITERATIONS = 8;
 
 /**
  * Run agent with provider-agnostic orchestrator

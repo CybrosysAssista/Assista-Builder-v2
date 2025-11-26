@@ -6,6 +6,7 @@ import { SettingsController } from './settings/SettingsController.js';
 import { HistoryController } from './history/HistoryController.js';
 import { runAgent } from "../runtime/agent.js";
 import { MentionController } from './mentions/MentionController.js';
+import { OdooEnvironmentService } from '../utils/odooDetection.js';
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaXView';
@@ -20,7 +21,8 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
-        private readonly _context: vscode.ExtensionContext
+        private readonly _context: vscode.ExtensionContext,
+        private readonly _odooEnvService: OdooEnvironmentService
     ) { }
 
     resolveWebviewView(
@@ -261,7 +263,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
     private async handleUserMessage(text: string, mode: string = 'agent') {
         try {
             const startTime = Date.now();
-            const response = await runAgent({ contents: text, mode }, this._context);
+            const response = await runAgent({ contents: text, mode }, this._context, this._odooEnvService);
             const elapsed = Date.now() - startTime;
             console.log(`[AssistaX] Total completion time taken in ${elapsed}ms`);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
