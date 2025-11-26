@@ -113,13 +113,13 @@ export function initSettingsUI(vscode) {
         const items = document.querySelectorAll('.sidebar .sidebar-item');
         if (sectionName === 'general') {
             general.style.display = 'block';
-            if (items[1]) items[1].classList.add('active');
+            if (items[0]) items[0].classList.add('active'); // items[0] is now Profile
             // Fetch usage data for the active provider (defaulting to openrouter for credits check)
             const provider = document.getElementById('provider')?.value || 'openrouter';
             vscode.postMessage({ command: 'fetchUsage', provider });
         } else {
             providers.style.display = 'block';
-            if (items[0]) items[0].classList.add('active');
+            if (items[1]) items[1].classList.add('active'); // items[1] is now Providers
         }
     }
 
@@ -128,10 +128,10 @@ export function initSettingsUI(vscode) {
     function wireSettingsSidebar() {
         const items = document.querySelectorAll('.sidebar .sidebar-item');
         if (items[0]) {
-            items[0].addEventListener('click', () => showSectionInternal('providers'));
+            items[0].addEventListener('click', () => showSectionInternal('general')); // items[0] is Profile
         }
         if (items[1]) {
-            items[1].addEventListener('click', () => showSectionInternal('general'));
+            items[1].addEventListener('click', () => showSectionInternal('providers')); // items[1] is Providers
         }
     }
 
@@ -153,6 +153,69 @@ export function initSettingsUI(vscode) {
             });
             sidebarResizeObserver.observe(frame);
         } catch (_) { /* no-op */ }
+    }
+
+    // Setup custom provider dropdown
+    function setupProviderDropdown() {
+        const wrap = document.getElementById('ddProvider');
+        const btn = document.getElementById('btnProvider');
+        if (!wrap || !btn || !providerSelect) return;
+
+        const menu = wrap.querySelector('.stx-dd-menu');
+        const label = btn.querySelector('.label');
+
+        // Toggle dropdown
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.classList.toggle('show');
+            wrap.classList.toggle('open');
+        });
+
+        // Select item
+        menu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const item = e.target.closest('.stx-dd-item');
+            if (!item) return;
+
+            const val = item.dataset.value;
+            const text = item.textContent;
+
+            // Update UI
+            label.textContent = text;
+            menu.querySelectorAll('.stx-dd-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+
+            // Update hidden select (for compatibility with existing code)
+            providerSelect.value = val;
+
+            // Trigger change event on hidden select
+            const event = new Event('change', { bubbles: true });
+            providerSelect.dispatchEvent(event);
+
+            // Close dropdown
+            menu.classList.remove('show');
+            wrap.classList.remove('open');
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (!wrap.contains(e.target)) {
+                menu.classList.remove('show');
+                wrap.classList.remove('open');
+            }
+        });
+
+        // Sync custom dropdown with hidden select when programmatically changed
+        const observer = new MutationObserver(() => {
+            const selectedOption = providerSelect.options[providerSelect.selectedIndex];
+            if (selectedOption) {
+                label.textContent = selectedOption.textContent;
+                menu.querySelectorAll('.stx-dd-item').forEach(i => {
+                    i.classList.toggle('active', i.dataset.value === providerSelect.value);
+                });
+            }
+        });
+        observer.observe(providerSelect, { attributes: true, attributeFilter: ['value'] });
     }
 
     // Filter and render models in dropdown based on search query
@@ -247,6 +310,7 @@ export function initSettingsUI(vscode) {
         vscode.postMessage({ command: 'loadSettings' });
         try { wireSettingsSidebar(); } catch (_) { }
         try { startSidebarObserver(); } catch (_) { }
+        try { setupProviderDropdown(); } catch (_) { }
     }
 
     function closeSettings() {
