@@ -504,8 +504,28 @@ export function initSettingsUI(vscode) {
         closeSettings,
         applySettingsData(data = {}) {
             const activeProvider = data.activeProvider || 'google';
-            if (providerSelect) providerSelect.value = activeProvider;
-            updateProviderUiLabels(activeProvider);
+            if (providerSelect) {
+                providerSelect.value = activeProvider;
+
+                // Manually sync custom dropdown UI to match the saved provider
+                const btn = document.getElementById('btnProvider');
+                const menu = document.querySelector('.stx-dd-menu');
+                if (btn && menu) {
+                    const label = btn.querySelector('.label');
+                    const selectedOption = providerSelect.options[providerSelect.selectedIndex];
+                    if (label && selectedOption) {
+                        label.textContent = selectedOption.textContent;
+                    }
+                    menu.querySelectorAll('.stx-dd-item').forEach(i => {
+                        i.classList.toggle('active', i.dataset.value === activeProvider);
+                    });
+                }
+
+                // Dispatch change event to update labels and inputs
+                providerSelect.dispatchEvent(new Event('change'));
+            }
+            // updateProviderUiLabels is called by the change listener above, but we can leave this for safety
+            // updateProviderUiLabels(activeProvider);
 
             // Persist saved keys in memory and set input for the active provider
             SAVED_KEYS.google = String(data.googleKey || '');

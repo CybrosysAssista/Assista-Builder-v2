@@ -88,7 +88,7 @@
             "openrouter",
             "custom"
           ],
-          "default": "openrouter",
+          "default": "google",
           "description": "Active AI provider for generation and chat."
         },
         "assistaX.providers": {

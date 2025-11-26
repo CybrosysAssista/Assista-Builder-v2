@@ -191,7 +191,12 @@ export function getHtmlForWebview(
         padding: 10px 14px;
         border-radius: 8px;
         max-width: 80%;
+        width: fit-content;
+        box-sizing: border-box;
         font-size: 13px;
+        word-break: break-all;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
       }
       .message.markdown {
         white-space: normal;
