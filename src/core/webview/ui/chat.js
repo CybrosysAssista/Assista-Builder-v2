@@ -294,7 +294,6 @@ export function initChatUI(vscode) {
         inputEl,
         mentionBtn,
         menuEl: mentionMenu,
-        pickFilesEl: mentionPickFiles,
         insertAtCursor,
     });
 

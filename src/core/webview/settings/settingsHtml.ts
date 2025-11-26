@@ -48,30 +48,32 @@ export function getSettingsModalHtml(): string {
         .btn.btn-save { background-color: #0e639c; color: white; }
         .btn.btn-done { background-color: #3c3c3c; color: #cccccc; }
         .btn.btn-get-api { 
-          display: flex;
-          width: 92px;
+          display: inline-flex;
+          min-width: fit-content;
+          width: auto;
           justify-content: center;
           align-items: center;
-          gap: 10px;
+          gap: 6px;
           align-self: stretch;
           border-radius: 8px;
           border: 0.5px solid rgba(188, 132, 135, 0.50);
           background: rgba(188, 132, 135, 0.05);
           color: #CDCDCD;
-          padding: 0; /* Let flex centering handle it */
+          padding: 6px 12px;
           white-space: nowrap;
           cursor: pointer;
-          font-size: 11px; /* Matching other inputs */
+          font-size: 13px;
+          flex-shrink: 0;
         }
         .btn.btn-get-api:hover { background: rgba(188, 132, 135, 0.1); }
         .api-key-row { display: flex; gap: 10px; align-items: center; }
         .api-key-row input[type="password"] { flex: 1; }
         .section { margin-bottom: 16px; }
         /* Ensure content aligns with subheader padding */
-        .content-body { display: flex; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; background: #1A1A1A; min-height: calc(100vh - 120px); }
-        .settings-container { margin: 0; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; background: #1A1A1A; }
-        .section-title { font-family: 'Ubuntu', sans-serif; font-size: 11px; color: #CDCDCD; margin-bottom: 8px; font-weight: 400; font-style: normal; line-height: normal; flex: 1 0 0; }
-        .section-description { font-family: 'Ubuntu', sans-serif; font-size: 11px; color: #CDCDCD; margin-bottom: 15px; font-weight: 400; font-style: normal; line-height: normal; }
+        .content-body { display: flex; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; min-height: calc(100vh - 120px); }
+        .settings-container { margin: 0; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; }
+        .section-title { font-family: 'Ubuntu', sans-serif; font-size: 13px; color: #CDCDCD; margin-bottom: 8px; font-weight: 400; font-style: normal; line-height: normal; flex: 1 0 0; }
+        .section-description { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: #CDCDCD; margin-bottom: 15px; font-weight: 400; font-style: normal; line-height: normal; }
         /* Make content section headings bold with gradient (e.g., General Settings h2) */
         .settings-container h2, .content-body h2 { font-family: 'Ubuntu', sans-serif; font-size: 20px; font-style: normal; font-weight: 700; line-height: normal; background: linear-gradient(91deg, #E3B2B3 0%, #BC8487 99.58%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .profile-row { display: flex; align-items: center; margin-bottom: 15px; }
@@ -80,13 +82,14 @@ export function getSettingsModalHtml(): string {
         .icon-btn { background: none; border: none; color: #cccccc; cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; }
         .checkbox-group { display: flex; align-items: center; margin-bottom: 12px; }
         .checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; cursor: pointer; }
-        .info-text { font-family: 'Ubuntu', sans-serif; font-size: 11px; color: #CDCDCD; margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
-        .info-box { background-color: #252526; padding: 15px; border-radius: 4px; margin-top: 15px; font-family: 'Ubuntu', sans-serif; font-size: 11px; line-height: 1.6; color: #CDCDCD; font-weight: 400; }
+        .checkbox-group label { font-size: 13px; }
+        .info-text { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: #CDCDCD; margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
+        .info-box { background-color: #252526; padding: 15px; border-radius: 4px; margin-top: 15px; font-family: 'Ubuntu', sans-serif; font-size: 12px; line-height: 1.6; color: #CDCDCD; font-weight: 400; }
         select, input[type="text"], input[type="password"] { 
           display: flex;
           width: 100%; 
-          height: 24px;
-          padding: 0 8px; 
+          height: 28px;
+          padding: 0 10px; 
           justify-content: space-between;
           align-items: center;
           align-self: stretch;
@@ -95,7 +98,7 @@ export function getSettingsModalHtml(): string {
           color: #CDCDCD; 
           border-radius: 8px; 
           font-family: 'Ubuntu', sans-serif; 
-          font-size: 11px; 
+          font-size: 13px; 
           font-weight: 400; 
           box-sizing: border-box; 
           outline: none; 
@@ -148,7 +151,7 @@ export function getSettingsModalHtml(): string {
 
         /* Subheading for active section (text only) */
         .subheader { display: flex; align-items: center; height: 32px; padding: 0 12px; color: #cccccc; background-color: #1f1f1f; margin-bottom: 5px; }
-        .subheader .subheader-text { font-size: 13px; font-weight: 500; }
+        .subheader .subheader-text { font-size: 14px; font-weight: 500; }
 
         /* Responsive tweaks */
         @media (max-width: 768px) {
@@ -204,22 +207,22 @@ export function getSettingsModalHtml(): string {
           -webkit-text-fill-color: transparent;
           margin: 0 0 4px 0; 
         }
-        .settings-subtitle { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: #CDCDCD; margin: 0; font-weight: 400; font-style: normal; line-height: normal; }
+        .settings-subtitle { font-family: 'Ubuntu', sans-serif; font-size: 13px; color: #CDCDCD; margin: 0; font-weight: 400; font-style: normal; line-height: normal; }
         
         /* Profile & Usage Styles */
         .profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 0 4px; max-width: 800px; }
         .avatar { width: 48px; height: 48px; border-radius: 50%; border: 1px solid #3C3C3C; display: flex; align-items: center; justify-content: center; background: #1A1A1A; flex-shrink: 0; }
         .user-info { flex: 1; }
-        .user-name { font-size: 14px; font-weight: 500; color: #E0E0E0; margin-bottom: 4px; }
-        .user-email { font-size: 12px; color: #9D9D9D; margin-bottom: 2px; }
-        .user-meta { font-size: 11px; color: #666; display: flex; align-items: center; gap: 4px; }
-        .logout-btn { background: #252526; border: 1px solid #3C3C3C; color: #CCCCCC; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+        .user-name { font-size: 15px; font-weight: 500; color: #E0E0E0; margin-bottom: 4px; }
+        .user-email { font-size: 13px; color: #9D9D9D; margin-bottom: 2px; }
+        .user-meta { font-size: 12px; color: #666; display: flex; align-items: center; gap: 4px; }
+        .logout-btn { background: #252526; border: 1px solid #3C3C3C; color: #CCCCCC; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
         .usage-card { border: 1px solid #3C3C3C; border-radius: 12px; padding: 16px; background: #1A1A1A; margin-top: 20px; max-width: 800px; }
-        .usage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 13px; color: #E0E0E0; }
-        .usage-meta { display: flex; align-items: center; gap: 10px; font-size: 11px; color: #666; }
-        .badge { background: #252526; padding: 2px 6px; border-radius: 4px; border: 1px solid #333; font-size: 10px; color: #CCC; }
+        .usage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 14px; color: #E0E0E0; }
+        .usage-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #666; }
+        .badge { background: #252526; padding: 2px 6px; border-radius: 4px; border: 1px solid #333; font-size: 11px; color: #CCC; }
         .usage-stats { margin-bottom: 16px; }
-        .usage-label { display: flex; justify-content: space-between; font-size: 11px; color: #9D9D9D; margin-bottom: 8px; }
+        .usage-label { display: flex; justify-content: space-between; font-size: 12px; color: #9D9D9D; margin-bottom: 8px; }
         .progress-bar { height: 8px; background: #2A2A2A; border-radius: 4px; overflow: hidden; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, #E3B2B3 0%, #BC8487 100%); border-radius: 4px; }
         .upgrade-btn { width: 100%; padding: 10px; background: transparent; border: 1px solid #BC8487; color: #E0E0E0; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
@@ -287,7 +290,6 @@ export function getSettingsModalHtml(): string {
                 <input type="password" id="apiKey"  />
                 <button class="btn btn-get-api" id="getApiKeyBtn">Get OpenRouter API</button>
               </div>
-              <div class="info-text">API keys are stored securely in VSCode's Secret Storage</div>
             </div>
 
             <div class="section"><div class="checkbox-group"><input type="checkbox" id="customUrl" /><label for="customUrl">Use custom base URL</label></div></div>
@@ -311,8 +313,9 @@ export function getSettingsModalHtml(): string {
           </div>
 
           </div>
-          <div class="settings-container" id="generalSection" style="display:none;">
+          <div id="generalSection" style="display:none;">
             <div class="subheader"><span class="subheader-text">Profile</span></div>
+            <div class="content-body">
             
             <div class="profile-header">
                 <div class="avatar">
@@ -348,6 +351,7 @@ export function getSettingsModalHtml(): string {
                     </div>
                 </div>
                 <button class="upgrade-btn">Upgrade Plan</button>
+            </div>
             </div>
           </div>
         </div>

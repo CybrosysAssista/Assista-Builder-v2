@@ -45,8 +45,7 @@ export function initWelcomeUI(vscode, opts = {}) {
   const mentions = initMentionsUI(vscode, {
     inputEl: input(),
     mentionBtn: null, // no dedicated @ button on welcome; inline typing opens it
-    menuEl: document.getElementById('mentionMenu'),
-    pickFilesEl: document.getElementById('mentionPickFiles'),
+    menuEl: document.getElementById('welcomeMentionMenu'),
     insertAtCursor: fallbackInsertAtCursor,
   });
 
