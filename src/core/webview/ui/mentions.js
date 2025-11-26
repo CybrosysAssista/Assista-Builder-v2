@@ -13,7 +13,6 @@ export function initMentionsUI(vscode, opts) {
   const defaultSection = menu.querySelector('.mention-default-section');
   const pickFilesEl = menu.querySelector('.mention-pick-files');
   const pickerPanel = menu.querySelector('.mention-picker-panel');
-  const pickerBack = menu.querySelector('.mention-picker-back');
   const pickerSearch = menu.querySelector('.mention-picker-search-input');
   const pickerList = menu.querySelector('.mention-picker-list');
 
@@ -311,10 +310,15 @@ export function initMentionsUI(vscode, opts) {
     openPicker();
   });
 
-  mentionBtn?.addEventListener('click', () => {
+  mentionBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
     try {
       inputEl?.focus();
-      openMenu();
+      if (typeof insertAtCursor === 'function') {
+        insertAtCursor('@');
+      } else {
+        openMenu();
+      }
     } catch (_) { }
   });
 
@@ -377,7 +381,6 @@ export function initMentionsUI(vscode, opts) {
   window.addEventListener('scroll', () => { if (open) positionMenu(); }, true);
 
   // Picker controls
-  pickerBack?.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); closePicker(); });
   // Debounced search
   let t;
   pickerSearch?.addEventListener('input', () => {

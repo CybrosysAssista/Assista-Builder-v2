@@ -217,7 +217,7 @@ export function getSettingsModalHtml(): string {
         .user-email { font-size: 13px; color: #9D9D9D; margin-bottom: 2px; }
         .user-meta { font-size: 12px; color: #666; display: flex; align-items: center; gap: 4px; }
         .logout-btn { background: #252526; border: 1px solid #3C3C3C; color: #CCCCCC; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
-        .usage-card { border: 1px solid #3C3C3C; border-radius: 12px; padding: 16px; background: #1A1A1A; margin-top: 20px; max-width: 800px; }
+        .usage-card { border: 1px solid #3C3C3C; border-radius: 12px; padding: 16px; background: #1A1A1A; margin-top: 8px; max-width: 800px; }
         .usage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 14px; color: #E0E0E0; }
         .usage-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #666; }
         .badge { background: #252526; padding: 2px 6px; border-radius: 4px; border: 1px solid #333; font-size: 11px; color: #CCC; }

@@ -716,7 +716,6 @@ export function getHtmlForWebview(
             </div>
             <div class="mention-panel mention-picker-panel">
               <div class="mention-search" style="display:flex; align-items:center; gap:8px;">
-                <button class="icon-btn mention-picker-back" title="Back" style="padding:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></button>
                 <input class="mention-picker-search-input" type="text" placeholder="Search files and folders..." />
               </div>
               <div class="mention-list mention-picker-list" role="listbox"></div>
