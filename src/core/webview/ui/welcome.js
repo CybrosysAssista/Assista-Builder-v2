@@ -45,8 +45,7 @@ export function initWelcomeUI(vscode, opts = {}) {
   const mentions = initMentionsUI(vscode, {
     inputEl: input(),
     mentionBtn: null, // no dedicated @ button on welcome; inline typing opens it
-    menuEl: document.getElementById('mentionMenu'),
-    pickFilesEl: document.getElementById('mentionPickFiles'),
+    menuEl: document.getElementById('welcomeMentionMenu'),
     insertAtCursor: fallbackInsertAtCursor,
   });
 
@@ -101,7 +100,7 @@ export function initWelcomeUI(vscode, opts = {}) {
     if (!btn) return;
     const mode = btn.getAttribute('data-mode');
     if (!mode) return;
-    const label = mode === 'code' ? 'Code' : 'Chat';
+    const label = mode === 'code' ? 'Agent' : 'Chat';
     if (modeLabel()) modeLabel().textContent = label;
     closeMenus();
   });

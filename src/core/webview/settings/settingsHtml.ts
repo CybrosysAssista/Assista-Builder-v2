@@ -48,30 +48,32 @@ export function getSettingsModalHtml(): string {
         .btn.btn-save { background-color: #0e639c; color: white; }
         .btn.btn-done { background-color: #3c3c3c; color: #cccccc; }
         .btn.btn-get-api { 
-          display: flex;
-          width: 92px;
+          display: inline-flex;
+          min-width: fit-content;
+          width: auto;
           justify-content: center;
           align-items: center;
-          gap: 10px;
+          gap: 6px;
           align-self: stretch;
           border-radius: 8px;
           border: 0.5px solid rgba(188, 132, 135, 0.50);
           background: rgba(188, 132, 135, 0.05);
           color: #CDCDCD;
-          padding: 0; /* Let flex centering handle it */
+          padding: 6px 12px;
           white-space: nowrap;
           cursor: pointer;
-          font-size: 11px; /* Matching other inputs */
+          font-size: 13px;
+          flex-shrink: 0;
         }
         .btn.btn-get-api:hover { background: rgba(188, 132, 135, 0.1); }
         .api-key-row { display: flex; gap: 10px; align-items: center; }
         .api-key-row input[type="password"] { flex: 1; }
         .section { margin-bottom: 16px; }
         /* Ensure content aligns with subheader padding */
-        .content-body { display: flex; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; background: #1A1A1A; min-height: calc(100vh - 120px); }
-        .settings-container { margin: 0; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; background: #1A1A1A; }
-        .section-title { font-family: 'Ubuntu', sans-serif; font-size: 11px; color: #CDCDCD; margin-bottom: 8px; font-weight: 400; font-style: normal; line-height: normal; flex: 1 0 0; }
-        .section-description { font-family: 'Ubuntu', sans-serif; font-size: 11px; color: #CDCDCD; margin-bottom: 15px; font-weight: 400; font-style: normal; line-height: normal; }
+        .content-body { display: flex; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; min-height: calc(100vh - 120px); }
+        .settings-container { margin: 0; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; }
+        .section-title { font-family: 'Ubuntu', sans-serif; font-size: 13px; color: #CDCDCD; margin-bottom: 8px; font-weight: 400; font-style: normal; line-height: normal; flex: 1 0 0; }
+        .section-description { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: #CDCDCD; margin-bottom: 15px; font-weight: 400; font-style: normal; line-height: normal; }
         /* Make content section headings bold with gradient (e.g., General Settings h2) */
         .settings-container h2, .content-body h2 { font-family: 'Ubuntu', sans-serif; font-size: 20px; font-style: normal; font-weight: 700; line-height: normal; background: linear-gradient(91deg, #E3B2B3 0%, #BC8487 99.58%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .profile-row { display: flex; align-items: center; margin-bottom: 15px; }
@@ -80,13 +82,14 @@ export function getSettingsModalHtml(): string {
         .icon-btn { background: none; border: none; color: #cccccc; cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; }
         .checkbox-group { display: flex; align-items: center; margin-bottom: 12px; }
         .checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; cursor: pointer; }
-        .info-text { font-family: 'Ubuntu', sans-serif; font-size: 11px; color: #CDCDCD; margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
-        .info-box { background-color: #252526; padding: 15px; border-radius: 4px; margin-top: 15px; font-family: 'Ubuntu', sans-serif; font-size: 11px; line-height: 1.6; color: #CDCDCD; font-weight: 400; }
+        .checkbox-group label { font-size: 13px; }
+        .info-text { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: #CDCDCD; margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
+        .info-box { background-color: #252526; padding: 15px; border-radius: 4px; margin-top: 15px; font-family: 'Ubuntu', sans-serif; font-size: 12px; line-height: 1.6; color: #CDCDCD; font-weight: 400; }
         select, input[type="text"], input[type="password"] { 
           display: flex;
           width: 100%; 
-          height: 24px;
-          padding: 0 8px; 
+          height: 28px;
+          padding: 0 10px; 
           justify-content: space-between;
           align-items: center;
           align-self: stretch;
@@ -95,7 +98,7 @@ export function getSettingsModalHtml(): string {
           color: #CDCDCD; 
           border-radius: 8px; 
           font-family: 'Ubuntu', sans-serif; 
-          font-size: 11px; 
+          font-size: 13px; 
           font-weight: 400; 
           box-sizing: border-box; 
           outline: none; 
@@ -146,9 +149,67 @@ export function getSettingsModalHtml(): string {
           font-size: 12px;
         }
 
+        /* Custom Provider Dropdown Styles (matching History page) */
+        .stx-dd-wrap { position: relative; width: 100%; }
+        .stx-dd-btn { 
+          width: 100%; 
+          padding: 0 10px; 
+          height: 28px;
+          background: #1F1F1F; 
+          color: #CDCDCD; 
+          border: 0.5px solid #2A2A2A; 
+          border-radius: 8px; 
+          font-size: 13px; 
+          text-align: left; 
+          cursor: pointer; 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center;
+          font-family: 'Ubuntu', sans-serif;
+          font-weight: 400;
+        }
+        .stx-dd-btn:hover { background: #252525; }
+        .stx-dd-btn:focus { outline: none; }
+        .stx-dd-chevron { 
+          opacity: 0.7; 
+          transition: transform 0.2s;
+          flex-shrink: 0;
+        }
+        .stx-dd-wrap.open .stx-dd-chevron {
+          transform: rotate(180deg);
+        }
+        
+        .stx-dd-menu { 
+          position: absolute; 
+          top: calc(100% + 4px); 
+          left: 0; 
+          width: 100%; 
+          background: #383535ff; 
+          border: 1px solid #2A2A2A; 
+          color: #CDCDCD;
+          border-radius: 8px; 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.25); 
+          display: none; 
+          z-index: 1000; 
+          padding: 4px; 
+        }
+        .stx-dd-menu.show { display: block; }
+        .stx-dd-item { 
+          padding: 8px 12px; 
+          font-size: 13px; 
+          cursor: pointer; 
+          border-radius: 4px;
+          font-family: 'Ubuntu', sans-serif;
+        }
+        .stx-dd-item:hover { background: #2A2A2A; }
+        .stx-dd-item.active { 
+          background: linear-gradient(90deg, #0E639C 0%, #094771 100%); 
+          color: #FFFFFF; 
+        }
+
         /* Subheading for active section (text only) */
         .subheader { display: flex; align-items: center; height: 32px; padding: 0 12px; color: #cccccc; background-color: #1f1f1f; margin-bottom: 5px; }
-        .subheader .subheader-text { font-size: 13px; font-weight: 500; }
+        .subheader .subheader-text { font-size: 14px; font-weight: 500; }
 
         /* Responsive tweaks */
         @media (max-width: 768px) {
@@ -204,22 +265,22 @@ export function getSettingsModalHtml(): string {
           -webkit-text-fill-color: transparent;
           margin: 0 0 4px 0; 
         }
-        .settings-subtitle { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: #CDCDCD; margin: 0; font-weight: 400; font-style: normal; line-height: normal; }
+        .settings-subtitle { font-family: 'Ubuntu', sans-serif; font-size: 13px; color: #CDCDCD; margin: 0; font-weight: 400; font-style: normal; line-height: normal; }
         
         /* Profile & Usage Styles */
         .profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 0 4px; max-width: 800px; }
         .avatar { width: 48px; height: 48px; border-radius: 50%; border: 1px solid #3C3C3C; display: flex; align-items: center; justify-content: center; background: #1A1A1A; flex-shrink: 0; }
         .user-info { flex: 1; }
-        .user-name { font-size: 14px; font-weight: 500; color: #E0E0E0; margin-bottom: 4px; }
-        .user-email { font-size: 12px; color: #9D9D9D; margin-bottom: 2px; }
-        .user-meta { font-size: 11px; color: #666; display: flex; align-items: center; gap: 4px; }
-        .logout-btn { background: #252526; border: 1px solid #3C3C3C; color: #CCCCCC; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
-        .usage-card { border: 1px solid #3C3C3C; border-radius: 12px; padding: 16px; background: #1A1A1A; margin-top: 20px; max-width: 800px; }
-        .usage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 13px; color: #E0E0E0; }
-        .usage-meta { display: flex; align-items: center; gap: 10px; font-size: 11px; color: #666; }
-        .badge { background: #252526; padding: 2px 6px; border-radius: 4px; border: 1px solid #333; font-size: 10px; color: #CCC; }
+        .user-name { font-size: 15px; font-weight: 500; color: #E0E0E0; margin-bottom: 4px; }
+        .user-email { font-size: 13px; color: #9D9D9D; margin-bottom: 2px; }
+        .user-meta { font-size: 12px; color: #666; display: flex; align-items: center; gap: 4px; }
+        .logout-btn { background: #252526; border: 1px solid #3C3C3C; color: #CCCCCC; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .usage-card { border: 1px solid #3C3C3C; border-radius: 12px; padding: 16px; background: #1A1A1A; margin-top: 8px; max-width: 800px; }
+        .usage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 14px; color: #E0E0E0; }
+        .usage-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #666; }
+        .badge { background: #252526; padding: 2px 6px; border-radius: 4px; border: 1px solid #333; font-size: 11px; color: #CCC; }
         .usage-stats { margin-bottom: 16px; }
-        .usage-label { display: flex; justify-content: space-between; font-size: 11px; color: #9D9D9D; margin-bottom: 8px; }
+        .usage-label { display: flex; justify-content: space-between; font-size: 12px; color: #9D9D9D; margin-bottom: 8px; }
         .progress-bar { height: 8px; background: #2A2A2A; border-radius: 4px; overflow: hidden; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, #E3B2B3 0%, #BC8487 100%); border-radius: 4px; }
         .upgrade-btn { width: 100%; padding: 10px; background: transparent; border: 1px solid #BC8487; color: #E0E0E0; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
@@ -242,7 +303,15 @@ export function getSettingsModalHtml(): string {
       </div>
       <div class="settings-frame">
         <div class="sidebar" id="sidebar">
-          <div class="sidebar-item active" onclick="showSection('providers')">
+          <div class="sidebar-item active" onclick="showSection('general')">
+            <span class="sidebar-item-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3.33329 13.3333H12.6666V14.6667H3.33329V13.3333ZM7.99996 12C5.05444 12 2.66663 9.61221 2.66663 6.66668C2.66663 3.72116 5.05444 1.33334 7.99996 1.33334C10.9455 1.33334 13.3333 3.72116 13.3333 6.66668C13.3333 9.61221 10.9455 12 7.99996 12ZM7.99996 10.6667C10.2091 10.6667 12 8.87581 12 6.66668C12 4.45754 10.2091 2.66668 7.99996 2.66668C5.79082 2.66668 3.99996 4.45754 3.99996 6.66668C3.99996 8.87581 5.79082 10.6667 7.99996 10.6667Z" fill="#CDCDCD"/>
+              </svg>
+            </span>
+            <span class="sidebar-item-text">Profile</span>
+          </div>
+          <div class="sidebar-item" onclick="showSection('providers')">
             <span class="sidebar-item-icon" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <g clip-path="url(#clip0_90_121)">
@@ -257,62 +326,11 @@ export function getSettingsModalHtml(): string {
             </span>
             <span class="sidebar-item-text">Providers</span>
           </div>
-          <div class="sidebar-item" onclick="showSection('general')">
-            <span class="sidebar-item-icon" aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3.33329 13.3333H12.6666V14.6667H3.33329V13.3333ZM7.99996 12C5.05444 12 2.66663 9.61221 2.66663 6.66668C2.66663 3.72116 5.05444 1.33334 7.99996 1.33334C10.9455 1.33334 13.3333 3.72116 13.3333 6.66668C13.3333 9.61221 10.9455 12 7.99996 12ZM7.99996 10.6667C10.2091 10.6667 12 8.87581 12 6.66668C12 4.45754 10.2091 2.66668 7.99996 2.66668C5.79082 2.66668 3.99996 4.45754 3.99996 6.66668C3.99996 8.87581 5.79082 10.6667 7.99996 10.6667Z" fill="#CDCDCD"/>
-              </svg>
-            </span>
-            <span class="sidebar-item-text">General</span>
-          </div>
         </div>
         <div class="main-content">
-          <div id="providersSection">
-          <div class="subheader"><span class="subheader-text">Providers</span></div>
-          <div class="content-body">
-
-            <div class="section">
-              <div class="section-title">API Provider </div>
-              <select id="provider">
-                <option value="openrouter">OpenRouter</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="openai">OpenAI</option>
-                <option value="google">Google (Gemini)</option>
-              </select>
-            </div>
-
-            <div class="section">
-              <div class="section-title" id="apiKeyLabel">OpenRouter API Key</div>
-              <div class="api-key-row">
-                <input type="password" id="apiKey"  />
-                <button class="btn btn-get-api" id="getApiKeyBtn">Get OpenRouter API</button>
-              </div>
-              <div class="info-text">API keys are stored securely in VSCode's Secret Storage</div>
-            </div>
-
-            <div class="section"><div class="checkbox-group"><input type="checkbox" id="customUrl" /><label for="customUrl">Use custom base URL</label></div></div>
-            <div class="section" id="customUrlField" style="display:none;">
-              <div class="section-title">Custom Base URL</div>
-              <input type="text" id="baseUrl" placeholder="https://api.example.com/v1" />
-              <div class="info-text">Custom base URL</div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Model</div>
-              <div style="position: relative;">
-                <input type="text" id="model"  autocomplete="off" />
-                <div id="modelDropdownList" class="model-dropdown-list" style="display: none;">
-                  <!-- Model items will be populated here by JavaScript -->
-                </div>
-              </div>
-              <div class="error-message" id="errorMessage" style="display: none;">✕ The model ID you provided is not available. Please choose a different model.</div>
-              
-            </div>
-          </div>
-
-          </div>
-          <div class="settings-container" id="generalSection" style="display:none;">
+          <div id="generalSection">
             <div class="subheader"><span class="subheader-text">Profile</span></div>
+            <div class="content-body">
             
             <div class="profile-header">
                 <div class="avatar">
@@ -349,6 +367,64 @@ export function getSettingsModalHtml(): string {
                 </div>
                 <button class="upgrade-btn">Upgrade Plan</button>
             </div>
+            </div>
+          </div>
+          <div id="providersSection" style="display:none;">
+          <div class="subheader"><span class="subheader-text">Providers</span></div>
+          <div class="content-body">
+
+            <div class="section">
+              <div class="section-title">API Provider </div>
+              <div class="stx-dd-wrap" id="ddProvider">
+                <button class="stx-dd-btn" id="btnProvider" type="button">
+                  <span class="label">OpenRouter</span>
+                  <svg class="stx-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L5 5L9 1" stroke="#CDCDCD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <div class="stx-dd-menu">
+                  <div class="stx-dd-item active" data-value="openrouter">OpenRouter</div>
+                  <div class="stx-dd-item" data-value="anthropic">Anthropic</div>
+                  <div class="stx-dd-item" data-value="openai">OpenAI</div>
+                  <div class="stx-dd-item" data-value="google">Google (Gemini)</div>
+                </div>
+              </div>
+              <!-- Hidden select for compatibility -->
+              <select id="provider" style="display:none;">
+                <option value="openrouter">OpenRouter</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="openai">OpenAI</option>
+                <option value="google">Google (Gemini)</option>
+              </select>
+            </div>
+
+            <div class="section">
+              <div class="section-title" id="apiKeyLabel">OpenRouter API Key</div>
+              <div class="api-key-row">
+                <input type="password" id="apiKey"  />
+                <button class="btn btn-get-api" id="getApiKeyBtn">Get OpenRouter API</button>
+              </div>
+            </div>
+
+            <div class="section"><div class="checkbox-group"><input type="checkbox" id="customUrl" /><label for="customUrl">Use custom base URL</label></div></div>
+            <div class="section" id="customUrlField" style="display:none;">
+              <div class="section-title">Custom Base URL</div>
+              <input type="text" id="baseUrl" placeholder="https://api.example.com/v1" />
+              <div class="info-text">Custom base URL</div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Model</div>
+              <div style="position: relative;">
+                <input type="text" id="model"  autocomplete="off" />
+                <div id="modelDropdownList" class="model-dropdown-list" style="display: none;">
+                  <!-- Model items will be populated here by JavaScript -->
+                </div>
+              </div>
+              <div class="error-message" id="errorMessage" style="display: none;">✕ The model ID you provided is not available. Please choose a different model.</div>
+              
+            </div>
+          </div>
           </div>
         </div>
       </div>

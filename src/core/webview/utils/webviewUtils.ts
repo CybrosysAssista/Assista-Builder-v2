@@ -107,6 +107,8 @@ export function getHtmlForWebview(
         display: flex;
         flex-direction: column;
         gap: 12px;
+        mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
       }
       /* User message container - right aligned with flex */
       .message-row:has(.message.user) {
@@ -191,7 +193,12 @@ export function getHtmlForWebview(
         padding: 10px 14px;
         border-radius: 8px;
         max-width: 80%;
+        width: fit-content;
+        box-sizing: border-box;
         font-size: 13px;
+        word-break: break-all;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
       }
       .message.markdown {
         white-space: normal;
@@ -314,13 +321,13 @@ export function getHtmlForWebview(
       }
       /* Input bar container at the bottom */
       .input-bar {
-        padding: 12px;
-        border-top: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.1));
-        background: var(--vscode-sideBar-background);
+        padding: 0px 8px 8px 8px;
+        border-top: none;
+        background: transparent;
       }
       /* Chatbox styled like the reference */
       .chatbox {
-        background: var(--vscode-input-background, #1f1f1f);
+        background: #2a2a2a;
         border: 1px solid var(--vscode-input-border, #3a3a3a);
         border-radius: 12px;
         box-shadow: 0 8px 20px rgba(0,0,0,0.25);
@@ -353,8 +360,35 @@ export function getHtmlForWebview(
       .chatbox-toolbar .right .icon-svg { width: 14px; height: 14px; }
       .icon-btn { display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--vscode-descriptionForeground); cursor: pointer; }
       .icon-btn:hover { background: var(--vscode-editorWidget-background); }
-      .chip-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--vscode-descriptionForeground); background: transparent; border: none; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
-      .chip-btn:hover { color: inherit; background: var(--vscode-editorWidget-background); }
+      /* Mode button (Code/Agent) - boxed style */
+      #modeToggle {
+        display: flex;
+        padding: 4px 8px;
+        justify-content: center;
+        align-items: center;
+        gap: 2px;
+        border-radius: 5px;
+        border: 0.5px solid #3a3a3a;
+        background: #2a2a2a;
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        cursor: pointer;
+      }
+      #modeToggle:hover { color: inherit; background: var(--vscode-editorWidget-background); }
+      /* Model button (GPT-5) - transparent style */
+      #modelToggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: 6px;
+      }
+      #modelToggle:hover { color: inherit; background: transparent; }
       .menu { position: relative; }
       .dropdown { position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; width: 260px; background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12)); border-radius: 8px; box-shadow: 0 16px 40px rgba(0,0,0,0.35); display: none; overflow: hidden; z-index: 9999; }
       .dropdown.visible { display: block; }
@@ -691,16 +725,19 @@ export function getHtmlForWebview(
             </div>
           </div>
           <div class="right">
-            <button class="icon-btn" id="mentionBtn" title="Mention"><span style="font-weight:600; font-size:13px;">@</span></button>
+            <button class="icon-btn" id="mentionBtn" title="Mention">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10.8 6C10.8 3.34903 8.65098 1.2 6 1.2C3.34903 1.2 1.2 3.34903 1.2 6C1.2 8.65098 3.34903 10.8 6 10.8C6.98508 10.8 7.90086 10.5032 8.66286 9.99426L9.32856 10.9928C8.37612 11.6291 7.23138 12 6 12C2.68629 12 0 9.31368 0 6C0 2.68629 2.68629 0 6 0C9.31368 0 12 2.68629 12 6V6.9C12 8.0598 11.0598 9 9.9 9C9.17748 9 8.54016 8.63508 8.16228 8.07954C7.61652 8.6469 6.84948 9 6 9C4.34315 9 3 7.65684 3 6C3 4.34315 4.34315 3 6 3C6.67548 3 7.29882 3.22325 7.8003 3.6H9V6.9C9 7.39704 9.40296 7.8 9.9 7.8C10.397 7.8 10.8 7.39704 10.8 6.9V6ZM6 4.2C5.00586 4.2 4.2 5.00586 4.2 6C4.2 6.99414 5.00586 7.8 6 7.8C6.99414 7.8 7.8 6.99414 7.8 6C7.8 5.00586 6.99414 4.2 6 4.2Z" fill="#CDCDCD"/>
+              </svg>
+            </button>
             <button class="icon-btn send-btn" id="stopBtn" type="button" title="Stop">
               <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="6" y="6" width="12" height="12" rx="1"/>
               </svg>
             </button>
             <button class="icon-btn send-btn" id="sendBtn" type="button" title="Send">
-              <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 2L11 13"/>
-                <path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+              <svg width="11" height="12" viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0.282593 0C0.33021 0 0.377059 0.0119894 0.418781 0.0348532L10.8535 5.75324C10.9903 5.82819 11.0402 5.99939 10.965 6.13567C10.9391 6.18247 10.9005 6.22099 10.8535 6.24672L0.418781 11.9651C0.282028 12.04 0.110194 11.9903 0.0349793 11.8541C0.0120328 11.8125 0 11.7658 0 11.7184V0.281574C0 0.126066 0.126523 0 0.282593 0ZM1.13037 1.71023V5.4368H3.95631V6.5631H1.13037V10.2897L8.95815 5.99995L1.13037 1.71023Z" fill="#CDCDCD"/>
               </svg>
             </button>
           </div>
@@ -708,17 +745,17 @@ export function getHtmlForWebview(
         <!-- Mention dropdown, positioned by chat.js near the input caret/button -->
         <div id="mentionMenu" class="mention-menu" role="menu" aria-hidden="true">
           <div class="mention-card">
-            <div id="mentionDefaultSection">
-              <div class="item" id="mentionRecent1" role="menuitem" style="display:none;">Recent: (1)</div>
-              <div class="item" id="mentionRecent2" role="menuitem" style="display:none;">Recent: (2)</div>
-              <div class="item" id="mentionRecent3" role="menuitem" style="display:none;">Recent: (3)</div>
-              <div class="item" id="mentionPickFiles" role="menuitem">Files & Folders</div>
+            <div class="mention-default-section">
+              <div class="item mention-recent-1" role="menuitem" style="display:none;">Recent: (1)</div>
+              <div class="item mention-recent-2" role="menuitem" style="display:none;">Recent: (2)</div>
+              <div class="item mention-recent-3" role="menuitem" style="display:none;">Recent: (3)</div>
+              <div class="item mention-pick-files" role="menuitem">Files & Folders</div>
             </div>
-            <div id="mentionPickerPanel" class="mention-panel">
+            <div class="mention-panel mention-picker-panel">
               <div class="mention-search" style="display:flex; align-items:center; gap:8px;">
-                <input id="mentionPickerSearch" type="text" placeholder="Search files and folders..." />
+                <input class="mention-picker-search-input" type="text" placeholder="Search files and folders..." />
               </div>
-              <div id="mentionPickerList" class="mention-list" role="listbox"></div>
+              <div class="mention-list mention-picker-list" role="listbox"></div>
             </div>
           </div>
         </div>

@@ -64,7 +64,6 @@ export class MentionController {
         if (names.length >= 3) break;
         try { pushName(path.basename(ed.document.uri.fsPath)); } catch {}
       }
-
       // 3) Fallback to tabs (if still not enough)
       if (names.length < 3) {
         for (const group of vscode.window.tabGroups.all) {

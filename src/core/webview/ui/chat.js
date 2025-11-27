@@ -175,7 +175,7 @@ export function initChatUI(vscode) {
 
         row.appendChild(bubble);
         messagesEl.appendChild(row);
-        messagesEl.scrollTop = messagesEl.scrollHeight;
+        messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
     }
 
     function clearInput() {
@@ -294,7 +294,6 @@ export function initChatUI(vscode) {
         inputEl,
         mentionBtn,
         menuEl: mentionMenu,
-        pickFilesEl: mentionPickFiles,
         insertAtCursor,
     });
 
