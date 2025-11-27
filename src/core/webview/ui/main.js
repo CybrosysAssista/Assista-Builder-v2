@@ -122,6 +122,13 @@ window.addEventListener('message', (event) => {
             // }
             break;
         }
+        case 'showQuestion': {
+            const payload = message.payload || {};
+            if (payload.id && payload.question && Array.isArray(payload.suggestions)) {
+                chat.showQuestion?.(payload.id, payload.question, payload.suggestions);
+            }
+            break;
+        }
         default:
             break;
     }

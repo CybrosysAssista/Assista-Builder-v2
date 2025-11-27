@@ -5,7 +5,7 @@ import { ALL_TOOLS, executeToolByName, findToolByName, readFileTool } from '../t
 import { safeParseJson } from '../tools/toolUtils.js';
 import { log } from 'console';
 
-const MAX_TOOL_ITERATIONS = 8;
+// const MAX_TOOL_ITERATIONS = 8;
 
 /**
  * Run agent with provider-agnostic orchestrator
@@ -59,7 +59,7 @@ export async function runAgentOrchestrator(
 
     const toolCalls: Array<{ id: string; name: string; args: string }> = [];
     let assistantContent: InternalMessage['content'] = [];
-    console.log('[Assista X] Starting to process stream...');
+    // console.log('[Assista X] Starting to process stream...');
     // Process stream
     for await (const event of stream) {
       // console.log('[Assista X] Event:', event);

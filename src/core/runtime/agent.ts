@@ -6,6 +6,7 @@ import { createProvider } from '../providers/factory.js';
 import { runAgentOrchestrator } from '../agent/orchestrator.js';
 import type { InternalMessage } from '../agent/types.js';
 import type { ChatMessage, ChatRole } from './sessions/types.js';
+import { OdooEnvironmentService } from '../utils/odooDetection.js';
 
 /**
  * Convert session messages to internal message format
@@ -45,7 +46,11 @@ function convertInternalToSession(internalMessages: InternalMessage[]): ChatMess
     });
 }
 
-export async function runAgent(params: any = {}, context: vscode.ExtensionContext): Promise<string> {
+export async function runAgent(
+  params: any = {},
+  context: vscode.ExtensionContext,
+  odooEnvService: OdooEnvironmentService
+): Promise<string> {
   if (!context) { throw new Error("Extension context is required."); }
 
   const cfg = params.config ?? {};
@@ -67,10 +72,12 @@ export async function runAgent(params: any = {}, context: vscode.ExtensionContex
   // Convert session history to internal format
   const internalHistory = convertSessionToInternal(sessionHistory);
 
-  // Get system instruction with mode
+  // Get environment and system instruction with mode
   const mode = params.mode || 'agent';
-  const systemInstruction = getSystemInstruction(customInstructions, mode);
-
+  const environment = await odooEnvService.getEnvironment();
+  const systemInstruction = getSystemInstruction(customInstructions, mode, environment);
+  // console.log('environment', environment);
+  // console.log('systemInstruction', systemInstruction);
   // Run orchestrator
   const userContent = typeof params.contents === 'string' ? params.contents : String(params.contents || '');
 
@@ -83,6 +90,14 @@ export async function runAgent(params: any = {}, context: vscode.ExtensionContex
     },
     reset: cfg.resetSession,
   };
+
+  // Persist user message immediately so it exists before tools run
+  const userMessage: ChatMessage = {
+    role: 'user',
+    content: userContent,
+    timestamp: Date.now()
+  };
+  await writeSessionMessages(context, [...sessionHistory, userMessage]);
 
   // Log request before calling orchestrator
   // console.log('[Assista X] Request to orchestrator:',requestPayload);
@@ -101,21 +116,18 @@ export async function runAgent(params: any = {}, context: vscode.ExtensionContex
   // console.log('[Assista X] Response from orchestrator:', response);
 
   // Convert back to session format and persist
-  const updatedInternalHistory: InternalMessage[] = [
-    ...internalHistory,
-    {
-      role: 'user',
-      content: [{ type: 'text', text: userContent }],
-      timestamp: Date.now(),
-    },
+  // Re-read session history to capture any intermediate updates (e.g. from tools)
+  const currentSessionHistory = await readSessionMessages(context);
+
+  const updatedSessionHistory: ChatMessage[] = [
+    ...currentSessionHistory,
     {
       role: 'assistant',
-      content: [{ type: 'text', text: response }],
+      content: response,
       timestamp: Date.now(),
     },
   ];
 
-  const updatedSessionHistory = convertInternalToSession(updatedInternalHistory);
   await writeSessionMessages(context, updatedSessionHistory);
 
   return response;

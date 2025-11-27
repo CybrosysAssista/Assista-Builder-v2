@@ -3,6 +3,7 @@ import { readFileTool } from './readFile.js';
 import { writeFileTool } from './writeFile.js';
 import { applyDiffTool } from './applyDiff.js';
 import { createFolderTool } from './createFolder.js';
+import { askFollowupQuestionTool } from './askFollowupQuestion.js';
 import { findToolByName, executeToolByName as executeTool } from './toolExecutor.js';
 
 /**
@@ -13,6 +14,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   writeFileTool,
   applyDiffTool,
   createFolderTool,
+  askFollowupQuestionTool,
 ];
 
 /**
@@ -28,5 +30,5 @@ export { executeTool as executeToolByName };
 /**
  * Re-export tool definitions for convenience
  */
-export { readFileTool, writeFileTool, applyDiffTool, createFolderTool };
+export { readFileTool, writeFileTool, applyDiffTool, createFolderTool, askFollowupQuestionTool };
 

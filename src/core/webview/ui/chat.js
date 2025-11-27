@@ -209,17 +209,30 @@ export function initChatUI(vscode) {
 
         if (Array.isArray(messages)) {
             messages.forEach((message) => {
-                const role =
-                    message.role === "assistant"
-                        ? "ai"
-                        : message.role === "system"
-                            ? "system"
-                            : "user";
-                appendMessage(
-                    String(message.content ?? ""),
-                    role,
-                    typeof message.html === "string" ? message.html : undefined
-                );
+                if (message.suggestions && message.suggestions.length > 0) {
+                    showQuestion(
+                        null, // No active questionId for history
+                        message.content,
+                        message.suggestions,
+                        message.selection
+                    );
+                } else if (message.role === "user" && message.selection) {
+                    // Skip user messages that are just selections for questions
+                    // as they are already displayed in the question UI
+                    return;
+                } else {
+                    const role =
+                        message.role === "assistant"
+                            ? "ai"
+                            : message.role === "system"
+                                ? "system"
+                                : "user";
+                    appendMessage(
+                        String(message.content ?? ""),
+                        role,
+                        typeof message.html === "string" ? message.html : undefined
+                    );
+                }
             });
         }
 
@@ -420,6 +433,123 @@ export function initChatUI(vscode) {
         });
     }
 
+    function showQuestion(questionId, questionText, suggestions, selectedAnswer = null) {
+        if (!messagesEl) return;
+        showChatArea();
+
+        // Create question container
+        const row = document.createElement("div");
+        row.className = "message-row";
+        if (questionId) {
+            row.setAttribute('data-question-id', questionId);
+        }
+
+        const questionContainer = document.createElement("div");
+        questionContainer.className = "question-container";
+
+        // Question text
+        const questionEl = document.createElement("div");
+        questionEl.className = "question-text";
+        questionEl.textContent = questionText;
+
+        // Suggestions container
+        const suggestionsEl = document.createElement("div");
+        suggestionsEl.className = "question-suggestions";
+
+        // Track if question is answered
+        let isAnswered = !!selectedAnswer;
+
+        suggestions.forEach((suggestion, index) => {
+            const button = document.createElement("button");
+            button.className = "question-suggestion-btn";
+            button.textContent = suggestion.text;
+            if (suggestion.mode) {
+                const modeBadge = document.createElement("span");
+                modeBadge.className = "question-mode-badge";
+                modeBadge.textContent = suggestion.mode;
+                button.appendChild(modeBadge);
+            }
+
+            if (selectedAnswer) {
+                button.disabled = true;
+                button.style.opacity = '0.5';
+                button.style.cursor = 'not-allowed';
+                if (suggestion.text === selectedAnswer) {
+                    button.classList.add('question-selected');
+                    button.disabled = false; // Keep it enabled for visual feedback
+                    button.style.opacity = '1';
+                    button.style.cursor = 'default';
+                }
+            }
+
+            button.addEventListener('click', () => {
+                if (isAnswered) return; // Prevent multiple selections
+                
+                isAnswered = true;
+
+                // Send answer back to extension
+                try {
+                    vscode.postMessage({
+                        command: 'answerQuestion',
+                        questionId: questionId,
+                        answer: suggestion.text,
+                        mode: suggestion.mode || null,
+                    });
+                } catch (e) {
+                    console.error('Failed to send answer:', e);
+                }
+
+                // Mark all buttons as disabled
+                suggestionsEl.querySelectorAll('.question-suggestion-btn').forEach(btn => {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                });
+
+                // Highlight selected button with green border
+                button.classList.add('question-selected');
+                button.disabled = false; // Keep it enabled for visual feedback
+                button.style.opacity = '1';
+                button.style.cursor = 'default';
+
+                // Hide cancel button
+                const cancelBtn = questionContainer.querySelector('.question-cancel-btn');
+                if (cancelBtn) {
+                    cancelBtn.style.display = 'none';
+                }
+            });
+            suggestionsEl.appendChild(button);
+        });
+
+        questionContainer.appendChild(questionEl);
+        questionContainer.appendChild(suggestionsEl);
+
+        // Cancel button (only if not answered)
+        if (!selectedAnswer) {
+            const cancelBtn = document.createElement("button");
+            cancelBtn.className = "question-cancel-btn";
+            cancelBtn.textContent = "Cancel";
+            cancelBtn.addEventListener('click', () => {
+                if (isAnswered) return; // Prevent cancellation after answering
+                
+                try {
+                    vscode.postMessage({
+                        command: 'cancelQuestion',
+                        questionId: questionId,
+                    });
+                } catch (e) {
+                    console.error('Failed to cancel question:', e);
+                }
+                row.remove();
+            });
+            questionContainer.appendChild(cancelBtn);
+        }
+
+        row.appendChild(questionContainer);
+        messagesEl.appendChild(row);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
     return {
         appendMessage,
         toggleBusy,
@@ -431,5 +561,6 @@ export function initChatUI(vscode) {
         insertAtCursor,
         setMentionRecentNames,
         setPickerItems,
+        showQuestion,
     };
 }

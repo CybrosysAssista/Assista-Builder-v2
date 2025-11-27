@@ -252,7 +252,6 @@
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
-    "@google/generative-ai": "^0.20.0",
     "@xmldom/xmldom": "^0.8.11",
     "diff": "^7.0.0",
     "ts-node": "^10.9.2",
