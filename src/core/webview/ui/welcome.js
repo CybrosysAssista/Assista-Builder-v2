@@ -100,7 +100,7 @@ export function initWelcomeUI(vscode, opts = {}) {
     if (!btn) return;
     const mode = btn.getAttribute('data-mode');
     if (!mode) return;
-    const label = mode === 'code' ? 'Code' : 'Chat';
+    const label = mode === 'code' ? 'Agent' : 'Chat';
     if (modeLabel()) modeLabel().textContent = label;
     closeMenus();
   });

@@ -28,12 +28,12 @@ export function getWelcomeHtml(assets: {
       <div class="menu" id="welcomeModeMenuRoot">
         <button id="welcomeModeToggle" class="chip-btn" title="Mode">
           <img class="chip-icon" src="${assets.code}" alt="Code icon" />
-          <span id="welcomeModeLabel">Code</span>
+          <span id="welcomeModeLabel">Agent</span>
           <img class="dropdown-icon" src="${assets.dropdown}" alt="Dropdown" />
         </button>
         <div id="welcomeModeMenu" class="dropdown" role="listbox">
-          <button class="item" data-mode="code"><span>Code</span></button>
-          <button class="item" data-mode="chat"><span>Chat</span></button>
+          <button class="item" data-mode="code"><span>Agent</span><span class="desc" style="opacity:.6;font-size:11px">Assista can write and edit code</span></button>
+          <button class="item" data-mode="chat"><span>Chat</span><span class="desc" style="opacity:.6;font-size:11px">Chat with Assista</span></button>
         </div>
       </div>
 
@@ -44,10 +44,15 @@ export function getWelcomeHtml(assets: {
           <img class="dropdown-icon" src="${assets.dropdown}" alt="Dropdown" />
         </button>
         <div id="welcomeModelMenu" class="dropdown" role="listbox">
-          <button class="item" data-model="gpt5"><span>GPT-5</span></button>
-          <button class="item" data-model="gpt5-high"><span>GPT-5 (high reasoning)</span></button>
+          <div class="section-title">Recently Used</div>
+          <button class="item" data-model="gpt5-low"><span>GPT-5 (low reasoning)</span><span style="opacity:.6;font-size:11px">0.5x</span></button>
+          <button class="item" data-model="gpt5-high"><span>GPT-5 (high reasoning)</span><span style="opacity:.6;font-size:11px">3x</span></button>
+          <div class="section-title">Recommended</div>
+          <button class="item" data-model="gpt4"><span>GPT-4</span><span style="opacity:.6;font-size:11px">2x</span></button>
+          <button class="item" data-model="sonnet-4.5"><span>Claude Sonnet 4.5</span><span style="opacity:.6;font-size:11px">2x</span></button>
+          <button class="item" data-model="sonnet-4-thinking"><span>Claude Sonnet 4.5 Thinking</span><span style="opacity:.6;font-size:11px">3x</span></button>
+          <button class="item custom" data-action="custom-api"><span>Use custom API key…</span></button>
         </div>
-      </div>
       </div>
     </div>
 
