@@ -61,7 +61,7 @@ export function getHtmlForWebview(
         margin: 0;
         padding: 0;
         font-family: var(--vscode-font-family, Sans-Serif);
-        // background: var(--vscode-editor-background);
+        background: var(--vscode-sideBar-background);
         color: var(--vscode-editor-foreground);
         display: flex;
         flex-direction: column;
@@ -221,10 +221,8 @@ export function getHtmlForWebview(
       .message.markdown pre {
         background: var(--vscode-textCodeBlock-background, rgba(255, 255, 255, 0.05));
         color: var(--vscode-editor-foreground, #E1E4E8);
-        padding: 12px;
-        border-radius: 8px;
+        padding: 0;
         overflow-x: auto;
-        margin: 0.85em 0;
         font-size: var(--vscode-editor-font-size, 13px) !important;
         line-height: 1.5;
         border: 1px solid var(--vscode-widget-border, rgba(255,255,255,0.1));
@@ -247,7 +245,7 @@ export function getHtmlForWebview(
         color: #FFAB70; /* Orange color for inline code */
       }
       .message.markdown pre code {
-        padding: 0;
+        padding: 8px;
         background: transparent;
         font-size: inherit !important;
         white-space: pre;
@@ -286,6 +284,48 @@ export function getHtmlForWebview(
       .token.property, .token.attr-name { color: #FFAB70 !important; }
       .token.builtin, .token.type-alias { color: #79B8FF !important; }
       .token.comment { color: #6A737D !important; }
+      
+      /* Code Block Wrapper and Header */
+      .code-block-wrapper {
+        margin: 0.85em 0;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid var(--vscode-widget-border, rgba(255,255,255,0.1));
+      }
+      .code-block-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 12px;
+        background: rgba(0, 0, 0, 0.3);
+        border-bottom: 1px solid var(--vscode-widget-border, rgba(255,255,255,0.1));
+      }
+      .code-filename {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground, #9ca3af);
+        font-family: var(--vscode-font-family, Sans-Serif);
+      }
+      .code-copy-btn {
+        background: transparent;
+        border: none;
+        color: var(--vscode-descriptionForeground, #9ca3af);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s, color 0.2s;
+      }
+      .code-copy-btn:hover {
+        background: rgba(255,255,255,0.1);
+        color: var(--vscode-editor-foreground);
+      }
+      .code-block-wrapper pre {
+        margin: 0;
+        border-radius: 0;
+        border: none;
+      }
       .message.markdown ul,
       .message.markdown ol {
         padding-left: 1.4em;
