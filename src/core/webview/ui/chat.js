@@ -135,11 +135,12 @@ export function initChatUI(vscode) {
             // 4. Functions (word followed by paren)
             text = text.replace(/(\w+)(?=\()/g, m => save('hljs-function', m));
 
-            // 5. Numbers
-            text = text.replace(/\b(\d+)\b/g, m => save('hljs-number', m));
+            // 5. Numbers (including decimals like 19.0, 3.14, etc.)
+            text = text.replace(/\b(\d+\.\d+|\d+)\b/g, m => save('hljs-number', m));
 
-            // 6. Attributes/Properties (simple heuristic: .word)
-            text = text.replace(/(.\w+)/g, m => save('hljs-attr', m));
+            // 6. Attributes/Properties (match .word but only when . is followed by a letter, not a digit)
+            // This avoids matching version numbers like 19.0 (which is already captured as a number above)
+            text = text.replace(/(\.)[a-zA-Z_]\w*/g, m => save('hljs-attr', m));
 
             // Restore tokens
             tokens.forEach((token, i) => {

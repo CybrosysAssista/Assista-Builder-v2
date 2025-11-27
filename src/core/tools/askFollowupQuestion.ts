@@ -11,113 +11,79 @@ interface AskFollowupQuestionArgs {
   follow_up: Suggestion[];
 }
 
-/**
- * Ask followup question tool - prompts user with a question and suggested answers
- * Uses webview UI for integrated question display
- */
 export const askFollowupQuestionTool: ToolDefinition = {
   name: 'ask_followup_question',
-  description: 'Ask the user a question to gather additional information needed to complete the task. Use when clarification or more detail is required before proceeding. Provide 2-4 suggested answers that the user can choose from.',
+  description:
+    'Ask the user a question and present 2–4 suggested answers. Suggestions must be short, clear, and directly actionable. Use this when additional clarification is required.',
   jsonSchema: {
     type: 'object',
     properties: {
-      question: {
-        type: 'string',
-        description: 'Clear, specific question that captures the missing information you need',
-      },
+      question: { type: 'string' },
       follow_up: {
         type: 'array',
-        description: 'Required list of 2-4 suggested responses; each suggestion must be a complete, actionable answer and may include a mode switch',
+        minItems: 2,
+        maxItems: 4,
         items: {
           type: 'object',
           properties: {
-            text: {
-              type: 'string',
-              description: 'Suggested answer the user can pick',
-            },
-            mode: {
-              type: ['string', 'null'],
-              description: 'Optional mode slug to switch to if this suggestion is chosen (e.g., code, architect)',
-            },
+            text: { type: 'string' },
+            mode: { type: ['string', 'null'] }
           },
           required: ['text'],
-          additionalProperties: false,
-        },
-        minItems: 2,
-        maxItems: 4,
-      },
-    },
-    required: ['question', 'follow_up'],
-    additionalProperties: false,
-  },
-  execute: async (args: AskFollowupQuestionArgs): Promise<ToolResult> => {
-    try {
-      // Validate question (matching Roo-Code validation)
-      if (!args.question || typeof args.question !== 'string' || args.question.trim() === '') {
-        return {
-          status: 'error',
-          error: {
-            message: 'ask_followup_question requires a valid question string',
-            code: 'INVALID_ARGS',
-          },
-        };
-      }
-
-      // Validate follow_up array (matching Roo-Code: 2-4 suggestions required)
-      if (!args.follow_up || !Array.isArray(args.follow_up) || args.follow_up.length < 2 || args.follow_up.length > 4) {
-        return {
-          status: 'error',
-          error: {
-            message: 'ask_followup_question requires follow_up array with 2-4 suggestions',
-            code: 'INVALID_ARGS',
-          },
-        };
-      }
-
-      // Validate all suggestions have text (matching Roo-Code validation)
-      for (const suggestion of args.follow_up) {
-        if (!suggestion || typeof suggestion.text !== 'string' || suggestion.text.trim() === '') {
-          return {
-            status: 'error',
-            error: {
-              message: 'All suggestions must have a valid text property',
-              code: 'INVALID_ARGS',
-            },
-          };
+          additionalProperties: false
         }
       }
+    },
+    required: ['question', 'follow_up'],
+    additionalProperties: false
+  },
 
-      // Ask question using question manager (will use webview UI or fallback to quick pick)
-      const { answer, mode } = await questionManager.askQuestion(args.question, args.follow_up);
+  execute: async (args: AskFollowupQuestionArgs): Promise<ToolResult> => {
+    try {
+      const { question, follow_up } = args;
+
+      if (typeof question !== 'string' || question.trim() === '') {
+        return {
+          status: 'error',
+          error: { message: 'Invalid question', code: 'INVALID_ARGS' }
+        };
+      }
+
+      if (
+        !Array.isArray(follow_up) ||
+        follow_up.length < 2 ||
+        follow_up.length > 4 ||
+        follow_up.some(
+          s => !s || typeof s.text !== 'string' || s.text.trim() === ''
+        )
+      ) {
+        return {
+          status: 'error',
+          error: {
+            message: 'follow_up must contain 2–4 valid suggestions',
+            code: 'INVALID_ARGS'
+          }
+        };
+      }
+
+      const { answer, mode } = await questionManager.askQuestion(
+        question,
+        follow_up
+      );
 
       return {
         status: 'success',
-        result: {
-          answer: `${answer}`,
-          text: answer,
-          mode: mode || null,
-        },
+        result: { answer, text: answer, mode: mode ?? null }
       };
-    } catch (error) {
-      // Handle cancellation and other errors
-      if (error instanceof Error && error.message.includes('cancelled')) {
-        return {
-          status: 'error',
-          error: {
-            message: 'User cancelled the question',
-            code: 'USER_CANCELLED',
-          },
-        };
-      }
-
+    } catch (err: any) {
+      const msg = err?.message || String(err);
       return {
         status: 'error',
         error: {
-          message: error instanceof Error ? error.message : String(error),
-          code: 'EXECUTION_ERROR',
-        },
+          message: msg.includes('cancel') ? 'User cancelled' : msg,
+          code: msg.includes('cancel') ? 'USER_CANCELLED' : 'EXECUTION_ERROR'
+        }
       };
     }
-  },
+  }
 };
-
