@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../runtime/sessionManager.js';
+import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession, readSessionMessages, writeSessionMessages } from '../runtime/sessionManager.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
 import { HistoryController } from './history/HistoryController.js';
 import { runAgent } from "../runtime/agent.js";
 import { MentionController } from './mentions/MentionController.js';
 import { OdooEnvironmentService } from '../utils/odooDetection.js';
+import { questionManager } from '../utils/questionManager.js';
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaXView';
@@ -38,6 +39,13 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         };
 
         webviewView.webview.html = getHtmlForWebview(webviewView.webview, this._extensionUri);
+
+        // Register webview provider with question manager
+        questionManager.registerWebviewProvider({
+            postMessage: (type: string, payload?: any) => {
+                this.postMessage(type, payload);
+            }
+        });
 
         // Instantiate controllers for delegating settings/history logic
         this._settings = new SettingsController(this._context, (type: string, payload?: any) => {
@@ -126,6 +134,72 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                     this._view?.show?.(true);
                     await this.queueHydration(switched.id, switched.messages);
                     this.postMessage('historyOpened', { sessionId: switched.id });
+                }
+                return;
+            }
+
+            // Handle question answer from webview
+            if (message.command === 'answerQuestion') {
+                const questionId = typeof message.questionId === 'string' ? message.questionId : '';
+                const answer = typeof message.answer === 'string' ? message.answer : '';
+                const mode = typeof message.mode === 'string' ? message.mode : null;
+                if (questionId && answer) {
+                    const pending = questionManager.getPendingQuestion(questionId);
+                    questionManager.handleAnswer(questionId, answer, mode);
+
+                    if (pending) {
+                        try {
+                            const currentMessages = await readSessionMessages(this._context);
+                            
+                            // Fix Issue 1: Find existing assistant message with this question (if any)
+                            // to preserve chronological ordering and original timestamp
+                            const questionMessageIndex = currentMessages.findIndex(
+                                (msg) =>
+                                    msg.role === 'assistant' &&
+                                    msg.content === pending.question &&
+                                    msg.suggestions &&
+                                    JSON.stringify(msg.suggestions) === JSON.stringify(pending.suggestions) &&
+                                    !msg.selection // Only update unanswered questions
+                            );
+
+                            const newMessages: ChatMessage[] = [...currentMessages];
+
+                            if (questionMessageIndex >= 0) {
+                                // Update existing question message with selection (preserve original timestamp)
+                                newMessages[questionMessageIndex] = {
+                                    ...newMessages[questionMessageIndex],
+                                    selection: answer
+                                };
+                            } else {
+                                // Question not in history yet, append it with selection
+                                newMessages.push({
+                                    role: 'assistant',
+                                    content: pending.question,
+                                    timestamp: Date.now(),
+                                    suggestions: pending.suggestions,
+                                    selection: answer
+                                });
+                            }
+
+                            // Fix Issue 2: Don't store redundant user message
+                            // The UI already skips user messages with selection property
+                            await writeSessionMessages(this._context, newMessages);
+                            
+                            // Immediately sync UI to show the question as answered
+                            void this.syncActiveSession();
+                        } catch (error) {
+                            console.error('[AssistaX] Failed to save question/answer to history:', error);
+                        }
+                    }
+                }
+                return;
+            }
+
+            // Handle question cancellation from webview
+            if (message.command === 'cancelQuestion') {
+                const questionId = typeof message.questionId === 'string' ? message.questionId : '';
+                if (questionId) {
+                    questionManager.handleCancel(questionId);
                 }
                 return;
             }
@@ -277,11 +351,13 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
 
     private async mapMessageForWebview(
         message: ChatMessage
-    ): Promise<{ role: string; content: string; html?: string; timestamp?: number }> {
+    ): Promise<{ role: string; content: string; html?: string; timestamp?: number; suggestions?: any; selection?: string }> {
         const base = {
             role: message.role,
             content: message.content,
-            timestamp: message.timestamp
+            timestamp: message.timestamp,
+            suggestions: message.suggestions,
+            selection: message.selection
         };
         if (message.role === 'assistant') {
             const html = await this.renderMarkdownToHtml(message.content);

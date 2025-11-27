@@ -4,6 +4,8 @@ export interface ChatMessage {
     role: ChatRole;
     content: string;
     timestamp?: number;
+    suggestions?: Array<{ text: string; mode?: string | null }>;
+    selection?: string;
 }
 
 export interface ChatSession {

@@ -21,11 +21,19 @@ function reviveSession(raw: any): ChatSession | undefined {
         if (!role || !content) {
             return undefined;
         }
-        return {
+        const result: any = {
             role,
             content,
             timestamp: typeof message.timestamp === 'number' ? message.timestamp : undefined
         };
+        // Preserve suggestions and selection if they exist
+        if (message.suggestions && Array.isArray(message.suggestions)) {
+            result.suggestions = message.suggestions;
+        }
+        if (typeof message.selection === 'string') {
+            result.selection = message.selection;
+        }
+        return result;
     }).filter(Boolean) : [];
 
     return {
@@ -59,11 +67,21 @@ export async function writePersistedSessions(
         title: session.title ?? undefined,
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
-        messages: session.messages.map((message) => ({
-            role: message.role,
-            content: message.content,
-            timestamp: message.timestamp
-        }))
+        messages: session.messages.map((message) => {
+            const result: any = {
+                role: message.role,
+                content: message.content,
+                timestamp: message.timestamp
+            };
+            // Preserve suggestions and selection if they exist
+            if (message.suggestions && Array.isArray(message.suggestions)) {
+                result.suggestions = message.suggestions;
+            }
+            if (typeof message.selection === 'string') {
+                result.selection = message.selection;
+            }
+            return result;
+        })
     }));
     await context.globalState.update(STORAGE_KEY, serializable);
 }

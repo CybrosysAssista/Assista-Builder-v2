@@ -639,6 +639,102 @@ export function getHtmlForWebview(
         #messages { padding: 8px 6px; gap: 4px; }
         .mention-menu { width: 180px; }
       }
+
+      .question-container {
+        background: var(--vscode-editorWidget-background, #252526);
+        border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12));
+        border-radius: 0px 16px 16px 16px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        min-width: 300px;
+        max-width: 500px;
+      }
+
+      .question-text {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--vscode-editor-foreground, #CCCCCC);
+        margin-bottom: 12px;
+        line-height: 1.5;
+        word-wrap: break-word;
+      }
+
+      .question-suggestions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .question-suggestion-btn {
+        background: var(--vscode-button-secondaryBackground, rgba(255,255,255,0.08));
+        color: var(--vscode-button-secondaryForeground, #CCCCCC);
+        border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 13px;
+        cursor: pointer;
+        text-align: left;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+
+      .question-suggestion-btn:hover {
+        background: var(--vscode-button-secondaryHoverBackground, rgba(255,255,255,0.12));
+        border-color: var(--vscode-focusBorder, #007ACC);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      }
+
+      .question-suggestion-btn:active {
+        transform: translateY(0);
+      }
+
+      .question-mode-badge {
+        background: var(--vscode-badge-background, rgba(128,128,128,0.3));
+        color: var(--vscode-badge-foreground, #CCCCCC);
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        margin-left: 8px;
+        font-weight: 500;
+      }
+
+      .question-cancel-btn {
+        background: transparent;
+        color: var(--vscode-descriptionForeground, #999999);
+        border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 12px;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.2s ease;
+      }
+
+      .question-cancel-btn:hover {
+        background: var(--vscode-button-secondaryHoverBackground, rgba(255,255,255,0.08));
+        color: var(--vscode-editor-foreground, #CCCCCC);
+      }
+
+      .question-suggestion-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .question-selected {
+        border: 2px solid var(--vscode-testing-iconPassed, #4caf50) !important;
+        background: var(--vscode-button-secondaryBackground, rgba(76, 175, 80, 0.1)) !important;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+      }
+
+      .question-selected:hover {
+        background: var(--vscode-button-secondaryBackground, rgba(76, 175, 80, 0.15)) !important;
+        transform: none;
+      }
     </style>
   </head>
   <body>

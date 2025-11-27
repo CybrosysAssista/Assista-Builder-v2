@@ -43,7 +43,9 @@ function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
         .map((message) => ({
             role: message.role,
             content: message.content,
-            timestamp: typeof message.timestamp === 'number' ? message.timestamp : Date.now()
+            timestamp: typeof message.timestamp === 'number' ? message.timestamp : Date.now(),
+            suggestions: message.suggestions,
+            selection: message.selection
         }));
 }
 
