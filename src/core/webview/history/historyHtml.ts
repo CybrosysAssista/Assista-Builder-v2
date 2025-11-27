@@ -118,6 +118,9 @@ export function getHistoryHtml(): string {
           color: var(--vscode-foreground);
           padding: 16px 0 8px 0;
           margin-top: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
         }
         .hx-section-header:first-child {
           margin-top: 0;
@@ -200,21 +203,20 @@ export function getHistoryHtml(): string {
         .hx-list::-webkit-scrollbar { width: 6px; }
         .hx-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         
-        /* Clear All Button */
+        /* Clear All Button - Inline with section headers */
         .hx-clear-btn {
-            position: absolute;
-            top: 16px;
-            right: 24px;
             background: transparent;
             border: none;
             color: var(--vscode-descriptionForeground);
             cursor: pointer;
-            padding: 8px;
-            border-radius: 6px;
+            padding: 4px 8px;
+            border-radius: 4px;
             transition: background 0.2s, color 0.2s;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
+            gap: 4px;
+            font-size: 12px;
+            margin-left: auto;
         }
         .hx-clear-btn:hover {
             background: rgba(255,255,255,0.1);
@@ -241,14 +243,7 @@ export function getHistoryHtml(): string {
             <span>Back</span>
           </button>
           
-          <button class="hx-clear-btn" id="historyClearAllBtn" title="Clear All History">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                <line x1="10" y1="11" x2="10" y2="17"></line>
-                <line x1="14" y1="11" x2="14" y2="17"></line>
-            </svg>
-          </button>
+
 
           <div>
             <div class="hx-title">Chat History</div>

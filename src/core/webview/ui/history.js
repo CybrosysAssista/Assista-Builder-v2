@@ -12,7 +12,6 @@ export function initHistoryUI(vscode) {
     const confirmCancelBtn = document.getElementById('hxConfirmCancel');
     const confirmDeleteBtn = document.getElementById('hxConfirmDelete');
 
-    const clearAllBtn = document.getElementById('historyClearAllBtn');
     const confirmTitle = document.getElementById('hxConfirmTitle');
     const confirmDesc = document.getElementById('hxConfirmDesc');
 
@@ -215,7 +214,21 @@ export function initHistoryUI(vscode) {
             // Add section header
             const header = document.createElement('div');
             header.className = 'hx-section-header';
-            header.textContent = period;
+
+            const headerText = document.createElement('span');
+            headerText.textContent = period;
+            header.appendChild(headerText);
+
+            // Add Clear History button only to the "Latest" section
+            if (period === 'Latest') {
+                const clearBtn = document.createElement('button');
+                clearBtn.className = 'hx-clear-btn';
+                clearBtn.id = 'historyClearAllBtn';
+                clearBtn.title = 'Clear History';
+                clearBtn.textContent = 'Clear History';
+                header.appendChild(clearBtn);
+            }
+
             listEl.appendChild(header);
 
             // Add cards for this period
@@ -367,8 +380,14 @@ export function initHistoryUI(vscode) {
         }
     }, true);
 
-    // Clear All Handler
-    clearAllBtn?.addEventListener('click', () => {
+    // Clear All Handler - Using delegation since button is dynamically created
+    listEl?.addEventListener('click', (e) => {
+        const clearBtn = e.target.closest('#historyClearAllBtn');
+        if (!clearBtn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
         if (items.length === 0) return; // Nothing to clear
         isClearAll = true;
         pendingDeleteId = null;
