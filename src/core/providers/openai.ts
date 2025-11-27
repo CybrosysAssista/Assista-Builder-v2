@@ -117,9 +117,25 @@ export class OpenAIAdapter implements ProviderAdapter {
     const maxRetries = 10;
     let lastErr: any = null;
 
+    const externalAbortSignal = options?.abortSignal as AbortSignal | undefined;
+    
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      // Check if already aborted
+      if (externalAbortSignal?.aborted) {
+        throw new Error('Request cancelled');
+      }
+      
+      // Create a combined signal: abort on timeout OR external signal
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 60_000);
+      
+      // If external signal exists, listen to it and abort our controller
+      if (externalAbortSignal) {
+        externalAbortSignal.addEventListener('abort', () => {
+          controller.abort();
+          clearTimeout(timeout);
+        });
+      }
 
       try {
         const response = await fetch(url, {

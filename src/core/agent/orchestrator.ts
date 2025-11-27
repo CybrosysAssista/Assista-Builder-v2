@@ -18,7 +18,8 @@ export async function runAgentOrchestrator(
   },
   context: vscode.ExtensionContext,
   adapter: ProviderAdapter,
-  sessionHistory: InternalMessage[]
+  sessionHistory: InternalMessage[],
+  abortSignal?: AbortSignal
 ): Promise<string> {
   const systemInstruction = params.config?.systemInstruction || '';
   let internalMessages: InternalMessage[] = [...sessionHistory];
@@ -55,13 +56,18 @@ export async function runAgentOrchestrator(
     console.log('[Assista X] Provider Request:', providerRequest);
 
     // Create message stream
-    const stream = adapter.createMessageStream(providerRequest, params.config);
+    const stream = adapter.createMessageStream(providerRequest, { ...params.config, abortSignal });
 
     const toolCalls: Array<{ id: string; name: string; args: string }> = [];
     let assistantContent: InternalMessage['content'] = [];
     // console.log('[Assista X] Starting to process stream...');
     // Process stream
     for await (const event of stream) {
+      // Check if cancelled
+      if (abortSignal?.aborted) {
+        throw new Error('Request cancelled');
+      }
+      
       // console.log('[Assista X] Event:', event);
       // console.log('[Assista X] Event type:', event.type);
       switch (event.type) {

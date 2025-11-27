@@ -61,6 +61,7 @@ export class GeminiAdapter implements ProviderAdapter {
     options?: any
   ): AsyncIterable<NormalizedEvent> {
     const { model, contents, config } = request;
+    const abortSignal = options?.abortSignal as AbortSignal | undefined;
     let lastError: Error | null = null;
     let toolCallCounter = 0;
 
@@ -71,6 +72,11 @@ export class GeminiAdapter implements ProviderAdapter {
     };
 
     for (let attempt = 1; attempt <= 5; attempt++) {
+      // Check if cancelled
+      if (abortSignal?.aborted) {
+        throw new Error('Request cancelled');
+      }
+      
       try {
         const response = await this.client.models.generateContentStream(requestPayload);
 
@@ -78,6 +84,10 @@ export class GeminiAdapter implements ProviderAdapter {
         let lastUsage: any = null;
 
         for await (const chunk of response) {
+          // Check if cancelled during streaming
+          if (abortSignal?.aborted) {
+            throw new Error('Request cancelled');
+          }
           if (chunk.candidates && chunk.candidates.length > 0) {
             const candidate = chunk.candidates[0];
 
