@@ -107,8 +107,7 @@ export function getHtmlForWebview(
         display: flex;
         flex-direction: column;
         gap: 12px;
-        mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
-        -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black 96%, transparent 100%);
       }
       /* User message container - right aligned with flex */
       .message-row:has(.message.user) {
