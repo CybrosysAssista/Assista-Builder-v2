@@ -123,7 +123,7 @@ export function initChatUI(vscode) {
             };
 
             // 1. Strings (Double and Single quotes)
-            text = text.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, m => save('hljs-string', m));
+            text = text.replace(/([\"'])(?:(?=(\\?))\2.)*?\1/g, m => save('hljs-string', m));
 
             // 2. Comments (Python # and JS //)
             text = text.replace(/(\/\/.*$|#.*$)/gm, m => save('hljs-comment', m));
@@ -139,7 +139,7 @@ export function initChatUI(vscode) {
             text = text.replace(/\b(\d+)\b/g, m => save('hljs-number', m));
 
             // 6. Attributes/Properties (simple heuristic: .word)
-            text = text.replace(/(\.\w+)/g, m => save('hljs-attr', m));
+            text = text.replace(/(.\w+)/g, m => save('hljs-attr', m));
 
             // Restore tokens
             tokens.forEach((token, i) => {
@@ -150,6 +150,74 @@ export function initChatUI(vscode) {
 
             block.innerHTML = text;
             block.classList.add("hljs");
+        });
+
+        // Add headers to code blocks
+        container.querySelectorAll("pre").forEach((pre) => {
+            // Skip if already wrapped
+            if (pre.parentElement?.classList.contains('code-block-wrapper')) return;
+
+            const code = pre.querySelector('code');
+            if (!code) return;
+
+            // Try to extract filename from class (e.g., language-javascript or js-filename.js)
+            let filename = 'Code';
+            const codeClasses = code.className.split(' ');
+            for (const cls of codeClasses) {
+                if (cls.startsWith('language-')) {
+                    const lang = cls.replace('language-', '');
+                    // Check if it looks like a filename (has a dot)
+                    if (lang.includes('.')) {
+                        filename = lang;
+                    } else {
+                        filename = lang;
+                    }
+                    break;
+                }
+            }
+
+            // Create wrapper
+            const wrapper = document.createElement('div');
+            wrapper.className = 'code-block-wrapper';
+
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'code-block-header';
+
+            const filenameSpan = document.createElement('span');
+            filenameSpan.className = 'code-filename';
+            filenameSpan.textContent = filename;
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.title = 'Copy code';
+            copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+
+            copyBtn.addEventListener('click', () => {
+                const codeText = code.textContent || '';
+                navigator.clipboard.writeText(codeText).then(() => {
+                    copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+                    setTimeout(() => {
+                        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+                    }, 2000);
+                }).catch(() => {
+                    // Fallback for older browsers
+                    const textarea = document.createElement('textarea');
+                    textarea.value = codeText;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                });
+            });
+
+            header.appendChild(filenameSpan);
+            header.appendChild(copyBtn);
+
+            // Replace pre with wrapper
+            pre.parentNode.insertBefore(wrapper, pre);
+            wrapper.appendChild(header);
+            wrapper.appendChild(pre);
         });
     }
 
