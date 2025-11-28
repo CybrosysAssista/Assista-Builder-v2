@@ -31,16 +31,30 @@ export function initChatUI(vscode) {
 
     function showChatArea() {
         try {
-            if (welcomeEl) {
-                welcomeEl.style.display = "none";
-                welcomeEl.classList.remove("active");
-                welcomeEl.setAttribute("aria-hidden", "true");
-            }
+            // Show messages immediately (behind welcome screen if it's visible)
             if (messagesEl) {
                 messagesEl.classList.add("active");
             }
             if (inputBar) {
                 inputBar.style.display = "";
+            }
+
+            // Smoothly hide welcome screen
+            if (welcomeEl) {
+                if (welcomeEl.classList.contains("active")) {
+                    welcomeEl.classList.remove("active");
+                    welcomeEl.setAttribute("aria-hidden", "true");
+                    // Wait for fade out
+                    setTimeout(() => {
+                        welcomeEl.style.display = "none";
+                    }, 300);
+                } else {
+                    // If not active, ensure it's hidden if not already animating
+                    // Check computed style or just set it if we're sure
+                    if (welcomeEl.style.display !== "none" && welcomeEl.style.opacity === "") {
+                        welcomeEl.style.display = "none";
+                    }
+                }
             }
         } catch (_) {
             // no-op
@@ -306,9 +320,15 @@ export function initChatUI(vscode) {
 
         if (!messages || !messages.length) {
             if (welcomeEl) {
-                welcomeEl.style.display = "";
-                welcomeEl.classList.add("active");
-                welcomeEl.setAttribute("aria-hidden", "false");
+                // Trigger splash animation every time welcome screen is shown
+                if (typeof window.showSplashAnimation === 'function') {
+                    window.showSplashAnimation();
+                } else {
+                    // Fallback if animation not available
+                    welcomeEl.style.display = "";
+                    welcomeEl.classList.add("active");
+                    welcomeEl.setAttribute("aria-hidden", "false");
+                }
             }
         } else {
             showChatArea();
@@ -418,9 +438,12 @@ export function initChatUI(vscode) {
         if (!btn) return;
         const action = btn.getAttribute('data-action');
         if (action === 'custom-api') {
-            // Open Settings so the user can enter a custom API key
-            try { vscode.postMessage({ command: 'loadSettings' }); } catch (_) { }
+            // Open Settings page so the user can enter a custom API key
             closeMenus();
+            // Use the backend message to properly open settings with data loaded
+            try {
+                vscode.postMessage({ command: 'openCustomApiSettings' });
+            } catch (_) { }
             return;
         }
         const model = btn.getAttribute('data-model');
@@ -552,7 +575,7 @@ export function initChatUI(vscode) {
 
             button.addEventListener('click', () => {
                 if (isAnswered) return; // Prevent multiple selections
-                
+
                 isAnswered = true;
 
                 // Send answer back to extension
@@ -599,7 +622,7 @@ export function initChatUI(vscode) {
             cancelBtn.textContent = "Cancel";
             cancelBtn.addEventListener('click', () => {
                 if (isAnswered) return; // Prevent cancellation after answering
-                
+
                 try {
                     vscode.postMessage({
                         command: 'cancelQuestion',
