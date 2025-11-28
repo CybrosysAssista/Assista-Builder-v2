@@ -292,7 +292,7 @@ export function initSettingsUI(vscode) {
         }
     }
 
-    function openSettings() {
+    function openSettings(section = 'general') {
         if (!settingsPage) return;
         if (messagesEl) messagesEl.style.display = 'none';
         if (inputBar) inputBar.style.display = 'none';
@@ -311,6 +311,8 @@ export function initSettingsUI(vscode) {
         try { wireSettingsSidebar(); } catch (_) { }
         try { startSidebarObserver(); } catch (_) { }
         try { setupProviderDropdown(); } catch (_) { }
+        // Show the requested section immediately
+        try { showSectionInternal(section); } catch (_) { }
     }
 
     function closeSettings() {

@@ -73,6 +73,11 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
+            if (message.command === 'newChat') {
+                await this.startNewChat();
+                return;
+            }
+
             if (message.command === 'cancel') {
                 return;
             }
@@ -106,6 +111,13 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                         console.error('[AssistaX] Failed to open external URL:', error);
                     }
                 }
+                return;
+            }
+
+            if (message.command === 'openCustomApiSettings') {
+                // Open settings and navigate to providers section
+                this.postMessage('showSettings', { section: 'providers' });
+                await this._settings?.handleLoadSettings();
                 return;
             }
             // Delegate mention-related commands
@@ -150,7 +162,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                     if (pending) {
                         try {
                             const currentMessages = await readSessionMessages(this._context);
-                            
+
                             // Fix Issue 1: Find existing assistant message with this question (if any)
                             // to preserve chronological ordering and original timestamp
                             const questionMessageIndex = currentMessages.findIndex(
@@ -184,7 +196,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                             // Fix Issue 2: Don't store redundant user message
                             // The UI already skips user messages with selection property
                             await writeSessionMessages(this._context, newMessages);
-                            
+
                             // Immediately sync UI to show the question as answered
                             void this.syncActiveSession();
                         } catch (error) {
@@ -247,7 +259,9 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         try {
             const session = await startNewSession(this._context);
             this._view?.show?.(true);
-            await this.queueHydration(session.id, session.messages);
+            // Show splash screen animation - no need to hydrate empty session
+            // But pass the session ID so frontend state is synced
+            this.postMessage('showWelcomeSplash', { sessionId: session.id });
         } catch (error: any) {
             vscode.window.showErrorMessage(error?.message || 'Failed to start a new chat session.');
         }

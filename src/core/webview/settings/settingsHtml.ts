@@ -221,6 +221,39 @@ export function getSettingsModalHtml(): string {
           .settings-container { padding: 20px 16px; }
           .header { flex-direction: row; align-items: center; }
         }
+        @media (max-width: 350px) {
+          .profile-header {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 12px;
+          }
+          .profile-header .avatar {
+            margin: 0 auto; /* Force center horizontally */
+          }
+          .user-info {
+            align-items: center;
+            text-align: center;
+            width: 100%;
+          }
+          .logout-btn {
+            width: 100%;
+          }
+          .usage-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+          .usage-meta {
+            width: 100%;
+            justify-content: space-between;
+            margin-top: 4px;
+          }
+          .usage-label {
+            flex-wrap: wrap;
+            gap: 4px;
+          }
+        }
 
         /* Confirm overlay (Unsaved Changes) */
         .stx-confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 99999; }
@@ -269,13 +302,53 @@ export function getSettingsModalHtml(): string {
         
         /* Profile & Usage Styles */
         .profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 0 4px; max-width: 800px; }
-        .avatar { width: 48px; height: 48px; border-radius: 50%; border: 1px solid #3C3C3C; display: flex; align-items: center; justify-content: center; background: #1A1A1A; flex-shrink: 0; }
-        .user-info { flex: 1; }
-        .user-name { font-size: 15px; font-weight: 500; color: #E0E0E0; margin-bottom: 4px; }
-        .user-email { font-size: 13px; color: #9D9D9D; margin-bottom: 2px; }
+        .avatar { 
+          display: flex;
+          width: 50px;
+          height: 50px;
+          padding: 10px;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          gap: 10px;
+          border-radius: 50px;
+          border: 0.5px solid rgba(188, 132, 135, 0.50);
+          background: rgba(188, 132, 135, 0.05);
+          flex-shrink: 0;
+        }
+        .user-info { 
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: flex-start;
+          gap: 3px;
+          flex: 1 0 0;
+          align-self: stretch;
+        }
+        .user-name { font-size: 15px; font-weight: 500; color: #E0E0E0; margin-bottom: 0; }
+        .user-email { font-size: 13px; color: #9D9D9D; margin-bottom: 0; }
         .user-meta { font-size: 12px; color: #666; display: flex; align-items: center; gap: 4px; }
-        .logout-btn { background: #252526; border: 1px solid #3C3C3C; color: #CCCCCC; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
-        .usage-card { border: 1px solid #3C3C3C; border-radius: 12px; padding: 16px; background: #1A1A1A; margin-top: 8px; max-width: 800px; }
+        .logout-btn { 
+          display: flex;
+          padding: 10px 16px;
+          justify-content: center;
+          align-items: center;
+          gap: 10px;
+          border-radius: 8px;
+          border: 0.5px solid #2A2A2A;
+          background: #1F1F1F;
+          color: #CCCCCC;
+          font-size: 12px;
+          cursor: pointer;
+        }
+        .usage-card { 
+          border: 0.5px solid rgba(188, 132, 135, 0.50); 
+          border-radius: 7px; 
+          padding: 16px; 
+          background: rgba(188, 132, 135, 0.05); 
+          margin-top: 8px; 
+          max-width: 800px; 
+        }
         .usage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 14px; color: #E0E0E0; }
         .usage-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #666; }
         .badge { background: #252526; padding: 2px 6px; border-radius: 4px; border: 1px solid #333; font-size: 11px; color: #CCC; }

@@ -108,6 +108,11 @@ export function getHtmlForWebview(
         flex-direction: column;
         gap: 12px;
         -webkit-mask-image: linear-gradient(to bottom, black 96%, transparent 100%);
+        opacity: 0;
+        transition: opacity 0.4s ease-in;
+      }
+      #messages.active {
+        opacity: 1;
       }
       /* User message container - right aligned with flex */
       .message-row:has(.message.user) {

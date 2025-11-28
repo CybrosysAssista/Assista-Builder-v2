@@ -41,11 +41,21 @@ window.addEventListener('message', (event) => {
             break;
         case 'showSettings':
             if (welcome && typeof welcome.hideWelcome === 'function') welcome.hideWelcome();
-            settings.openSettings();
+            const section = message.payload?.section || 'general';
+            settings.openSettings(section);
             break;
         case 'showHistory':
             if (welcome && typeof welcome.hideWelcome === 'function') welcome.hideWelcome();
             history.openHistory();
+            break;
+        case 'showWelcomeSplash':
+            // Trigger splash screen animation
+            if (welcome && typeof welcome.showSplashAnimation === 'function') {
+                welcome.showSplashAnimation();
+            }
+            // Clear session state (persist as empty/welcome)
+            const newSessionId = message.payload?.sessionId || null;
+            chat.renderSession(newSessionId, []);
             break;
         case 'sessionHydrated': {
             const payload = message.payload || {};

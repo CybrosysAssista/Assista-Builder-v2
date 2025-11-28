@@ -17,13 +17,20 @@ export function initWelcomeUI(vscode, opts = {}) {
 
   function showWelcome() {
     root.style.display = '';
+    // Force reflow to ensure display change takes effect before opacity transition
+    root.offsetHeight;
     root.classList.add('active');
     root.setAttribute('aria-hidden', 'false');
   }
+
   function hideWelcome() {
-    root.style.display = 'none';
+    // Remove active class to trigger fade-out
     root.classList.remove('active');
     root.setAttribute('aria-hidden', 'true');
+    // Wait for fade-out animation to complete before hiding
+    setTimeout(() => {
+      root.style.display = 'none';
+    }, 300); // Match CSS transition duration
   }
 
   // Fallback insert-at-cursor for the welcome input, used only if chat's helper isn't passed in
@@ -50,16 +57,22 @@ export function initWelcomeUI(vscode, opts = {}) {
   });
 
   function routeSend(text) {
-    const chatInput = document.getElementById('chatInput');
-    const chatSend = document.getElementById('sendBtn');
-    if (chatInput && chatSend && typeof text === 'string') {
-      chatInput.value = text;
-      try { chatInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) { }
-      chatSend.click();
-    } else {
-      // Fallback: send directly to host (UI will show assistant only)
-      if (text) vscode.postMessage({ command: 'userMessage', text });
-    }
+    // First, clear any existing session to start fresh
+    vscode.postMessage({ command: 'newChat' });
+
+    // Small delay to ensure the new chat is initialized before sending the message
+    setTimeout(() => {
+      const chatInput = document.getElementById('chatInput');
+      const chatSend = document.getElementById('sendBtn');
+      if (chatInput && chatSend && typeof text === 'string') {
+        chatInput.value = text;
+        try { chatInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) { }
+        chatSend.click();
+      } else {
+        // Fallback: send directly to host (UI will show assistant only)
+        if (text) vscode.postMessage({ command: 'userMessage', text });
+      }
+    }, 100);
   }
 
   // Buttons
@@ -119,13 +132,34 @@ export function initWelcomeUI(vscode, opts = {}) {
     if (modelMenu() && !modelMenu().contains(e.target) && modelToggle() && !modelToggle().contains(e.target)) modelMenu().classList.remove('visible');
   });
 
+  // Splash screen animation for new chat
+  function showSplashAnimation() {
+    // Show welcome screen with splash mode
+    root.style.display = '';
+    root.classList.add('active', 'splash-mode');
+    root.setAttribute('aria-hidden', 'false');
+
+    // After splash animation plays, transition to full welcome
+    setTimeout(() => {
+      root.classList.remove('splash-mode');
+      root.classList.add('transitioning');
+
+      // Remove transitioning class after animation completes
+      setTimeout(() => {
+        root.classList.remove('transitioning');
+      }, 1000);
+    }, 800);
+  }
+
   // Expose helpers
   window.showWelcome = showWelcome;
   window.hideWelcome = hideWelcome;
+  window.showSplashAnimation = showSplashAnimation;
 
   return {
     showWelcome,
     hideWelcome,
+    showSplashAnimation,
     // Forwarders so main.js can pass mention data to this instance too
     setMentionRecentNames: (names) => mentions?.setRecentNames?.(names),
     setPickerItems: (items) => mentions?.setPickerItems?.(items),
