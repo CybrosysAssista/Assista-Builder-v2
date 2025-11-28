@@ -49,6 +49,10 @@ window.addEventListener('message', (event) => {
             history.openHistory();
             break;
         case 'showWelcomeSplash':
+            // Close overlays
+            if (history && typeof history.closeHistory === 'function') history.closeHistory();
+            if (settings && typeof settings.closeSettings === 'function') settings.closeSettings();
+
             // Trigger splash screen animation
             if (welcome && typeof welcome.showSplashAnimation === 'function') {
                 welcome.showSplashAnimation();
