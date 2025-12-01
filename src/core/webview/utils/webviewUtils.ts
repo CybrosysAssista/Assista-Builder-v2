@@ -287,7 +287,7 @@ export function getHtmlForWebview(
       /* Code Block Wrapper and Header */
       .code-block-wrapper {
         margin: 0.85em 0;
-        border-radius: 4px;
+        border-radius: 10px;
         overflow: hidden;
         border: 1px solid var(--vscode-widget-border, rgba(255,255,255,0.1));
       }
@@ -298,7 +298,7 @@ export function getHtmlForWebview(
         padding: 6px 12px;
         background: rgba(0, 0, 0, 0.3);
         border-bottom: 1px solid var(--vscode-widget-border, rgba(255,255,255,0.1));
-      }
+      }.
       .code-filename {
         font-size: 12px;
         color: var(--vscode-descriptionForeground, #9ca3af);
@@ -324,6 +324,39 @@ export function getHtmlForWebview(
         margin: 0;
         border-radius: 0;
         border: none;
+      }
+      .progress-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--vscode-descriptionForeground, #9ca3af);
+        font-size: 12px;
+        font-family: var(--vscode-font-family, Sans-Serif);
+        margin-top: 8px;
+      }
+      .progress-indicator.loading::before {
+        content: '';
+        width: 12px;
+        height: 12px;
+        border: 2px solid var(--vscode-descriptionForeground, #9ca3af);
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        display: inline-block;
+        flex-shrink: 0;
+      }
+      .progress-indicator.completed {
+        color: var(--vscode-testing-iconPassed, #89d185);
+      }
+      .progress-indicator.completed::before {
+        content: '✓';
+        display: inline-block;
+        flex-shrink: 0;
+        font-size: 14px;
+        line-height: 1;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
       }
       .message.markdown ul,
       .message.markdown ol {

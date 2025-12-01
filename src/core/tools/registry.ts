@@ -13,7 +13,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   readFileTool,
   writeFileTool,
   applyDiffTool,
-  createFolderTool,
+  // createFolderTool,
   askFollowupQuestionTool,
 ];
 
@@ -30,5 +30,6 @@ export { executeTool as executeToolByName };
 /**
  * Re-export tool definitions for convenience
  */
-export { readFileTool, writeFileTool, applyDiffTool, createFolderTool, askFollowupQuestionTool };
+// export { readFileTool, writeFileTool, applyDiffTool, createFolderTool, askFollowupQuestionTool };
 
+export { readFileTool, writeFileTool, applyDiffTool, askFollowupQuestionTool };

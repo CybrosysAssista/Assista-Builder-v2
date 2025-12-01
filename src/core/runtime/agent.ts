@@ -51,6 +51,7 @@ export async function runAgent(
   context: vscode.ExtensionContext,
   odooEnvService: OdooEnvironmentService
 ): Promise<string> {
+  const onProgress = params.onProgress as ((msg: string) => void) | undefined;
   const abortSignal = params.abortSignal as AbortSignal | undefined;
   
   // Check if already cancelled
@@ -116,7 +117,8 @@ export async function runAgent(
     context,
     adapter,
     internalHistory,
-    abortSignal
+    abortSignal,
+    onProgress
   );
 
   // Log response after orchestrator call
