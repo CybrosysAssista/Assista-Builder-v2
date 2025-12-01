@@ -221,7 +221,10 @@ export function getSettingsModalHtml(): string {
           .settings-container { padding: 20px 16px; }
           .header { flex-direction: row; align-items: center; }
         }
-        @media (max-width: 350px) {
+        @media (max-width: 320px) {
+          .content-body {
+            padding: 12px;
+          }
           .profile-header {
             flex-direction: column;
             align-items: center;
@@ -229,29 +232,51 @@ export function getSettingsModalHtml(): string {
             gap: 12px;
           }
           .profile-header .avatar {
-            margin: 0 auto; /* Force center horizontally */
+            margin: 0 auto;
           }
           .user-info {
             align-items: center;
             text-align: center;
             width: 100%;
+            max-width: 100%;
+            min-width: 0;
+          }
+          .user-email, .user-meta {
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            white-space: normal;
+            max-width: 100%;
           }
           .logout-btn {
             width: 100%;
           }
+          
+          /* Usage Card Fixes for Narrow Widths */
+          .usage-card {
+            padding: 12px;
+          }
           .usage-header {
             flex-direction: column;
             align-items: flex-start;
-            gap: 8px;
+            gap: 4px;
           }
           .usage-meta {
             width: 100%;
             justify-content: space-between;
             margin-top: 4px;
+            flex-wrap: wrap;
           }
           .usage-label {
-            flex-wrap: wrap;
-            gap: 4px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            margin-bottom: 8px;
+          }
+          .upgrade-btn {
+            width: 100%;
+            padding: 8px;
+            font-size: 12px;
+            white-space: normal;
           }
         }
 

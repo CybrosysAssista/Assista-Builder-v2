@@ -47,7 +47,7 @@
     width: 56px;
     height: auto;
     display: block;
-    filter: drop-shadow(0 6px 24px rgba(255, 105, 180, 0.3));
+    filter: none;
 }
 
 #welcomeScreen .welcome-greeting {
@@ -359,7 +359,7 @@
 #welcomeScreen.splash-mode .welcome-logo {
     width: 50px;
     height: 54px;
-    filter: drop-shadow(0 8px 32px rgba(188, 132, 135, 0.4));
+    filter: none;
 }
 
 /* Hide all content except logo in splash mode */
