@@ -1,45 +1,48 @@
 import type { OdooEnv } from '../../utils/odooDetection.js';
+import { getWorkspaceRoot } from '../../tools/toolUtils.js';
 
-const BASE_PROMPTS = [
-    'You are Assista X, an AI assistant specialized in Odoo development, functional workflows, module customization, debugging, architecture decisions, ORM usage, API integration, and best practices across Odoo versions. Help developers working on Odoo projects with precise, actionable, minimally verbose guidance.',
-    'Provide clear reasoning while staying concise. Prefer direct code examples using correct Odoo patterns. Validate missing information explicitly, warn about incorrect, unsafe, or deprecated approaches, and highlight version-specific differences when relevant.',
-    'Never guess unknown facts, never output destructive commands unless explicitly requested and safe, and never expose private data, secrets, or internal file paths unless provided by the user. Prioritize accuracy, reliability, and a professional tone.',
-];
+const BASE_PROMPT = `
+You are Assista X, an Odoo-focused assistant.
+Give precise, minimal, correct answers.
+Do not guess; ask when info is missing.
+Warn about unsafe or deprecated methods.
+`.trim();
 
-const CHAT_MODE_PROMPT = 'IMPORTANT: You are in CHAT mode. You have READ-ONLY access to files. You can only read files using the read_file tool. You cannot write, modify, or create files. Use the read_file tool to examine code and provide guidance, explanations, and suggestions, but do not attempt to make any changes. If the user requests file operations (writing, modifying, creating files), inform them that they need to switch to Agent mode to perform such operations.';
+const CHAT_MODE_PROMPT = `
+CHAT mode: Read-only. Only use read_file.
+For write/edit requests, ask user to switch to Agent mode.
+`.trim();
 
-const AGENT_MODE_PROMPT = 'You are in AGENT mode. You have full access to tools including reading, writing, modifying, and creating files. Use tools as needed to help the user with their Odoo development tasks.';
+const AGENT_MODE_PROMPT = `
+AGENT mode: You may read/create/modify files.
+Before writing, confirm Odoo version, addons path, module, and destination.
+If unclear, use ask_followup_question.
+Create modules only in the specified custom addons paths shown in WORKSPACE ENVIRONMENT.
+Never create modules in the default /addons path.
+Follow proper Odoo module structure.
+`.trim();
 
-function formatEnvironmentInfo(environment: OdooEnv | null): string {
-    if (!environment) {
-        return '';
-    }
-
-    const parts: string[] = [];
-    
-    if (environment.version && environment.version !== 'not available') {
-        parts.push(`Odoo Version: ${environment.version}`);
-    }
-    
-    if (environment.addons && environment.addons.length > 0) {
-        parts.push(`Addons Paths: ${environment.addons.join(', ')}`);
-    }
-
-    if (parts.length === 0) {
-        return '';
-    }
-
-    return `\n\nWORKSPACE ENVIRONMENT:\n${parts.join('\n')}`;
+function formatEnvironmentInfo(env: OdooEnv | null): string {
+  if (!env) return '';
+  const out = [];
+  try {
+    const rootPath = getWorkspaceRoot();
+    out.push(`Project Root: ${rootPath}`);
+  } catch (error) {
+    // Workspace root not available, skip
+  }
+  if (env.version && env.version !== 'not available') out.push(`Odoo Version: ${env.version}`);
+  if (env.addons?.length) out.push(`Addons Paths: ${env.addons.join(', ')}`);
+  return out.length ? `\n\nWORKSPACE ENVIRONMENT:\n${out.join('\n')}` : '';
 }
 
 export function getSystemInstruction(
-    customInstructions?: string,
-    mode: string = 'agent',
-    environment?: OdooEnv | null
+  custom?: string,
+  mode: string = 'agent',
+  env?: OdooEnv | null
 ): string {
-    const base = BASE_PROMPTS.join('\n\n');
-    const modePrompt = mode === 'chat' ? CHAT_MODE_PROMPT : AGENT_MODE_PROMPT;
-    const envInfo = formatEnvironmentInfo(environment ?? null);
-    const fullPrompt = `${base}\n\n${modePrompt}${envInfo}`;
-    return customInstructions?.trim() ? `${fullPrompt}\n\n${customInstructions.trim()}` : fullPrompt;
+  const prompt = mode === 'chat' ? CHAT_MODE_PROMPT : AGENT_MODE_PROMPT;
+  let text = `${BASE_PROMPT}\n\n${prompt}${formatEnvironmentInfo(env ?? null)}`;
+  if (custom?.trim()) text += `\n\n${custom.trim()}`;
+  return text;
 }

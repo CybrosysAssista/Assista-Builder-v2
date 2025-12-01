@@ -20,13 +20,55 @@ window.addEventListener('message', (event) => {
 
     switch (message.type) {
         case 'assistantMessage':
-            chat.appendMessage(
-                String(message.text || ''),
-                'ai',
-                typeof message.html === 'string' ? message.html : undefined
-            );
+            // Finalize streaming if active before showing final message
+            if (typeof chat.finalizeStreamingMessage === 'function') {
+                chat.finalizeStreamingMessage();
+            }
+            // If we're currently streaming, replace the streaming bubble with final message
+            if (typeof chat.replaceStreamingMessage === 'function') {
+                chat.replaceStreamingMessage(
+                    String(message.text || ''),
+                    typeof message.html === 'string' ? message.html : undefined
+                );
+            } else {
+                chat.appendMessage(
+                    String(message.text || ''),
+                    'ai',
+                    typeof message.html === 'string' ? message.html : undefined
+                );
+            }
             chat.toggleBusy(false);
             break;
+        case 'streamingChunk': {
+            const payload = message.payload || {};
+            if (payload.type === 'stream_start') {
+                // Start streaming - create new message
+                if (typeof chat.appendStreamingChunk === 'function') {
+                    chat.appendStreamingChunk(String(payload.text || ''));
+                }
+            } else if (payload.type === 'stream_append') {
+                // Append to streaming message
+                if (typeof chat.appendStreamingChunk === 'function') {
+                    chat.appendStreamingChunk(String(payload.text || ''));
+                }
+            } else if (payload.type === 'stream_end') {
+                // End streaming - finalize message (will be replaced by final assistantMessage)
+                if (typeof chat.finalizeStreamingMessage === 'function') {
+                    chat.finalizeStreamingMessage();
+                }
+            }
+            break;
+        }
+        case 'progressEvent': {
+            // Finalize streaming if active before showing progress
+            if (typeof chat.finalizeStreamingMessage === 'function') {
+                chat.finalizeStreamingMessage();
+            }
+            if (typeof chat.renderProgressEvent === 'function') {
+                chat.renderProgressEvent(message.payload);
+            }
+            break;
+        }
         case 'systemMessage':
             chat.appendMessage(String(message.text || ''), 'system');
             chat.toggleBusy(false);

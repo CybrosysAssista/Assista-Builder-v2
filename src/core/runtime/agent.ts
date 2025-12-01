@@ -51,6 +51,13 @@ export async function runAgent(
   context: vscode.ExtensionContext,
   odooEnvService: OdooEnvironmentService
 ): Promise<string> {
+  const onProgress = params.onProgress as ((msg: string) => void) | undefined;
+  const abortSignal = params.abortSignal as AbortSignal | undefined;
+  
+  // Check if already cancelled
+  if (abortSignal?.aborted) {
+    throw new Error('Request cancelled');
+  }
   if (!context) { throw new Error("Extension context is required."); }
 
   const cfg = params.config ?? {};
@@ -109,7 +116,9 @@ export async function runAgent(
     requestPayload,
     context,
     adapter,
-    internalHistory
+    internalHistory,
+    abortSignal,
+    onProgress
   );
 
   // Log response after orchestrator call

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import Ajv from 'ajv';
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
+import { runWithProgressCallback } from './progressContext.js';
 
 const ajv = new Ajv({ allErrors: true });
 
@@ -76,35 +77,38 @@ export function validateWorkspacePath(filePath: string): boolean {
  */
 export async function executeToolWithLock(
   tool: ToolDefinition,
-  args: any
+  args: any,
+  onProgress?: (msg: string) => void
 ): Promise<ToolResult> {
-  // Check if this is a write operation that needs locking
-  const writeTools = ['writeFileTool', 'write_to_file', 'applyPatchTool', 'apply_diff'];
-  const needsLock = writeTools.includes(tool.name) && args.path;
+  return await runWithProgressCallback(onProgress, async () => {
+    // Check if this is a write operation that needs locking
+    const writeTools = ['writeFileTool', 'write_to_file', 'applyPatchTool', 'apply_diff'];
+    const needsLock = writeTools.includes(tool.name) && args.path;
 
-  if (needsLock) {
-    const lockKey = args.path;
+    if (needsLock) {
+      const lockKey = args.path;
 
-    // Wait for any existing lock on this file
-    if (fileLocks.has(lockKey)) {
-      await fileLocks.get(lockKey);
+      // Wait for any existing lock on this file
+      if (fileLocks.has(lockKey)) {
+        await fileLocks.get(lockKey);
+      }
+
+      // Create new lock
+      const lockPromise = (async () => {
+        try {
+          return await tool.execute(args);
+        } finally {
+          fileLocks.delete(lockKey);
+        }
+      })();
+
+      fileLocks.set(lockKey, lockPromise);
+      return await lockPromise;
     }
 
-    // Create new lock
-    const lockPromise = (async () => {
-      try {
-        return await tool.execute(args);
-      } finally {
-        fileLocks.delete(lockKey);
-      }
-    })();
-
-    fileLocks.set(lockKey, lockPromise);
-    return await lockPromise;
-  }
-
-  // No lock needed, execute directly
-  return await tool.execute(args);
+    // No lock needed, execute directly
+    return await tool.execute(args);
+  });
 }
 
 /**
@@ -122,6 +126,10 @@ export function getWorkspaceRoot(): string {
  */
 export function resolveWorkspacePath(filePath: string): string {
   const workspaceRoot = getWorkspaceRoot();
+  // If path is already absolute and within workspace, use it directly
+  if (path.isAbsolute(filePath) && path.normalize(filePath).startsWith(path.normalize(workspaceRoot))) {
+    return path.normalize(filePath);
+  }
   return path.resolve(workspaceRoot, filePath);
 }
 

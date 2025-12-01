@@ -16,7 +16,6 @@ interface SessionState {
     activeSessionId?: string;
 }
 
-export const MAX_HISTORY_MESSAGES = 20;
 
 const RUNTIME_STATE = new WeakMap<vscode.ExtensionContext, SessionState>();
 
@@ -149,7 +148,7 @@ export async function writeSessionMessages(
 ): Promise<void> {
     const state = await ensureLoaded(context);
     const session = await getMutableActiveSession(context);
-    const sanitized = trimHistory(sanitizeMessages(history));
+    const sanitized = (sanitizeMessages(history));
     session.messages = sanitized;
     session.updatedAt = sanitized.length ? Date.now() : session.updatedAt;
     session.title = deriveTitle(session.messages);
@@ -224,13 +223,6 @@ export async function getAllSessions(context: vscode.ExtensionContext): Promise<
     return deepClone(ordered);
 }
 
-export function trimHistory(messages: ChatMessage[]): ChatMessage[] {
-    const filtered = messages.filter((msg) => msg.role === 'user' || msg.role === 'assistant');
-    if (filtered.length <= MAX_HISTORY_MESSAGES) {
-        return deepClone(filtered);
-    }
-    return deepClone(filtered.slice(filtered.length - MAX_HISTORY_MESSAGES));
-}
 
 export async function clearAllSessions(context: vscode.ExtensionContext): Promise<void> {
     const state = await ensureLoaded(context);

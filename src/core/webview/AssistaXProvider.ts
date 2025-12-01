@@ -19,6 +19,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
     private _history?: HistoryController;
     private _mentions?: MentionController;
     private _pendingHydration?: { sessionId: string; messages: ChatMessage[] };
+    private _abortController?: AbortController;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -79,6 +80,12 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             }
 
             if (message.command === 'cancel') {
+                if (this._abortController) {
+                    this._abortController.abort();
+                    this._abortController = undefined;
+                    // Send cancellation message to chat
+                    await this.sendAssistantMessage('Request cancelled by user.', 'systemMessage');
+                }
                 return;
             }
 
@@ -348,18 +355,87 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         this._view.webview.postMessage({ type, text });
     }
 
+    private async handleProgressMessage(msg: string) {
+        if (!this._view) {
+            return;
+        }
+
+        // Check if this is a structured JSON progress event
+        try {
+            const parsed = JSON.parse(msg);
+            
+            // Handle streaming messages (existing)
+            if (parsed.type === 'stream_start' || parsed.type === 'stream_append' || parsed.type === 'stream_end') {
+                this._view.webview.postMessage({
+                    type: 'streamingChunk',
+                    payload: parsed
+                });
+                return;
+            }
+            
+            // Handle structured tool progress events
+            if (parsed.type === 'file_preview' || parsed.type === 'file_operation') {
+                this._view.webview.postMessage({
+                    type: 'progressEvent',
+                    payload: parsed
+                });
+                return;
+            }
+        } catch {
+            // Not JSON, treat as legacy plain text progress message
+            // (for backward compatibility during migration)
+        }
+
+        // Legacy plain text progress message - render as markdown
+        const html = await this.renderMarkdownToHtml(msg);
+        this._view.webview.postMessage({
+            type: 'assistantMessage',
+            text: msg,
+            html
+        });
+    }
+
     private async handleUserMessage(text: string, mode: string = 'agent') {
+        // Cancel any existing request
+        if (this._abortController) {
+            this._abortController.abort();
+        }
+        
+        // Create new AbortController for this request
+        this._abortController = new AbortController();
+        const abortController = this._abortController;
+        
         try {
             const startTime = Date.now();
-            const response = await runAgent({ contents: text, mode }, this._context, this._odooEnvService);
+            const response = await runAgent({ 
+                contents: text, 
+                mode, 
+                abortSignal: abortController.signal,
+                onProgress: (msg: string) => this.handleProgressMessage(msg)
+            }, this._context, this._odooEnvService);
+            
+            // Check if request was cancelled
+            if (abortController.signal.aborted) {
+                return;
+            }
+            
             const elapsed = Date.now() - startTime;
             console.log(`[AssistaX] Total completion time taken in ${elapsed}ms`);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
             await this.sendAssistantMessage(reply);
             void this.syncActiveSession();
         } catch (error: any) {
+            // Don't show error if request was cancelled
+            if (abortController.signal.aborted) {
+                return;
+            }
             const message = error?.message || String(error) || 'Unexpected error';
             await this.sendAssistantMessage(message, 'error');
+        } finally {
+            // Clear abort controller if this was the current request
+            if (this._abortController === abortController) {
+                this._abortController = undefined;
+            }
         }
     }
 

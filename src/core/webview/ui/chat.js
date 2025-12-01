@@ -149,11 +149,12 @@ export function initChatUI(vscode) {
             // 4. Functions (word followed by paren)
             text = text.replace(/(\w+)(?=\()/g, m => save('hljs-function', m));
 
-            // 5. Numbers
-            text = text.replace(/\b(\d+)\b/g, m => save('hljs-number', m));
+            // 5. Numbers (including decimals like 19.0, 3.14, etc.)
+            text = text.replace(/\b(\d+\.\d+|\d+)\b/g, m => save('hljs-number', m));
 
-            // 6. Attributes/Properties (simple heuristic: .word)
-            text = text.replace(/(.\w+)/g, m => save('hljs-attr', m));
+            // 6. Attributes/Properties (match .word but only when . is followed by a letter, not a digit)
+            // This avoids matching version numbers like 19.0 (which is already captured as a number above)
+            text = text.replace(/(\.)[a-zA-Z_]\w*/g, m => save('hljs-attr', m));
 
             // Restore tokens
             tokens.forEach((token, i) => {
@@ -174,14 +175,22 @@ export function initChatUI(vscode) {
             const code = pre.querySelector('code');
             if (!code) return;
 
-            // Try to extract filename from class (e.g., language-javascript or js-filename.js)
+            // Extract filename from class (format: language-ext-filename.ext)
             let filename = 'Code';
             const codeClasses = code.className.split(' ');
             for (const cls of codeClasses) {
                 if (cls.startsWith('language-')) {
                     const lang = cls.replace('language-', '');
-                    // Check if it looks like a filename (has a dot)
-                    if (lang.includes('.')) {
+                    if (lang.includes('-')) {
+                        // Format: ext-filename.ext (e.g., py-example.py)
+                        // Extract only the filename part (everything after first dash)
+                        const parts = lang.split('-');
+                        if (parts.length >= 2) {
+                            filename = parts.slice(1).join('-');
+                        } else {
+                            filename = lang;
+                        }
+                    } else if (lang.includes('.')) {
                         filename = lang;
                     } else {
                         filename = lang;
@@ -235,15 +244,43 @@ export function initChatUI(vscode) {
         });
     }
 
+    let streamingMessageBubble = null;
+    let streamingTextBuffer = '';
+    let streamingRenderTimeout = null;
+    let streamingRow = null;
+
     function appendMessage(text, sender, html) {
         if (!messagesEl || (!text && !html)) {
             return;
         }
         showChatArea();
 
+        // Check if this is a progress message and try to update existing one
+        if (html && sender === 'ai' && html.includes('data-file-id')) {
+            const fileIdMatch = html.match(/data-file-id="([^"]+)"/);
+            if (fileIdMatch) {
+                const fileId = fileIdMatch[1];
+                // Find last message with same file-id
+                const lastRow = messagesEl.lastElementChild;
+                if (lastRow) {
+                    const lastBubble = lastRow.querySelector('.message.ai.markdown');
+                    if (lastBubble && lastBubble.innerHTML.includes(`data-file-id="${fileId}"`)) {
+                        lastBubble.innerHTML = html;
+                        enhanceMarkdownContent(lastBubble);
+                        messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Finalize streaming if active before appending new message
+        if (streamingRow && streamingRow.parentNode) {
+            finalizeStreamingMessage();
+        }
+
         const row = document.createElement("div");
         row.className = "message-row";
-
         const bubble = document.createElement("div");
         bubble.className = `message ${sender || "ai"}`;
 
@@ -258,6 +295,169 @@ export function initChatUI(vscode) {
         row.appendChild(bubble);
         messagesEl.appendChild(row);
         messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+    }
+
+    function appendStreamingChunk(text) {
+        if (!messagesEl) {
+            return;
+        }
+        showChatArea();
+
+        // Check if we need to create a new streaming message
+        if (!streamingMessageBubble) {
+            // Create new row and bubble for streaming
+            streamingRow = document.createElement("div");
+            streamingRow.className = "message-row";
+            streamingMessageBubble = document.createElement("div");
+            streamingMessageBubble.className = "message ai";
+            streamingRow.appendChild(streamingMessageBubble);
+            messagesEl.appendChild(streamingRow);
+            streamingTextBuffer = '';
+        }
+
+        // Append text to buffer
+        streamingTextBuffer += text;
+
+        // Show plain text immediately for streaming feedback
+        streamingMessageBubble.textContent = streamingTextBuffer;
+        
+        // Scroll to bottom smoothly
+        messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'auto' });
+
+        // Clear any pending render timeout
+        if (streamingRenderTimeout) {
+            clearTimeout(streamingRenderTimeout);
+        }
+
+        // Debounce markdown rendering (render every 500ms while streaming)
+        streamingRenderTimeout = setTimeout(() => {
+            if (streamingMessageBubble && streamingTextBuffer) {
+                // Request markdown rendering for accumulated text
+                // For now, just show as plain text - we'll enhance with markdown later
+                // The final render will happen in finalizeStreamingMessage
+            }
+        }, 500);
+    }
+
+    function finalizeStreamingMessage() {
+        // Clear any pending render timeout
+        if (streamingRenderTimeout) {
+            clearTimeout(streamingRenderTimeout);
+            streamingRenderTimeout = null;
+        }
+
+        // Keep streamingRow for replacement - don't reset it yet
+        // Reset other state but keep row reference
+        streamingMessageBubble = null;
+        streamingTextBuffer = '';
+    }
+
+    function replaceStreamingMessage(text, html) {
+        // Clear any pending render timeout
+        if (streamingRenderTimeout) {
+            clearTimeout(streamingRenderTimeout);
+            streamingRenderTimeout = null;
+        }
+
+        // Check if we have a streaming row to replace
+        if (streamingRow && streamingRow.parentNode === messagesEl) {
+            // Find the bubble in the streaming row
+            const bubble = streamingRow.querySelector('.message.ai');
+            if (bubble) {
+                // Replace the streaming bubble content with the final rendered message
+                if (html) {
+                    bubble.classList.add('markdown');
+                    bubble.innerHTML = html;
+                    enhanceMarkdownContent(bubble);
+                } else {
+                    bubble.textContent = text;
+                }
+                // Reset streaming state
+                streamingMessageBubble = null;
+                streamingTextBuffer = '';
+                streamingRow = null;
+                return;
+            }
+        }
+
+        // No streaming message to replace, create new one
+        appendMessage(text, 'ai', html);
+        
+        // Reset streaming state
+        streamingMessageBubble = null;
+        streamingTextBuffer = '';
+        streamingRow = null;
+    }
+
+    function renderProgressEvent(ev) {
+        if (!messagesEl) {
+            return;
+        }
+        showChatArea();
+
+        // Finalize streaming if active
+        if (streamingRow && streamingRow.parentNode) {
+            finalizeStreamingMessage();
+        }
+
+        if (ev.type === 'file_preview') {
+            const fileId = ev.fileId || `file-${ev.file || 'unknown'}`;
+            const language = ev.language || 'text';
+            const fileName = ev.file || 'file';
+            
+            // Build preview HTML
+            const previewLines = ev.preview.split(/\r?\n/);
+            const preview = previewLines.join('\n');
+            const truncated = ev.truncated ? '\n...' : '';
+            
+            // Build code block with syntax highlighting class
+            const codeBlock = `\`\`\`${language}-${fileName}\n${preview}${truncated}\n\`\`\``;
+            
+            // Build progress indicator based on state
+            let indicatorHtml = '';
+            if (ev.state === 'writing' || ev.state === 'applying') {
+                indicatorHtml = `<span class="progress-indicator loading" data-file-id="${fileId}">${ev.state === 'applying' ? `Applying ${ev.blockCount || 0} change(s)...` : 'Writing file...'}</span>`;
+            } else if (ev.state === 'completed') {
+                const successMsg = ev.blockCount ? `✓ ${ev.blockCount} change(s) applied successfully` : '✓ File written successfully';
+                indicatorHtml = `<span class="progress-indicator completed" data-file-id="${fileId}">${successMsg}</span>`;
+            }
+            
+            const fullHtml = `${codeBlock}\n\n${indicatorHtml}`;
+            
+            // Try to update existing message with same file-id
+            const fileIdAttr = `data-file-id="${fileId}"`;
+            const lastRow = messagesEl.lastElementChild;
+            if (lastRow) {
+                const lastBubble = lastRow.querySelector('.message.ai.markdown');
+                if (lastBubble && lastBubble.innerHTML.includes(fileIdAttr)) {
+                    // Update existing message
+                    lastBubble.innerHTML = fullHtml;
+                    enhanceMarkdownContent(lastBubble);
+                    messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+                    return;
+                }
+            }
+            
+            // Create new message
+            const row = document.createElement("div");
+            row.className = "message-row";
+            const bubble = document.createElement("div");
+            bubble.className = "message ai markdown";
+            bubble.innerHTML = fullHtml;
+            enhanceMarkdownContent(bubble);
+            row.appendChild(bubble);
+            messagesEl.appendChild(row);
+            messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+            
+        } else if (ev.type === 'file_operation') {
+            // Simple operation message (creating directory, reading file, etc.)
+            const operationText = ev.operation === 'creating_directory' ? `Creating directory ${ev.path}...` :
+                                 ev.operation === 'creating_folder' ? `Creating folder ${ev.path}...` :
+                                 ev.operation === 'reading_file' ? `Reading file ${ev.path}...` :
+                                 `${ev.operation} ${ev.path}...`;
+            
+            appendMessage(operationText, 'ai');
+        }
     }
 
     function clearInput() {
@@ -288,6 +488,15 @@ export function initChatUI(vscode) {
 
         messagesEl.innerHTML = "";
         activeSessionId = sessionId;
+        
+        // Reset streaming state
+        streamingMessageBubble = null;
+        streamingTextBuffer = '';
+        streamingRow = null;
+        if (streamingRenderTimeout) {
+            clearTimeout(streamingRenderTimeout);
+            streamingRenderTimeout = null;
+        }
 
         if (Array.isArray(messages)) {
             messages.forEach((message) => {
@@ -349,6 +558,14 @@ export function initChatUI(vscode) {
     function clearMessages() {
         if (messagesEl) {
             messagesEl.innerHTML = "";
+        }
+        // Reset streaming state
+        streamingMessageBubble = null;
+        streamingTextBuffer = '';
+        streamingRow = null;
+        if (streamingRenderTimeout) {
+            clearTimeout(streamingRenderTimeout);
+            streamingRenderTimeout = null;
         }
     }
 
@@ -643,6 +860,10 @@ export function initChatUI(vscode) {
 
     return {
         appendMessage,
+        appendStreamingChunk,
+        finalizeStreamingMessage,
+        replaceStreamingMessage,
+        renderProgressEvent,
         toggleBusy,
         renderSession,
         clearMessages,

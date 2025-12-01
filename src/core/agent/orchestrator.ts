@@ -3,6 +3,8 @@ import type { ProviderAdapter } from '../providers/base.js';
 import type { InternalMessage } from './types.js';
 import { ALL_TOOLS, executeToolByName, findToolByName, readFileTool } from '../tools/registry.js';
 import { safeParseJson } from '../tools/toolUtils.js';
+import { readSessionMessages, writeSessionMessages } from '../runtime/sessionManager.js';
+import type { ChatMessage } from '../runtime/sessions/types.js';
 import { log } from 'console';
 
 // const MAX_TOOL_ITERATIONS = 8;
@@ -18,7 +20,9 @@ export async function runAgentOrchestrator(
   },
   context: vscode.ExtensionContext,
   adapter: ProviderAdapter,
-  sessionHistory: InternalMessage[]
+  sessionHistory: InternalMessage[],
+  abortSignal?: AbortSignal,
+  onProgress?: (msg: string) => void
 ): Promise<string> {
   const systemInstruction = params.config?.systemInstruction || '';
   let internalMessages: InternalMessage[] = [...sessionHistory];
@@ -55,25 +59,48 @@ export async function runAgentOrchestrator(
     console.log('[Assista X] Provider Request:', providerRequest);
 
     // Create message stream
-    const stream = adapter.createMessageStream(providerRequest, params.config);
+    const stream = adapter.createMessageStream(providerRequest, { ...params.config, abortSignal });
 
     const toolCalls: Array<{ id: string; name: string; args: string }> = [];
     let assistantContent: InternalMessage['content'] = [];
+    let isStreaming = false;
     // console.log('[Assista X] Starting to process stream...');
     // Process stream
     for await (const event of stream) {
+      // Check if cancelled
+      if (abortSignal?.aborted) {
+        throw new Error('Request cancelled');
+      }
+      
       // console.log('[Assista X] Event:', event);
       // console.log('[Assista X] Event type:', event.type);
       switch (event.type) {
         case 'text':
           finalResponse += event.text;
           assistantContent.push({ type: 'text', text: event.text });
+          // Send text chunks to UI in real-time via onProgress
+          // Use JSON format to distinguish streaming chunks from tool progress
+          if (!isStreaming) {
+            // Initialize streaming message
+            onProgress?.(JSON.stringify({ type: 'stream_start', text: event.text }));
+            isStreaming = true;
+          } else {
+            // Append to streaming message
+            onProgress?.(JSON.stringify({ type: 'stream_append', text: event.text }));
+          }
           break;
 
         case 'reasoning':
           // Include reasoning in response
           finalResponse += event.text;
           assistantContent.push({ type: 'reasoning', text: event.text });
+          // Stream reasoning similarly
+          if (!isStreaming) {
+            onProgress?.(JSON.stringify({ type: 'stream_start', text: event.text }));
+            isStreaming = true;
+          } else {
+            onProgress?.(JSON.stringify({ type: 'stream_append', text: event.text }));
+          }
           break;
 
         case 'tool_call':
@@ -88,6 +115,11 @@ export async function runAgentOrchestrator(
             name: event.name,
             input: safeParseJson(event.args),
           });
+          // Mark end of streaming when tool call starts (new response will follow)
+          if (isStreaming) {
+            onProgress?.(JSON.stringify({ type: 'stream_end' }));
+            isStreaming = false;
+          }
           break;
 
         case 'usage':
@@ -99,7 +131,11 @@ export async function runAgentOrchestrator(
           throw new Error(event.error);
 
         case 'end':
-          // Stream ended
+          // Stream ended - mark streaming as complete
+          if (isStreaming) {
+            onProgress?.(JSON.stringify({ type: 'stream_end' }));
+            isStreaming = false;
+          }
           break;
       }
     }
@@ -140,8 +176,29 @@ export async function runAgentOrchestrator(
           continue;
         }
 
-        // Execute tool
-        const toolResult = await executeToolByName(toolCall.name, args);
+        // Execute tool with progress callback that persists to session history
+        const toolResult = await executeToolByName(toolCall.name, args, (progressMsg) => {
+          // Send to UI immediately
+          onProgress?.(progressMsg);
+          
+          // Persist progress to session history immediately (fire-and-forget async)
+          (async () => {
+            try {
+              const currentSessionHistory = await readSessionMessages(context);
+              await writeSessionMessages(context, [
+                ...currentSessionHistory,
+                {
+                  role: 'assistant',
+                  content: progressMsg,
+                  timestamp: Date.now()
+                }
+              ]);
+            } catch (error) {
+              // Log but don't fail on persistence errors
+              console.warn('[Assista X] Failed to persist progress message:', error);
+            }
+          })();
+        });
 
         // Add tool result to conversation
         const resultContent = toolResult.status === 'success'
