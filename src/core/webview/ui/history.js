@@ -208,6 +208,8 @@ export function initHistoryUI(vscode) {
 
         /** BUILD CARDS WITH SECTION HEADERS */
         let globalIdx = 0;
+        let clearButtonAdded = false;
+
         groupOrder.forEach(period => {
             if (!groups[period] || groups[period].length === 0) return;
 
@@ -219,14 +221,15 @@ export function initHistoryUI(vscode) {
             headerText.textContent = period;
             header.appendChild(headerText);
 
-            // Add Clear History button only to the "Latest" section
-            if (period === 'Latest') {
+            // Add Clear History button to the first visible section
+            if (!clearButtonAdded) {
                 const clearBtn = document.createElement('button');
                 clearBtn.className = 'hx-clear-btn';
                 clearBtn.id = 'historyClearAllBtn';
                 clearBtn.title = 'Clear History';
                 clearBtn.textContent = 'Clear History';
                 header.appendChild(clearBtn);
+                clearButtonAdded = true;
             }
 
             listEl.appendChild(header);

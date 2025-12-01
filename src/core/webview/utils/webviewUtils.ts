@@ -122,18 +122,18 @@ export function getHtmlForWebview(
         align-items: flex-end;
         gap: 10px;
       }
-      /* AI message container - left aligned, with background and rounded corners */
-      /* AI message container - left aligned, with background and rounded corners */
+      /* AI message container - transparent, no box */
       .message-row:has(.message.ai) {
         display: flex;
-        padding: 10px;
+        padding: 10px 0;
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
-        max-width: fit-content;
-        border-radius: 0 16px 16px 16px;
-        border: 0.5px solid #2A2A2A;
-        background: #1F1F1F;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        border: none;
+        background: transparent;
         font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
         color: #CDCDCD;
         font-size: 13px;
