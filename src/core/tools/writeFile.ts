@@ -2,7 +2,6 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
 import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
-import { reportProgress } from './progressContext.js';
 
 interface WriteFileArgs {
   path: string;
@@ -82,11 +81,6 @@ export const writeFileTool: ToolDefinition = {
 
       // Create directory if it doesn't exist
       const dir = path.dirname(fullPath);
-      reportProgress(JSON.stringify({
-        type: 'file_operation',
-        operation: 'creating_directory',
-        path: dir
-      }));
       try {
         await fs.mkdir(dir, { recursive: true });
       } catch (error) {
@@ -99,37 +93,8 @@ export const writeFileTool: ToolDefinition = {
         };
       }
 
-      // Write file - show progress as code block with preview
-      const fileName = path.basename(args.path);
-      const fileExt = path.extname(fileName).slice(1) || 'text';
-      const previewLines = args.content.split(/\r?\n/).slice(0, 20);
-      const preview = previewLines.join('\n');
-      const isTruncated = args.content.split(/\r?\n/).length > 20;
-      const fileId = `file-${args.path.replace(/[^a-zA-Z0-9]/g, '-')}`;
-      
-      reportProgress(JSON.stringify({
-        type: 'file_preview',
-        file: fileName,
-        filePath: args.path,
-        fileId: fileId,
-        preview: preview,
-        truncated: isTruncated,
-        state: 'writing',
-        language: fileExt
-      }));
+      // Write file
       await fs.writeFile(fullPath, args.content, 'utf-8');
-
-      // Update to completed state
-      reportProgress(JSON.stringify({
-        type: 'file_preview',
-        file: fileName,
-        filePath: args.path,
-        fileId: fileId,
-        preview: preview,
-        truncated: isTruncated,
-        state: 'completed',
-        language: fileExt
-      }));
 
       const actualLines = args.content.split(/\r?\n/).length;
       return {

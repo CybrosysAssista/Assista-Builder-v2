@@ -360,11 +360,11 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             return;
         }
 
-        // Check if this is a structured JSON progress event
+        // Check if this is a structured JSON streaming message
         try {
             const parsed = JSON.parse(msg);
             
-            // Handle streaming messages (existing)
+            // Handle streaming messages
             if (parsed.type === 'stream_start' || parsed.type === 'stream_append' || parsed.type === 'stream_end') {
                 this._view.webview.postMessage({
                     type: 'streamingChunk',
@@ -372,21 +372,11 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 });
                 return;
             }
-            
-            // Handle structured tool progress events
-            if (parsed.type === 'file_preview' || parsed.type === 'file_operation') {
-                this._view.webview.postMessage({
-                    type: 'progressEvent',
-                    payload: parsed
-                });
-                return;
-            }
         } catch {
-            // Not JSON, treat as legacy plain text progress message
-            // (for backward compatibility during migration)
+            // Not JSON - treat as plain text message
         }
 
-        // Legacy plain text progress message - render as markdown
+        // Plain text message - render as markdown
         const html = await this.renderMarkdownToHtml(msg);
         this._view.webview.postMessage({
             type: 'assistantMessage',

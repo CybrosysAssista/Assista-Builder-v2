@@ -14,8 +14,7 @@ export function findToolByName(name: string): ToolDefinition | undefined {
  */
 export async function executeToolByName(
   name: string,
-  args: any,
-  onProgress?: (msg: string) => void
+  args: any
 ): Promise<ToolResult> {
   const tool = findToolByName(name);
   
@@ -43,7 +42,7 @@ export async function executeToolByName(
 
   // Execute tool with locking for write operations
   try {
-    return await executeToolWithLock(tool, args, onProgress);
+    return await executeToolWithLock(tool, args);
   } catch (error) {
     return {
       status: 'error',
