@@ -330,39 +330,6 @@ export function getHtmlForWebview(
         border-radius: 0;
         border: none;
       }
-      .progress-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        color: var(--vscode-descriptionForeground, #9ca3af);
-        font-size: 12px;
-        font-family: var(--vscode-font-family, Sans-Serif);
-        margin-top: 8px;
-      }
-      .progress-indicator.loading::before {
-        content: '';
-        width: 12px;
-        height: 12px;
-        border: 2px solid var(--vscode-descriptionForeground, #9ca3af);
-        border-top-color: transparent;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        display: inline-block;
-        flex-shrink: 0;
-      }
-      .progress-indicator.completed {
-        color: var(--vscode-testing-iconPassed, #89d185);
-      }
-      .progress-indicator.completed::before {
-        content: '✓';
-        display: inline-block;
-        flex-shrink: 0;
-        font-size: 14px;
-        line-height: 1;
-      }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
       .message.markdown ul,
       .message.markdown ol {
         padding-left: 1.4em;

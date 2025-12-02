@@ -125,7 +125,7 @@ export async function runAgent(
   // console.log('[Assista X] Response from orchestrator:', response);
 
   // Convert back to session format and persist
-  // Re-read session history to capture any intermediate updates (e.g. from tools)
+  // Re-read session history to get the latest state
   const currentSessionHistory = await readSessionMessages(context);
 
   const updatedSessionHistory: ChatMessage[] = [
