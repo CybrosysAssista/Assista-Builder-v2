@@ -59,16 +59,6 @@ window.addEventListener('message', (event) => {
             }
             break;
         }
-        case 'progressEvent': {
-            // Finalize streaming if active before showing progress
-            if (typeof chat.finalizeStreamingMessage === 'function') {
-                chat.finalizeStreamingMessage();
-            }
-            if (typeof chat.renderProgressEvent === 'function') {
-                chat.renderProgressEvent(message.payload);
-            }
-            break;
-        }
         case 'systemMessage':
             chat.appendMessage(String(message.text || ''), 'system');
             chat.toggleBusy(false);

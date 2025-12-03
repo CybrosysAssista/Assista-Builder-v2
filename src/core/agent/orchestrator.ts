@@ -3,8 +3,6 @@ import type { ProviderAdapter } from '../providers/base.js';
 import type { InternalMessage } from './types.js';
 import { ALL_TOOLS, executeToolByName, findToolByName, readFileTool } from '../tools/registry.js';
 import { safeParseJson } from '../tools/toolUtils.js';
-import { readSessionMessages, writeSessionMessages } from '../runtime/sessionManager.js';
-import type { ChatMessage } from '../runtime/sessions/types.js';
 import { log } from 'console';
 
 // const MAX_TOOL_ITERATIONS = 8;
@@ -79,7 +77,6 @@ export async function runAgentOrchestrator(
           finalResponse += event.text;
           assistantContent.push({ type: 'text', text: event.text });
           // Send text chunks to UI in real-time via onProgress
-          // Use JSON format to distinguish streaming chunks from tool progress
           if (!isStreaming) {
             // Initialize streaming message
             onProgress?.(JSON.stringify({ type: 'stream_start', text: event.text }));
@@ -176,29 +173,8 @@ export async function runAgentOrchestrator(
           continue;
         }
 
-        // Execute tool with progress callback that persists to session history
-        const toolResult = await executeToolByName(toolCall.name, args, (progressMsg) => {
-          // Send to UI immediately
-          onProgress?.(progressMsg);
-          
-          // Persist progress to session history immediately (fire-and-forget async)
-          (async () => {
-            try {
-              const currentSessionHistory = await readSessionMessages(context);
-              await writeSessionMessages(context, [
-                ...currentSessionHistory,
-                {
-                  role: 'assistant',
-                  content: progressMsg,
-                  timestamp: Date.now()
-                }
-              ]);
-            } catch (error) {
-              // Log but don't fail on persistence errors
-              console.warn('[Assista X] Failed to persist progress message:', error);
-            }
-          })();
-        });
+        // Execute tool
+        const toolResult = await executeToolByName(toolCall.name, args);
 
         // Add tool result to conversation
         const resultContent = toolResult.status === 'success'

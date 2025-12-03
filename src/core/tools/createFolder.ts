@@ -2,7 +2,6 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
 import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
-import { reportProgress } from './progressContext.js';
 
 interface CreateFolderArgs {
   path: string;
@@ -75,11 +74,6 @@ export const createFolderTool: ToolDefinition = {
       }
 
       // Create directory (recursive)
-      reportProgress(JSON.stringify({
-        type: 'file_operation',
-        operation: 'creating_folder',
-        path: args.path
-      }));
       await fs.mkdir(fullPath, { recursive: true });
 
       return {

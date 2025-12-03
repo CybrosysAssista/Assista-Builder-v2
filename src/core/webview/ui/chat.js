@@ -252,25 +252,6 @@ export function initChatUI(vscode) {
         }
         showChatArea();
 
-        // Check if this is a progress message and try to update existing one
-        if (html && sender === 'ai' && html.includes('data-file-id')) {
-            const fileIdMatch = html.match(/data-file-id="([^"]+)"/);
-            if (fileIdMatch) {
-                const fileId = fileIdMatch[1];
-                // Find last message with same file-id
-                const lastRow = messagesEl.lastElementChild;
-                if (lastRow) {
-                    const lastBubble = lastRow.querySelector('.message.ai.markdown');
-                    if (lastBubble && lastBubble.innerHTML.includes(`data-file-id="${fileId}"`)) {
-                        lastBubble.innerHTML = html;
-                        enhanceMarkdownContent(lastBubble);
-                        messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
-                        return;
-                    }
-                }
-            }
-        }
-
         // Finalize streaming if active before appending new message
         if (streamingRow && streamingRow.parentNode) {
             finalizeStreamingMessage();
@@ -372,77 +353,6 @@ export function initChatUI(vscode) {
         streamingMessageBubble = null;
         streamingTextBuffer = '';
         streamingRow = null;
-    }
-
-    function renderProgressEvent(ev) {
-        if (!messagesEl) {
-            return;
-        }
-        showChatArea();
-
-        // Finalize streaming if active
-        if (streamingRow && streamingRow.parentNode) {
-            finalizeStreamingMessage();
-        }
-
-        if (ev.type === 'file_preview') {
-            const fileId = ev.fileId || `file-${ev.file || 'unknown'}`;
-            const language = ev.language || 'text';
-            const fileName = ev.file || 'file';
-
-            // Build preview HTML
-            const previewLines = ev.preview.split(/\r?\n/);
-            const preview = previewLines.join('\n');
-            const truncated = ev.truncated ? '\n...' : '';
-
-            // Build code block with syntax highlighting class
-            const codeBlock = `\`\`\`${language}-${fileName}\n${preview}${truncated}\n\`\`\``;
-
-            // Build progress indicator based on state
-            let indicatorHtml = '';
-            if (ev.state === 'writing' || ev.state === 'applying') {
-                indicatorHtml = `<span class="progress-indicator loading" data-file-id="${fileId}">${ev.state === 'applying' ? `Applying ${ev.blockCount || 0} change(s)...` : 'Writing file...'}</span>`;
-            } else if (ev.state === 'completed') {
-                const successMsg = ev.blockCount ? `✓ ${ev.blockCount} change(s) applied successfully` : '✓ File written successfully';
-                indicatorHtml = `<span class="progress-indicator completed" data-file-id="${fileId}">${successMsg}</span>`;
-            }
-
-            const fullHtml = `${codeBlock}\n\n${indicatorHtml}`;
-
-            // Try to update existing message with same file-id
-            const fileIdAttr = `data-file-id="${fileId}"`;
-            const lastRow = messagesEl.lastElementChild;
-            if (lastRow) {
-                const lastBubble = lastRow.querySelector('.message.ai.markdown');
-                if (lastBubble && lastBubble.innerHTML.includes(fileIdAttr)) {
-                    // Update existing message
-                    lastBubble.innerHTML = fullHtml;
-                    enhanceMarkdownContent(lastBubble);
-                    messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
-                    return;
-                }
-            }
-
-            // Create new message
-            const row = document.createElement("div");
-            row.className = "message-row";
-            const bubble = document.createElement("div");
-            bubble.className = "message ai markdown";
-            bubble.innerHTML = fullHtml;
-            enhanceMarkdownContent(bubble);
-            row.appendChild(bubble);
-            messagesEl.appendChild(row);
-            messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
-
-        } else if (ev.type === 'file_operation') {
-            // Simple operation message (creating directory, reading file, etc.)
-            const operationText = ev.operation === 'creating_directory' ? `Creating directory ${ev.path}...` :
-                ev.operation === 'creating_folder' ? `Creating folder ${ev.path}...` :
-                    ev.operation === 'reading_file' ? `Reading file ${ev.path}...` :
-                        `${ev.operation} ${ev.path}...`;
-
-            appendMessage(operationText, 'ai');
-        }
     }
 
     function clearInput() {
@@ -890,7 +800,6 @@ export function initChatUI(vscode) {
         appendStreamingChunk,
         finalizeStreamingMessage,
         replaceStreamingMessage,
-        renderProgressEvent,
         toggleBusy,
         renderSession,
         clearMessages,

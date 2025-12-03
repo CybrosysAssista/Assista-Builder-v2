@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import Ajv from 'ajv';
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
-import { runWithProgressCallback } from './progressContext.js';
 
 const ajv = new Ajv({ allErrors: true });
 
@@ -77,38 +76,35 @@ export function validateWorkspacePath(filePath: string): boolean {
  */
 export async function executeToolWithLock(
   tool: ToolDefinition,
-  args: any,
-  onProgress?: (msg: string) => void
+  args: any
 ): Promise<ToolResult> {
-  return await runWithProgressCallback(onProgress, async () => {
-    // Check if this is a write operation that needs locking
-    const writeTools = ['writeFileTool', 'write_to_file', 'applyPatchTool', 'apply_diff'];
-    const needsLock = writeTools.includes(tool.name) && args.path;
+  // Check if this is a write operation that needs locking
+  const writeTools = ['writeFileTool', 'write_to_file', 'applyPatchTool', 'apply_diff'];
+  const needsLock = writeTools.includes(tool.name) && args.path;
 
-    if (needsLock) {
-      const lockKey = args.path;
+  if (needsLock) {
+    const lockKey = args.path;
 
-      // Wait for any existing lock on this file
-      if (fileLocks.has(lockKey)) {
-        await fileLocks.get(lockKey);
-      }
-
-      // Create new lock
-      const lockPromise = (async () => {
-        try {
-          return await tool.execute(args);
-        } finally {
-          fileLocks.delete(lockKey);
-        }
-      })();
-
-      fileLocks.set(lockKey, lockPromise);
-      return await lockPromise;
+    // Wait for any existing lock on this file
+    if (fileLocks.has(lockKey)) {
+      await fileLocks.get(lockKey);
     }
 
-    // No lock needed, execute directly
-    return await tool.execute(args);
-  });
+    // Create new lock
+    const lockPromise = (async () => {
+      try {
+        return await tool.execute(args);
+      } finally {
+        fileLocks.delete(lockKey);
+      }
+    })();
+
+    fileLocks.set(lockKey, lockPromise);
+    return await lockPromise;
+  }
+
+  // No lock needed, execute directly
+  return await tool.execute(args);
 }
 
 /**

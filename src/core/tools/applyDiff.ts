@@ -2,7 +2,6 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
 import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
-import { reportProgress } from './progressContext.js';
 
 interface ApplyDiffArgs {
   path: string;
@@ -127,11 +126,6 @@ export const applyDiffTool: ToolDefinition = {
       const fileExt = path.extname(fileName).slice(1) || 'text';
 
       // Check if file exists
-      reportProgress(JSON.stringify({
-        type: 'file_operation',
-        operation: 'reading_file',
-        path: args.path
-      }));
       let originalContent: string;
       try {
         originalContent = await fs.readFile(fullPath, 'utf-8');
@@ -148,34 +142,7 @@ export const applyDiffTool: ToolDefinition = {
       // Parse search/replace blocks
       const blocks = parseSearchReplaceBlocks(args.diff);
       const blockCount = blocks.length;
-      const fileId = `file-${args.path.replace(/[^a-zA-Z0-9]/g, '-')}`;
 
-      // Extract context around first block (if any)
-      let contextPreview = '';
-      let contextTruncated = false;
-      if (blocks.length > 0) {
-        const first = blocks[0];
-        const matchIndex = findMatchLineIndex(originalContent, first.searchContent);
-        contextPreview = extractContext(originalContent, matchIndex, 5);
-        contextTruncated = true;
-      } else {
-        // Fallback to first 15 lines if no blocks
-        contextPreview = originalContent.split(/\r?\n/).slice(0, 15).join('\n');
-        contextTruncated = originalContent.split(/\r?\n/).length > 15;
-      }
-
-      reportProgress(JSON.stringify({
-        type: 'file_preview',
-        file: fileName,
-        filePath: args.path,
-        fileId: fileId,
-        preview: contextPreview,
-        truncated: contextTruncated,
-        state: 'applying',
-        language: fileExt,
-        blockCount: blockCount
-      }));
-      
       if (blocks.length === 0) {
         return {
           status: 'error',
@@ -247,34 +214,7 @@ export const applyDiffTool: ToolDefinition = {
 
       // Write modified content
       modifiedContent = lines.join('\n');
-      const writePreviewLines = modifiedContent.split(/\r?\n/).slice(0, 15);
-      const writePreview = writePreviewLines.join('\n');
-      const writeIsTruncated = modifiedContent.split(/\r?\n/).length > 15;
-      
-      reportProgress(JSON.stringify({
-        type: 'file_preview',
-        file: fileName,
-        filePath: args.path,
-        fileId: fileId,
-        preview: writePreview,
-        truncated: writeIsTruncated,
-        state: 'writing',
-        language: fileExt
-      }));
       await fs.writeFile(fullPath, modifiedContent, 'utf-8');
-      
-      // Update to completed state
-      reportProgress(JSON.stringify({
-        type: 'file_preview',
-        file: fileName,
-        filePath: args.path,
-        fileId: fileId,
-        preview: writePreview,
-        truncated: writeIsTruncated,
-        state: 'completed',
-        language: fileExt,
-        blockCount: blockCount
-      }));
 
       return {
         status: 'success',
