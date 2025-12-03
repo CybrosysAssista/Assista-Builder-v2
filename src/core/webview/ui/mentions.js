@@ -21,6 +21,8 @@ export function initMentionsUI(vscode, opts) {
   let lastQuery = '';
   let inlineTyping = false; // when true, keep focus in chat input while showing results
   let menuPosition = null; // Store the initial menu position to prevent jumping
+  let isInserting = false;
+  let lastRange = null; // Track cursor position to restore it after focus loss
 
   // Custom tooltip (styled) for full paths
   let mentionTooltipEl = null;
@@ -84,19 +86,15 @@ export function initMentionsUI(vscode, opts) {
     const nm = String(name || '').toLowerCase();
     const ext = nm.split('.').pop() || '';
     const map = {
-      'py': 'python.svg', 'js': 'js.svg', 'jsx': 'js.svg', 'mjs': 'js.svg', 'cjs': 'js.svg',
-      'ts': 'ts.svg', 'tsx': 'ts.svg', 'go': 'go.svg', 'java': 'java.svg', 'rs': 'rust.svg',
-      'rb': 'ruby.svg', 'php': 'php.svg', 'cs': 'csharp.svg', 'c': 'c.svg', 'h': 'h.svg',
-      'cpp': 'cplus.svg', 'cxx': 'cplus.svg', 'cc': 'cplus.svg', 'kt': 'kotlin.svg', 'swift': 'swift.svg',
-      'lua': 'lua.svg', 'r': 'r.svg',
-      'html': 'code-orange.svg', 'css': 'code-blue.svg', 'scss': 'sass.svg', 'sass': 'sass.svg',
-      'md': 'markdown.svg', 'markdown': 'markdown.svg', 'xml': 'xml.svg',
-      'json': 'document.svg', 'yaml': 'yaml.svg', 'yml': 'yaml.svg', 'csv': 'csv.svg', 'ini': 'gear.svg', 'toml': 'gear.svg',
-      'sh': 'shell.svg', 'bash': 'shell.svg', 'zsh': 'shell.svg', 'ps1': 'shell.svg',
-      'sql': 'database.svg',
-      'png': 'image.svg', 'jpg': 'image.svg', 'jpeg': 'image.svg', 'gif': 'image.svg', 'bmp': 'image.svg', 'webp': 'image.svg', 'svg': 'svg.svg',
-      'mp4': 'video.svg', 'webm': 'video.svg', 'mkv': 'video.svg', 'mp3': 'audio.svg', 'wav': 'audio.svg', 'ogg': 'audio.svg',
-      'pdf': 'pdf.svg', 'lock': 'lock.svg', 'txt': 'text.svg'
+      'py': 'python.svg', 'js': 'js.svg', 'jsx': 'js.svg', 'mjs': 'js.svg', 'cjs': 'js.svg', 'ts': 'ts.svg', 'tsx': 'ts.svg',
+      'go': 'go.svg', 'java': 'java.svg', 'rs': 'rust.svg', 'rb': 'ruby.svg', 'php': 'php.svg', 'cs': 'csharp.svg', 'c': 'c.svg',
+      'h': 'h.svg', 'cpp': 'cplus.svg', 'cxx': 'cplus.svg', 'cc': 'cplus.svg', 'kt': 'kotlin.svg', 'swift': 'swift.svg',
+      'lua': 'lua.svg', 'r': 'r.svg', 'html': 'code-orange.svg', 'css': 'code-blue.svg', 'scss': 'sass.svg', 'sass': 'sass.svg',
+      'md': 'markdown.svg', 'markdown': 'markdown.svg', 'xml': 'xml.svg', 'json': 'document.svg', 'yaml': 'yaml.svg',
+      'yml': 'yaml.svg', 'csv': 'csv.svg', 'ini': 'gear.svg', 'toml': 'gear.svg', 'sh': 'shell.svg', 'bash': 'shell.svg',
+      'zsh': 'shell.svg', 'ps1': 'shell.svg', 'sql': 'database.svg', 'png': 'image.svg', 'jpg': 'image.svg', 'jpeg': 'image.svg',
+      'gif': 'image.svg', 'bmp': 'image.svg', 'webp': 'image.svg', 'svg': 'svg.svg', 'mp4': 'video.svg', 'webm': 'video.svg',
+      'mkv': 'video.svg', 'mp3': 'audio.svg', 'wav': 'audio.svg', 'ogg': 'audio.svg', 'pdf': 'pdf.svg', 'lock': 'lock.svg', 'txt': 'text.svg'
     };
     if (nm.endsWith('package.json')) {
       const t = img(filesBase, 'npm.svg') || img(filesBase, 'document.svg');
@@ -113,43 +111,19 @@ export function initMentionsUI(vscode, opts) {
 
   function positionMenu() {
     if (!menu) return;
-
-    // If we already have a stored position and the menu is open, use it
-    // This prevents the menu from jumping when the picker panel opens
     if (menuPosition && open) {
-      menu.style.left = `${menuPosition.left}px`;
-      menu.style.bottom = `${menuPosition.bottom}px`;
-      menu.style.top = 'auto'; // Clear top positioning
+      Object.assign(menu.style, { left: `${menuPosition.left}px`, bottom: `${menuPosition.bottom}px`, top: 'auto' });
       return;
     }
-
     const anchor = mentionBtn || inputEl;
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
-
-    const margin = 8;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-
-    // Calculate space available above the input
+    const margin = 8, vw = window.innerWidth, vh = window.innerHeight;
     const spaceAbove = rect.top;
-
-    // Position from bottom of viewport
-    // Distance from bottom = viewport height - anchor top + margin
     const bottom = vh - rect.top + margin;
+    let left = Math.max(margin, Math.min(rect.left, vw - 280 - margin));
 
-    // Align to anchor's left similar to model dropdown
-    let left = rect.left;
-    // Clamp horizontally in viewport
-    const menuWidth = 280; // approximate width
-    left = Math.max(margin, Math.min(left, vw - menuWidth - margin));
-
-    menu.style.left = `${left}px`;
-    menu.style.bottom = `${bottom}px`;
-    menu.style.top = 'auto'; // Clear any top positioning
-    menu.style.maxHeight = `${spaceAbove - margin * 2}px`; // Limit height to available space
-
-    // Store the position for future use
+    Object.assign(menu.style, { left: `${left}px`, bottom: `${bottom}px`, top: 'auto', maxHeight: `${spaceAbove - margin * 2}px` });
     menuPosition = { left, bottom };
   }
 
@@ -183,31 +157,84 @@ export function initMentionsUI(vscode, opts) {
     hideMentionTooltip();
     closeMenu();
     const base = (String(name).split(/[\\\/]/).pop()) || String(name);
-    const textToInsert = `@${base} `;
+
+    // Create chip element
+    const chip = document.createElement('span');
+    chip.className = 'mention-chip';
+    chip.textContent = `@${base}`;
+    chip.contentEditable = "false";
+    chip.setAttribute('data-mention', base);
 
     if (inputEl) {
-      const val = inputEl.value;
-      const sel = inputEl.selectionStart;
-      // Search backwards for @
-      const lastAt = val.lastIndexOf('@', sel - 1);
-      if (lastAt >= 0) {
-        const potentialQuery = val.slice(lastAt + 1, sel);
-        // If query has no spaces, assume it's the mention being typed
-        if (!/\s/.test(potentialQuery)) {
-          const before = val.slice(0, lastAt);
-          const after = val.slice(sel);
-          inputEl.value = before + textToInsert + after;
-          const newPos = before.length + textToInsert.length;
-          inputEl.selectionStart = inputEl.selectionEnd = newPos;
-          inputEl.focus();
-          inputEl.dispatchEvent(new Event('input'));
-          return;
+      inputEl.focus();
+      const sel = window.getSelection();
+      // Restore the tracked range if available, as focus() might have reset it to the start
+      if (lastRange) {
+        sel.removeAllRanges();
+        sel.addRange(lastRange);
+      }
+
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+
+        // Find and delete the '@' that triggered this
+        let node = range.startContainer, offset = range.startOffset;
+        if (node.nodeType === 1 && offset > 0 && node.childNodes[offset - 1].nodeType === 3) {
+          node = node.childNodes[offset - 1]; offset = node.textContent.length;
         }
+
+        if (node.nodeType === 3) {
+          const text = node.textContent;
+          let lastAt = text.lastIndexOf('@', offset - 1);
+          if (lastAt === -1 && offset < text.length && text[offset] === '@') lastAt = offset;
+
+          if (lastAt >= 0) {
+            range.setStart(node, lastAt);
+            range.setEnd(node, (lastAt === offset) ? lastAt + 1 : offset);
+            range.deleteContents();
+          } else {
+            const prev = node.previousSibling;
+            let handled = false;
+            if (prev?.nodeType === 3) {
+              const prevAt = prev.textContent.lastIndexOf('@');
+              if (prevAt >= 0) {
+                range.setStart(prev, prevAt); range.setEnd(node, offset); range.deleteContents(); handled = true;
+              }
+            }
+            if (!handled) {
+              const next = node.nextSibling;
+              if (next?.nodeType === 3 && next.textContent.startsWith('@')) {
+                range.setStart(next, 0); range.setEnd(next, 1); range.deleteContents();
+              }
+            }
+          }
+        }
+
+        // Insert chip and space
+        range.insertNode(chip);
+        range.setStartAfter(chip);
+        range.collapse(true);
+
+        const space = document.createTextNode('\u00A0');
+        range.insertNode(space);
+        // Place cursor explicitly inside the text node to avoid parent-level selection
+        range.setStart(space, 1);
+        range.setEnd(space, 1);
+        range.collapse(true);
+
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        isInserting = true;
+        inputEl.dispatchEvent(new Event('input'));
+        isInserting = false;
+        return;
       }
     }
+
     // Fallback
     if (typeof insertAtCursor === 'function') {
-      insertAtCursor(textToInsert);
+      insertAtCursor(`@${base} `);
     }
   }
 
@@ -222,7 +249,7 @@ export function initMentionsUI(vscode, opts) {
       empty.className = 'empty';
       empty.textContent = 'No results';
       pickerList.appendChild(empty);
-      // Don't reposition - keep menu stable
+
       return;
     }
 
@@ -246,7 +273,7 @@ export function initMentionsUI(vscode, opts) {
       };
       pickerList.appendChild(row);
     });
-    // Don't reposition - keep menu stable
+
   }
 
   function requestSearch(q) {
@@ -322,18 +349,46 @@ export function initMentionsUI(vscode, opts) {
     } catch (_) { }
   });
 
+  // Track cursor position
+  const updateLastRange = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && inputEl.contains(sel.anchorNode)) {
+      lastRange = sel.getRangeAt(0).cloneRange();
+    }
+  };
+  inputEl?.addEventListener('keyup', updateLastRange);
+  inputEl?.addEventListener('mouseup', updateLastRange);
+
   // Inline mention: typing "@query" in the chat input opens picker and searches while keeping focus in chat
   let inlineAtTimer;
   inputEl?.addEventListener('input', () => {
+    updateLastRange();
+    if (isInserting) return;
     try {
-      const val = String(inputEl.value || '');
-      const sel = inputEl.selectionStart ?? val.length;
-      const at = val.lastIndexOf('@', sel - 1);
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+
+      const node = sel.anchorNode;
+      let val = '';
+      let selPos = 0;
+
+      if (node && node.nodeType === 3) { // Text node
+        val = node.textContent || '';
+        selPos = sel.anchorOffset;
+      } else if (node === inputEl) {
+        // Empty or at start
+        val = inputEl.textContent || '';
+        selPos = 0;
+      } else {
+        return;
+      }
+
+      const at = val.lastIndexOf('@', selPos - 1);
       let hasAt = at >= 0;
       let inlineQuery = '';
+
       if (hasAt) {
-        const raw = val.slice(at + 1, sel);
-        // If the text from @ to cursor contains a delimiter, we are past the mention
+        const raw = val.slice(at + 1, selPos);
         if (/[\s\n\t\"']/.test(raw)) {
           hasAt = false;
         } else {
@@ -394,6 +449,8 @@ export function initMentionsUI(vscode, opts) {
       else { requestSearch(q); }
     }, 160);
   });
+
+
 
   return {
     open: openMenu,

@@ -27,7 +27,19 @@ export function getWelcomeHtml(assets: {
     <div class="welcome-actions">
       <div class="menu" id="welcomeModeMenuRoot">
         <button id="welcomeModeToggle" class="chip-btn" title="Mode">
-          <img class="chip-icon" src="${assets.code}" alt="Code icon" />
+          <span class="chip-icon">
+            <!-- Chat Icon (hidden by default) -->
+            <svg class="mode-icon-chat" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 2H4C2.9 2 2 2.9 2 4V16C2 17.1 2.9 18 4 18H6L10 22L14 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke-linejoin="round"/>
+              <path d="M7 9H17"/>
+              <path d="M7 13H13"/>
+            </svg>
+            <!-- Agent Icon (code brackets, visible by default) -->
+            <svg class="mode-icon-agent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+          </span>
           <span id="welcomeModeLabel">Agent</span>
           <img class="dropdown-icon" src="${assets.dropdown}" alt="Dropdown" />
         </button>

@@ -17,7 +17,6 @@ export function initChatUI(vscode) {
     const modelLabel = document.getElementById('modelLabel');
     const mentionBtn = document.getElementById('mentionBtn');
     const mentionMenu = document.getElementById('mentionMenu');
-    const mentionPickFiles = document.getElementById('mentionPickFiles');
     const micBtn = document.getElementById('micBtn');
     const settingsBtn = document.getElementById('settingsBtn');
 
@@ -28,6 +27,7 @@ export function initChatUI(vscode) {
     let selectedModel = 'gpt5-low';
     let showModeMenu = false;
     let showModelMenu = false;
+    let optimisticUserMessage = null; // Store text of optimistic message to ensure it persists
 
     function showChatArea() {
         try {
@@ -120,9 +120,6 @@ export function initChatUI(vscode) {
         // Custom Syntax Highlighting
         // Apply to ALL code blocks (inline and block)
         container.querySelectorAll("code").forEach((block) => {
-            // If already highlighted by VS Code (has spans), skip or maybe force?
-            // User says "no color", so likely no spans. 
-            // We'll apply our simple highlighter if it looks like plain text.
             if (block.children.length > 0) return;
 
             let text = block.textContent;
@@ -301,23 +298,11 @@ export function initChatUI(vscode) {
 
         // Show plain text immediately for streaming feedback
         streamingMessageBubble.textContent = streamingTextBuffer;
-        
+
         // Scroll to bottom smoothly
         messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'auto' });
 
-        // Clear any pending render timeout
-        if (streamingRenderTimeout) {
-            clearTimeout(streamingRenderTimeout);
-        }
 
-        // Debounce markdown rendering (render every 500ms while streaming)
-        streamingRenderTimeout = setTimeout(() => {
-            if (streamingMessageBubble && streamingTextBuffer) {
-                // Request markdown rendering for accumulated text
-                // For now, just show as plain text - we'll enhance with markdown later
-                // The final render will happen in finalizeStreamingMessage
-            }
-        }, 500);
     }
 
     function finalizeStreamingMessage() {
@@ -363,7 +348,7 @@ export function initChatUI(vscode) {
 
         // No streaming message to replace, create new one
         appendMessage(text, 'ai', html);
-        
+
         // Reset streaming state
         streamingMessageBubble = null;
         streamingTextBuffer = '';
@@ -371,24 +356,29 @@ export function initChatUI(vscode) {
     }
 
     function clearInput() {
-        if (!inputEl) {
-            return;
-        }
-        inputEl.value = "";
+        if (!inputEl) return;
+        inputEl.innerHTML = "";
         inputEl.style.height = "";
+        if (sendBtn) sendBtn.disabled = true;
     }
 
     function insertAtCursor(text) {
         if (!inputEl) return;
-        const start = inputEl.selectionStart ?? inputEl.value.length;
-        const end = inputEl.selectionEnd ?? inputEl.value.length;
-        const before = inputEl.value.slice(0, start);
-        const after = inputEl.value.slice(end);
-        inputEl.value = `${before}${text}${after}`;
-        const pos = start + text.length;
-        try { inputEl.selectionStart = inputEl.selectionEnd = pos; } catch (_) { }
-        inputEl.dispatchEvent(new Event('input'));
         inputEl.focus();
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            const textNode = document.createTextNode(text);
+            range.insertNode(textNode);
+            range.setStartAfter(textNode);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        } else {
+            inputEl.textContent += text;
+        }
+        inputEl.dispatchEvent(new Event('input'));
     }
 
     function renderSession(sessionId, messages) {
@@ -398,7 +388,7 @@ export function initChatUI(vscode) {
 
         messagesEl.innerHTML = "";
         activeSessionId = sessionId;
-        
+
         // Reset streaming state
         streamingMessageBubble = null;
         streamingTextBuffer = '';
@@ -406,6 +396,23 @@ export function initChatUI(vscode) {
         if (streamingRenderTimeout) {
             clearTimeout(streamingRenderTimeout);
             streamingRenderTimeout = null;
+        }
+
+
+
+        // Handle optimistic user message
+        if (optimisticUserMessage) {
+            // Check if the new messages list already contains our message
+            const hasIt = messages && messages.some(m => m.role === 'user' && m.content === optimisticUserMessage);
+            if (hasIt) {
+                // Backend has synced it, we can stop tracking
+                optimisticUserMessage = null;
+            } else {
+                // Backend hasn't synced it yet (or sent empty list), so we must inject it
+                if (!messages) messages = [];
+                // We assume the optimistic message is the first one in this new session
+                messages.unshift({ role: 'user', content: optimisticUserMessage });
+            }
         }
 
         if (Array.isArray(messages)) {
@@ -466,6 +473,9 @@ export function initChatUI(vscode) {
     }
 
     function clearMessages() {
+        // If we have an optimistic message pending, don't clear!
+        if (optimisticUserMessage) return;
+
         if (messagesEl) {
             messagesEl.innerHTML = "";
         }
@@ -483,27 +493,32 @@ export function initChatUI(vscode) {
         if (!inputEl) {
             return;
         }
-        const text = inputEl.value.trim();
+        const text = inputEl.innerText.trim();
         if (!text) {
             return;
         }
 
-        // Close any open overlays (History/Settings) to show the chat area
         const historyPage = document.getElementById('historyPage');
         const settingsPage = document.getElementById('settingsPage');
-        const messagesEl = document.getElementById('messages');
-        const inputBar = document.querySelector('.input-bar');
 
         if (historyPage) historyPage.style.display = 'none';
         if (settingsPage) settingsPage.style.display = 'none';
-
-        // Ensure messages and input bar are visible
         if (messagesEl) messagesEl.style.display = '';
         if (inputBar) inputBar.style.display = '';
 
         appendMessage(text, "user");
         clearInput();
         toggleBusy(true);
+
+        const isNewSession = inputEl.dataset.isNewSession === 'true';
+        if (isNewSession) {
+            delete inputEl.dataset.isNewSession;
+            // We are starting a fresh session.
+            // Store the text so we can force-render it until backend syncs
+            optimisticUserMessage = text;
+            // Tell backend to reset session.
+            vscode.postMessage({ command: 'newChat' });
+        }
 
         vscode.postMessage({ command: "userMessage", text, mode: selectedMode });
     }
@@ -528,6 +543,18 @@ export function initChatUI(vscode) {
     function applyMode(mode) {
         selectedMode = mode;
         if (modeLabel) modeLabel.textContent = mode === 'agent' ? 'Agent' : 'Chat';
+
+        const chatIcon = document.querySelector('#modeIcon .mode-icon-chat');
+        const agentIcon = document.querySelector('#modeIcon .mode-icon-agent');
+
+        if (mode === 'chat') {
+            if (chatIcon) chatIcon.style.display = '';
+            if (agentIcon) agentIcon.style.display = 'none';
+        } else {
+            if (chatIcon) chatIcon.style.display = 'none';
+            if (agentIcon) agentIcon.style.display = '';
+        }
+
         // Optional: inform host of mode change in the future
     }
 
@@ -635,13 +662,13 @@ export function initChatUI(vscode) {
                 inputEl.style.height = 'auto';
                 inputEl.style.height = `${Math.min(Math.max(inputEl.scrollHeight, 28), 160)}px`;
                 // Enable/disable send button
-                if (sendBtn) sendBtn.disabled = !inputEl.value.trim();
+                if (sendBtn) sendBtn.disabled = !inputEl.innerText.trim();
             } catch (_) {
                 // ignore sizing issues
             }
         });
         // Initialize disabled state
-        try { if (sendBtn) sendBtn.disabled = !inputEl.value.trim(); } catch (_) { }
+        try { if (sendBtn) sendBtn.disabled = !inputEl.innerText.trim(); } catch (_) { }
     }
 
     if (stopBtn) {
