@@ -57,15 +57,20 @@ export function initWelcomeUI(vscode, opts = {}) {
   });
 
   function routeSend(text) {
-    // First, clear any existing session to start fresh
-    vscode.postMessage({ command: 'newChat' });
+    // Send message directly; the current view implies a new or empty session
+    // We avoid sending 'newChat' here to prevent a race condition where the backend
+    // sends an empty session update that wipes out our optimistic user message.
 
     // Small delay to ensure the new chat is initialized before sending the message
     setTimeout(() => {
       const chatInput = document.getElementById('chatInput');
       const chatSend = document.getElementById('sendBtn');
       if (chatInput && chatSend && typeof text === 'string') {
-        chatInput.value = text;
+        // Chat input is a contenteditable div, so we must set innerText/textContent, not value
+        chatInput.innerText = text;
+        chatInput.textContent = text;
+        // Signal that this is a new session start
+        chatInput.dataset.isNewSession = 'true';
         try { chatInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) { }
         chatSend.click();
       } else {
@@ -115,6 +120,19 @@ export function initWelcomeUI(vscode, opts = {}) {
     if (!mode) return;
     const label = mode === 'code' ? 'Agent' : 'Chat';
     if (modeLabel()) modeLabel().textContent = label;
+
+    // Swap icons based on mode
+    const chatIcon = document.querySelector('#welcomeModeToggle .mode-icon-chat');
+    const agentIcon = document.querySelector('#welcomeModeToggle .mode-icon-agent');
+
+    if (mode === 'chat') {
+      if (chatIcon) chatIcon.style.display = '';
+      if (agentIcon) agentIcon.style.display = 'none';
+    } else {
+      if (chatIcon) chatIcon.style.display = 'none';
+      if (agentIcon) agentIcon.style.display = '';
+    }
+
     closeMenus();
   });
 

@@ -427,6 +427,52 @@ export function getHtmlForWebview(
         justify-content: space-between;
         padding: 0 8px 8px 8px;
       }
+      
+      /* Chat Input (Rich Text) */
+      #chatInput {
+        width: 100%;
+        max-height: 200px;
+        min-height: 44px;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--vscode-input-foreground);
+        font-family: var(--vscode-font-family);
+        font-size: 13px;
+        line-height: 20px;
+        resize: none;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        display: block;
+        padding: 6px 8px;
+        box-sizing: border-box;
+      }
+      
+      #chatInput:empty:before {
+        content: attr(placeholder);
+        color: var(--vscode-input-placeholderForeground);
+        pointer-events: none;
+        display: block;
+      }
+      
+      /* Mention Chip */
+      .mention-chip {
+        display: inline-flex;
+        align-items: center;
+        background-color: rgba(30, 58, 138, 0.5);
+        color: #bfdbfe;
+        border-radius: 4px;
+        padding: 1px 6px;
+        margin: 0 2px;
+        font-family: monospace;
+        font-size: 0.9em;
+        vertical-align: middle;
+        cursor: default;
+        user-select: none;
+        border: 1px solid #3b82f6;
+      }
+      
       .chatbox-toolbar .left,
       .chatbox-toolbar .right { display: flex; align-items: center; gap: 8px; }
       /* Tighter spacing between Mode chip and Model chip */
@@ -477,6 +523,23 @@ export function getHtmlForWebview(
       .send-btn { padding: 6px; border-radius: 9999px; }
       .send-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
       .icon-svg { width: 16px; height: 16px; display: inline-block; }
+      /* Mode icon container and icons */
+      #modeIcon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        position: relative;
+      }
+      #modeIcon .mode-icon-chat,
+      #modeIcon .mode-icon-agent {
+        width: 14px;
+        height: 14px;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
       /* Mention dropdown */
       .mention-menu { position: fixed; z-index: 10000; display: none; width: 260px; color: var(--vscode-editor-foreground); max-width: calc(100vw - 16px); }
       .mention-card { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.12)); border-radius: 10px; box-shadow: 0 16px 40px rgba(0,0,0,0.35); overflow: hidden; max-height: min(60vh, 380px); }
@@ -863,13 +926,20 @@ export function getHtmlForWebview(
     ${getHistoryHtml()}
     <div class="input-bar">
       <div class="chatbox">
-        <textarea id="chatInput" rows="1" placeholder="Ask anything (Ctrl+L)" style="max-height:200px; min-height:44px"></textarea>
+        <div id="chatInput" contenteditable="true" role="textbox" aria-multiline="true" placeholder="Ask anything (Ctrl+L)"></div>
         <div class="chatbox-toolbar">
           <div class="left">
             <div class="menu" id="modeMenu">
               <button class="chip-btn" id="modeToggle" title="Mode">
                 <span id="modeIcon">
-                  <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <!-- Chat Icon (hidden by default) -->
+                  <svg class="icon-svg mode-icon-chat" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 2H4C2.9 2 2 2.9 2 4V16C2 17.1 2.9 18 4 18H6L10 22L14 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke-linejoin="round"/>
+                    <path d="M7 9H17"/>
+                    <path d="M7 13H13"/>
+                  </svg>
+                  <!-- Agent Icon (code brackets, visible by default) -->
+                  <svg class="icon-svg mode-icon-agent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="16 18 22 12 16 6"/>
                     <polyline points="8 6 2 12 8 18"/>
                   </svg>
