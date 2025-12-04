@@ -235,8 +235,8 @@ export function initWelcomeUI(vscode, opts = {}) {
       // Remove transitioning class after animation completes
       setTimeout(() => {
         root.classList.remove('transitioning');
-      }, 1000);
-    }, 800);
+      }, 800);
+    }, 550);
   }
 
   // Expose helpers

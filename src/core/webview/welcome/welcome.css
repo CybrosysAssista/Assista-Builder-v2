@@ -383,7 +383,7 @@
 /* Splash Screen Animation */
 #welcomeScreen.splash-mode {
     /* Container fade is subtle */
-    animation: fadeIn 0.8s ease-out forwards;
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
 #welcomeScreen.splash-mode .welcome-container {
@@ -395,7 +395,7 @@
     /* Logo specifically animates in */
     opacity: 0;
     /* Start hidden */
-    animation: logoEntry 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation: logoEntry 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 #welcomeScreen.splash-mode .welcome-logo {
@@ -420,11 +420,11 @@
 
 /* Transition to full welcome screen */
 #welcomeScreen .welcome-container {
-    transition: gap 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: gap 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 #welcomeScreen .welcome-logo {
-    transition: width 1.2s cubic-bezier(0.2, 0.8, 0.2, 1), height 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 #welcomeScreen.transitioning .welcome-container {
@@ -440,33 +440,33 @@
     overflow: visible;
     visibility: visible;
     /* Longer duration for luxurious flow */
-    transition: max-height 1.2s cubic-bezier(0.2, 0.8, 0.2, 1), margin 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-    animation: slideUpFadeIn 1.2s ease-out forwards;
+    transition: max-height 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), margin 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: slideUpFadeIn 0.8s ease-out forwards;
 }
 
 /* Specific max-heights to ensure smooth animation speed */
 #welcomeScreen.transitioning .welcome-greeting {
     max-height: 40px;
     /* Tight fit for text */
-    animation-delay: 0.1s;
+    animation-delay: 0.05s;
 }
 
 #welcomeScreen.transitioning .welcome-tagline {
     max-height: 30px;
     /* Tight fit for small text */
-    animation-delay: 0.2s;
+    animation-delay: 0.1s;
 }
 
 #welcomeScreen.transitioning .welcome-input {
     max-height: 60px;
     /* Tight fit for input */
-    animation-delay: 0.3s;
+    animation-delay: 0.15s;
 }
 
 #welcomeScreen.transitioning .welcome-actions {
     max-height: 60px;
     /* Tight fit for buttons */
-    animation-delay: 0.4s;
+    animation-delay: 0.2s;
 }
 
 /* Keyframe Animations */
