@@ -498,6 +498,12 @@ export function initChatUI(vscode) {
             return;
         }
 
+        // Validate model selection
+        if (selectedModel !== 'custom-api') {
+            appendMessage('Please select "Custom API" to use the chat.', 'system');
+            return;
+        }
+
         const historyPage = document.getElementById('historyPage');
         const settingsPage = document.getElementById('settingsPage');
 
@@ -520,7 +526,7 @@ export function initChatUI(vscode) {
             vscode.postMessage({ command: 'newChat' });
         }
 
-        vscode.postMessage({ command: "userMessage", text, mode: selectedMode });
+        vscode.postMessage({ command: "userMessage", text, mode: selectedMode, model: selectedModel });
     }
 
     // --- New UI: toolbar behaviors ---
@@ -561,7 +567,10 @@ export function initChatUI(vscode) {
     function applyModel(model, labelText) {
         selectedModel = model;
         if (modelLabel && labelText) modelLabel.textContent = labelText;
-        // Optional: map to actual provider/model config later
+
+        // Sync to welcome screen
+        const welcomeLabel = document.getElementById('welcomeModelLabel');
+        if (welcomeLabel && labelText) welcomeLabel.textContent = labelText;
     }
 
     // Toggle menus
@@ -592,12 +601,8 @@ export function initChatUI(vscode) {
         if (!btn) return;
         const action = btn.getAttribute('data-action');
         if (action === 'custom-api') {
-            // Open Settings page so the user can enter a custom API key
+            applyModel('custom-api', 'Custom API');
             closeMenus();
-            // Use the backend message to properly open settings with data loaded
-            try {
-                vscode.postMessage({ command: 'openCustomApiSettings' });
-            } catch (_) { }
             return;
         }
         const model = btn.getAttribute('data-model');
@@ -820,5 +825,11 @@ export function initChatUI(vscode) {
         setMentionRecentNames,
         setPickerItems,
         showQuestion,
+        sendMessage,
+        getSelectedMode: () => selectedMode,
+        getSelectedModel: () => selectedModel,
+        getSelectedModelLabel: () => modelLabel ? modelLabel.textContent : 'GPT-5 (low reasoning)',
+        // Allow other modules (e.g., welcome.js) to set the selected model
+        setSelectedModel: (id, label) => applyModel(id, label),
     };
 }

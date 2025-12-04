@@ -8,7 +8,7 @@ const vscode = acquireVsCodeApi();
 const chat = initChatUI(vscode);
 const settings = initSettingsUI(vscode);
 const history = initHistoryUI(vscode);
-const welcome = initWelcomeUI(vscode, { insertAtCursor: chat.insertAtCursor });
+const welcome = initWelcomeUI(vscode, { insertAtCursor: chat.insertAtCursor, chat });
 
 const bootState = typeof vscode.getState === 'function' ? vscode.getState() : undefined;
 if (bootState && Array.isArray(bootState.messages)) {

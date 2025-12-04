@@ -175,7 +175,8 @@
 
 #welcomeScreen .dropdown {
     position: absolute;
-    top: calc(100% + 6px);
+    /* Open downward under the trigger */
+    top: calc(100% + 8px);
     bottom: auto;
     left: 0;
     background: var(--vscode-editorWidget-background, #2a2a2a);
@@ -187,6 +188,15 @@
     min-width: fit-content;
     overflow: hidden;
     z-index: 10000;
+    /* Cap height and scroll if too tall to stay on-screen */
+    max-height: min(60vh, 320px);
+    overflow-y: auto;
+}
+
+/* Align the model dropdown to the right edge of its trigger to reduce right overflow */
+#welcomeScreen #welcomeModelDropdown {
+    right: 0;
+    left: auto;
 }
 
 #welcomeScreen .dropdown.visible {
@@ -229,6 +239,18 @@
     flex-direction: row;
     align-items: center;
     gap: 8px;
+}
+
+/* Ensure model items lay out in one line like chat */
+#welcomeScreen #welcomeModelDropdown .item {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Prevent the right-side multiplier from wrapping to the next line */
+#welcomeScreen #welcomeModelDropdown .item span:last-child {
+    white-space: nowrap;
 }
 
 #welcomeScreen .dropdown .item:hover {

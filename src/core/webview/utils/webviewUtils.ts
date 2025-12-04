@@ -13,6 +13,33 @@ function getNonce(): string {
   return text;
 }
 
+function getModelMenuHtml(idPrefix: string, assets?: { model?: string; dropdown?: string }): string {
+  const modelIcon = assets?.model ? `<img class="chip-icon" src="${assets.model}" alt="Model icon" />` : '';
+  const dropdownIcon = assets?.dropdown ? `<img class="dropdown-icon" src="${assets.dropdown}" alt="Dropdown" />` : '';
+
+  const rootId = idPrefix ? `${idPrefix}ModelMenu` : 'modelMenu';
+  const toggleId = idPrefix ? `${idPrefix}ModelToggle` : 'modelToggle';
+  const labelId = idPrefix ? `${idPrefix}ModelLabel` : 'modelLabel';
+  const dropdownId = idPrefix ? `${idPrefix}ModelDropdown` : 'modelDropdown';
+
+  return `
+    <div class="menu" id="${rootId}">
+      <button class="chip-btn" id="${toggleId}" title="Model">
+        ${modelIcon}
+        <span id="${labelId}">GPT-5 (low reasoning)</span>
+        ${dropdownIcon}
+      </button>
+      <div class="dropdown" id="${dropdownId}" role="listbox">
+        <button class="item" data-model="gpt5-low"><span>GPT-5 (low reasoning)</span><span style="opacity:.6;font-size:11px">0.5x</span></button>
+        <button class="item" data-model="gpt5-high"><span>GPT-5 (high reasoning)</span><span style="opacity:.6;font-size:11px">3x</span></button>
+        <button class="item" data-model="gpt4"><span>GPT-4</span><span style="opacity:.6;font-size:11px">2x</span></button>
+        <button class="item" data-model="sonnet-4.5"><span>Claude Sonnet 4.5</span><span style="opacity:.6;font-size:11px">2x</span></button>
+        <button class="item" data-model="sonnet-4-thinking"><span>Claude Sonnet 4.5 Thinking</span><span style="opacity:.6;font-size:11px">3x</span></button>
+        <button class="item custom" data-action="custom-api"><span>Use custom API key…</span></button>
+      </div>
+    </div>`;
+}
+
 export function getHtmlForWebview(
   webview: vscode.Webview,
   extensionUri: vscode.Uri
@@ -78,6 +105,7 @@ export function getHtmlForWebview(
     code: String(welcomeCode),
     model: String(welcomeModel),
     dropdown: String(welcomeDropdown),
+    modelMenuHtml: getModelMenuHtml('welcome', { model: String(welcomeModel), dropdown: String(welcomeDropdown) }),
   })}</div>
     <div id="messages"></div>
     ${getSettingsModalHtml()}
@@ -109,21 +137,7 @@ export function getHtmlForWebview(
                 <button class="item" data-mode="agent"><span>Agent</span><span class="desc" style="opacity:.6;font-size:11px">Cascade can write and edit code</span></button>
               </div>
             </div>
-            <div class="menu" id="modelMenu">
-              <button class="chip-btn" id="modelToggle" title="Model">
-                <span id="modelLabel">GPT-5 (low reasoning)</span>
-              </button>
-              <div class="dropdown" id="modelDropdown">
-                <div class="section-title">Recently Used</div>
-                <button class="item" data-model="gpt5-low"><span>GPT-5 (low reasoning)</span><span style="opacity:.6;font-size:11px">0.5x</span></button>
-                <button class="item" data-model="gpt5-high"><span>GPT-5 (high reasoning)</span><span style="opacity:.6;font-size:11px">3x</span></button>
-                <div class="section-title">Recommended</div>
-                <button class="item" data-model="gpt4"><span>GPT-4</span><span style="opacity:.6;font-size:11px">2x</span></button>
-                <button class="item" data-model="sonnet-4.5"><span>Claude Sonnet 4.5</span><span style="opacity:.6;font-size:11px">2x</span></button>
-                <button class="item" data-model="sonnet-4-thinking"><span>Claude Sonnet 4.5 Thinking</span><span style="opacity:.6;font-size:11px">3x</span></button>
-                <button class="item custom" data-action="custom-api"><span>Use custom API key…</span></button>
-              </div>
-            </div>
+            ${getModelMenuHtml('')}
           </div>
           <div class="right">
             <button class="icon-btn" id="mentionBtn" title="Mention">

@@ -12,8 +12,33 @@ export function initWelcomeUI(vscode, opts = {}) {
   const modeMenu = () => document.getElementById('welcomeModeMenu');
   const modeLabel = () => document.getElementById('welcomeModeLabel');
   const modelToggle = () => document.getElementById('welcomeModelToggle');
-  const modelMenu = () => document.getElementById('welcomeModelMenu');
+  const modelMenu = () => document.getElementById('welcomeModelDropdown');
   const modelLabel = () => document.getElementById('welcomeModelLabel');
+  const toolbarMount = () => document.getElementById('welcomeToolbarMount');
+  const chatToolbarLeft = () => document.querySelector('.chatbox .chatbox-toolbar .left');
+
+  function moveMenusToWelcome() {
+    const mount = toolbarMount();
+    if (!mount) return;
+    const mode = document.getElementById('modeMenu');
+    const model = document.getElementById('modelMenu');
+    try {
+      if (mode) mount.appendChild(mode);
+      if (model) mount.appendChild(model);
+    } catch (_) { /* no-op */ }
+  }
+
+  function moveMenusBackToChat() {
+    const left = chatToolbarLeft();
+    if (!left) return;
+    const mode = document.getElementById('modeMenu');
+    const model = document.getElementById('modelMenu');
+    try {
+      // Maintain original order: mode first, then model
+      if (mode) left.appendChild(mode);
+      if (model) left.appendChild(model);
+    } catch (_) { /* no-op */ }
+  }
 
   function showWelcome() {
     root.style.display = '';
@@ -21,12 +46,25 @@ export function initWelcomeUI(vscode, opts = {}) {
     root.offsetHeight;
     root.classList.add('active');
     root.setAttribute('aria-hidden', 'false');
+
+    // Sync model selection from chat state
+    if (opts.chat && opts.chat.getSelectedModelLabel) {
+      const label = opts.chat.getSelectedModelLabel();
+      if (label && modelLabel()) {
+        modelLabel().textContent = label;
+      }
+    }
+
+    // Reuse exact chat toolbar HTML inside welcome
+    moveMenusToWelcome();
   }
 
   function hideWelcome() {
     // Remove active class to trigger fade-out
     root.classList.remove('active');
     root.setAttribute('aria-hidden', 'true');
+    // Move menus back to chat toolbar so chat view has them
+    moveMenusBackToChat();
     // Wait for fade-out animation to complete before hiding
     setTimeout(() => {
       root.style.display = 'none';
@@ -156,9 +194,22 @@ export function initWelcomeUI(vscode, opts = {}) {
   modelMenu()?.addEventListener('click', (e) => {
     const btn = e.target.closest('button.item');
     if (!btn) return;
+    const action = btn.getAttribute('data-action');
     const mdl = btn.getAttribute('data-model');
     const label = btn.querySelector('span')?.textContent || 'GPT-5';
     if (modelLabel()) modelLabel().textContent = label;
+
+    try {
+      if (action === 'custom-api') {
+        // Set chat model to custom-api and open settings so user can add key
+        opts.chat?.setSelectedModel?.('custom-api', 'Custom API');
+        vscode.postMessage({ command: 'loadSettings' });
+      } else if (mdl) {
+        // Propagate selected model to chat so Send won't be blocked unexpectedly
+        opts.chat?.setSelectedModel?.(mdl, label);
+      }
+    } catch (_) { /* no-op */ }
+
     closeMenus();
   });
 
@@ -173,6 +224,8 @@ export function initWelcomeUI(vscode, opts = {}) {
     root.style.display = '';
     root.classList.add('active', 'splash-mode');
     root.setAttribute('aria-hidden', 'false');
+    // Ensure menus are shown within welcome during splash
+    moveMenusToWelcome();
 
     // After splash animation plays, transition to full welcome
     setTimeout(() => {

@@ -555,6 +555,13 @@
     cursor: pointer;
 }
 
+/* Specific style for model dropdown items to be single line */
+#modelDropdown button.item {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
 .dropdown button.item:hover {
     background: rgba(255, 255, 255, 0.06);
 }
