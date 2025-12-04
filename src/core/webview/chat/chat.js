@@ -1,4 +1,4 @@
-import { initMentionsUI } from './mentions.js';
+import { initMentionsUI } from '../mentions/mentions.js';
 
 export function initChatUI(vscode) {
     const messagesEl = document.getElementById('messages');
@@ -657,10 +657,20 @@ export function initChatUI(vscode) {
             }
         });
 
-        inputEl.addEventListener("input", () => {
+        inputEl.addEventListener('input', () => {
             try {
+                // Fix: contenteditable often leaves a <br> when cleared, preventing :empty from working
+                if (inputEl.innerHTML === '<br>' || inputEl.textContent.trim() === '') {
+                    inputEl.innerHTML = '';
+                }
+
+                // Auto-resize
                 inputEl.style.height = 'auto';
                 inputEl.style.height = `${Math.min(Math.max(inputEl.scrollHeight, 28), 160)}px`;
+
+                // Mention logic
+                // ... (existing mention logic is handled by mentions.js via initMentionsUI)
+
                 // Enable/disable send button
                 if (sendBtn) sendBtn.disabled = !inputEl.innerText.trim();
             } catch (_) {

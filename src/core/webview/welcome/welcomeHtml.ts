@@ -18,7 +18,7 @@ export function getWelcomeHtml(assets: {
       <button id="welcomePlusBtn" class="welcome-icon-btn" title="Add">
         <img src="${assets.plus}" alt="Add" />
       </button>
-      <input id="welcomeInput" type="text" placeholder="Plan, @ for context, / for commands" />
+      <div id="welcomeInput" contenteditable="true" role="textbox" aria-multiline="false" placeholder="Plan, @ for context, / for commands"></div>
       <button id="welcomeSendBtn" class="welcome-icon-btn" title="Send">
         <img src="${assets.submit}" alt="Send" />
       </button>

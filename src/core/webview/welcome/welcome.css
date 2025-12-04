@@ -75,7 +75,7 @@
     max-width: 520px;
 }
 
-#welcomeScreen .welcome-input input {
+#welcomeScreen #welcomeInput {
     flex: 1;
     background: transparent;
     border: none;
@@ -84,6 +84,17 @@
     font-size: 13px;
     padding: 6px;
     min-width: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    cursor: text;
+    text-align: left;
+}
+
+#welcomeScreen #welcomeInput:empty:before {
+    content: attr(placeholder);
+    color: var(--vscode-input-placeholderForeground);
+    pointer-events: none;
+    display: block;
 }
 
 #welcomeScreen .welcome-icon-btn {

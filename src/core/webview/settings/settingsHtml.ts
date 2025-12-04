@@ -85,24 +85,7 @@ export function getSettingsModalHtml(): string {
         .checkbox-group label { font-size: 13px; }
         .info-text { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: #CDCDCD; margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
         .info-box { background-color: #252526; padding: 15px; border-radius: 4px; margin-top: 15px; font-family: 'Ubuntu', sans-serif; font-size: 12px; line-height: 1.6; color: #CDCDCD; font-weight: 400; }
-        select, input[type="text"], input[type="password"] { 
-          display: flex;
-          width: 100%; 
-          height: 28px;
-          padding: 0 10px; 
-          justify-content: space-between;
-          align-items: center;
-          align-self: stretch;
-          background-color: #1F1F1F; 
-          border: 0.5px solid #2A2A2A; 
-          color: #CDCDCD; 
-          border-radius: 8px; 
-          font-family: 'Ubuntu', sans-serif; 
-          font-size: 13px; 
-          font-weight: 400; 
-          box-sizing: border-box; 
-          outline: none; 
-        }
+        
         /* Neutral focus for Settings fields: no colored outline/border */
         select:focus, select:focus-visible,
         input[type="text"]:focus, input[type="text"]:focus-visible,
@@ -206,6 +189,27 @@ export function getSettingsModalHtml(): string {
           background: linear-gradient(90deg, #0E639C 0%, #094771 100%); 
           color: #FFFFFF; 
         }
+
+        /* Reusable input field style matching Provider dropdown */
+        .settings-input {
+          display: flex;
+          width: 100%;
+          height: 28px;
+          padding: 0 10px;
+          justify-content: space-between;
+          align-items: center;
+          background-color: #1F1F1F;
+          border: 0.5px solid #2A2A2A;
+          color: #CDCDCD;
+          border-radius: 8px;
+          font-family: 'Ubuntu', sans-serif;
+          font-size: 13px;
+          font-weight: 400;
+          box-sizing: border-box;
+          outline: none;
+        }
+        .settings-input:hover { background: #252525; }
+        .settings-input:focus { border-color: #2A2A2A; background-color: #1F1F1F; }
 
         /* Subheading for active section (text only) */
         .subheader { display: flex; align-items: center; height: 32px; padding: 0 12px; color: #cccccc; background-color: #1f1f1f; margin-bottom: 5px; }
@@ -499,7 +503,7 @@ export function getSettingsModalHtml(): string {
             <div class="section">
               <div class="section-title" id="apiKeyLabel">OpenRouter API Key</div>
               <div class="api-key-row">
-                <input type="password" id="apiKey"  />
+                <input type="password" id="apiKey" class="settings-input" />
                 <button class="btn btn-get-api" id="getApiKeyBtn">Get OpenRouter API</button>
               </div>
             </div>
@@ -514,7 +518,7 @@ export function getSettingsModalHtml(): string {
             <div class="section">
               <div class="section-title">Model</div>
               <div style="position: relative;">
-                <input type="text" id="model"  autocomplete="off" />
+                <input type="text" id="model" class="settings-input" autocomplete="off" />
                 <div id="modelDropdownList" class="model-dropdown-list" style="display: none;">
                   <!-- Model items will be populated here by JavaScript -->
                 </div>

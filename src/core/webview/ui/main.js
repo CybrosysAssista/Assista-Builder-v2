@@ -1,7 +1,7 @@
-import { initChatUI } from './chat.js';
-import { initSettingsUI } from './settings.js';
-import { initHistoryUI } from './history.js';
-import { initWelcomeUI } from './welcome.js';
+import { initChatUI } from '../chat/chat.js';
+import { initSettingsUI } from '../settings/settings.js';
+import { initHistoryUI } from '../history/history.js';
+import { initWelcomeUI } from '../welcome/welcome.js';
 
 const vscode = acquireVsCodeApi();
 

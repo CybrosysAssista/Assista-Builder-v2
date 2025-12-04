@@ -115,7 +115,7 @@ export function initMentionsUI(vscode, opts) {
       Object.assign(menu.style, { left: `${menuPosition.left}px`, bottom: `${menuPosition.bottom}px`, top: 'auto' });
       return;
     }
-    const anchor = mentionBtn || inputEl;
+    const anchor = inputEl || mentionBtn;
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
     const margin = 8, vw = window.innerWidth, vh = window.innerHeight;
@@ -153,22 +153,42 @@ export function initMentionsUI(vscode, opts) {
     if (pickerList) pickerList.innerHTML = '';
   }
   // Helper to insert mention and handle existing '@' prefix
-  function insertMention(name) {
+  function insertMention(name, isFolder = false) {
     hideMentionTooltip();
     closeMenu();
     const base = (String(name).split(/[\\\/]/).pop()) || String(name);
+    const iconHtml = fileIconFor(name, isFolder);
 
-    // Create chip element
-    const chip = document.createElement('span');
-    chip.className = 'mention-chip';
-    chip.textContent = `@${base}`;
-    chip.contentEditable = "false";
-    chip.setAttribute('data-mention', base);
+    const isInput = inputEl && (inputEl.tagName === 'INPUT' || inputEl.tagName === 'TEXTAREA');
 
-    if (inputEl) {
+    if (isInput) {
+      inputEl.focus();
+      const val = inputEl.value;
+      const pos = inputEl.selectionStart;
+      // Find the @ before cursor to replace
+      let start = -1;
+      for (let i = pos - 1; i >= 0; i--) {
+        if (val[i] === '@') {
+          start = i;
+          break;
+        }
+        if (/\s/.test(val[i])) break;
+      }
+
+      if (start >= 0) {
+        const before = val.slice(0, start);
+        const after = val.slice(pos);
+        // For plain input, we can't show icons, so just text
+        const newText = `@${base} `;
+        inputEl.value = before + newText + after;
+        const newPos = start + newText.length;
+        inputEl.selectionStart = inputEl.selectionEnd = newPos;
+        inputEl.dispatchEvent(new Event('input'));
+        return;
+      }
+    } else if (inputEl) {
       inputEl.focus();
       const sel = window.getSelection();
-      // Restore the tracked range if available, as focus() might have reset it to the start
       if (lastRange) {
         sel.removeAllRanges();
         sel.addRange(lastRange);
@@ -210,6 +230,14 @@ export function initMentionsUI(vscode, opts) {
           }
         }
 
+        // Create chip element
+        const chip = document.createElement('span');
+        chip.className = 'mention-chip';
+        // Insert icon and text
+        chip.innerHTML = `${iconHtml}<span style="margin-left:4px">@${base}</span>`;
+        chip.contentEditable = "false";
+        chip.setAttribute('data-mention', base);
+
         // Insert chip and space
         range.insertNode(chip);
         range.setStartAfter(chip);
@@ -217,7 +245,6 @@ export function initMentionsUI(vscode, opts) {
 
         const space = document.createTextNode('\u00A0');
         range.insertNode(space);
-        // Place cursor explicitly inside the text node to avoid parent-level selection
         range.setStart(space, 1);
         range.setEnd(space, 1);
         range.collapse(true);
@@ -260,7 +287,6 @@ export function initMentionsUI(vscode, opts) {
       row.dataset.relPath = String(it.relPath || '');
       const fullPath = String(it.description || it.relPath || '');
       row.innerHTML = `${iconFor(it)}<span class="label">${it.label || ''}</span><span class="desc"><span>${it.description || ''}</span></span>`;
-      // Attach styled tooltip on hover (full path)
       if (fullPath) {
         attachTooltipEvents(row, () => fullPath);
         const descSpan = row.querySelector('.desc');
@@ -269,7 +295,7 @@ export function initMentionsUI(vscode, opts) {
       row.onclick = (e) => {
         e.preventDefault(); e.stopPropagation();
         const rel = row.dataset.relPath;
-        if (rel) insertMention(rel);
+        if (rel) insertMention(rel, String(it.kind) === 'folder');
       };
       pickerList.appendChild(row);
     });
@@ -297,6 +323,7 @@ export function initMentionsUI(vscode, opts) {
 
   function closeMenu() {
     if (!menu) return;
+    hideMentionTooltip(); // Ensure tooltip is hidden when menu closes
     menu.style.display = 'none';
     menu.setAttribute('aria-hidden', 'true');
     open = false;
@@ -317,7 +344,7 @@ export function initMentionsUI(vscode, opts) {
         attachTooltipEvents(el, () => name);
         el.onclick = (e) => {
           e.preventDefault(); e.stopPropagation();
-          insertMention(name);
+          insertMention(name, false); // Assume recent items are files for now, or we need to store kind
         };
       } else {
         el.style.display = 'none';
@@ -364,59 +391,66 @@ export function initMentionsUI(vscode, opts) {
   inputEl?.addEventListener('input', () => {
     updateLastRange();
     if (isInserting) return;
-    try {
-      const sel = window.getSelection();
-      if (!sel || !sel.rangeCount) return;
 
-      const node = sel.anchorNode;
-      let val = '';
-      let selPos = 0;
+    let val = '';
+    let selPos = 0;
+    const isInput = inputEl.tagName === 'INPUT' || inputEl.tagName === 'TEXTAREA';
 
-      if (node && node.nodeType === 3) { // Text node
-        val = node.textContent || '';
-        selPos = sel.anchorOffset;
-      } else if (node === inputEl) {
-        // Empty or at start
-        val = inputEl.textContent || '';
-        selPos = 0;
+    if (isInput) {
+      val = inputEl.value || '';
+      selPos = inputEl.selectionStart || 0;
+    } else {
+      try {
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+
+        const node = sel.anchorNode;
+        if (node && node.nodeType === 3) { // Text node
+          val = node.textContent || '';
+          selPos = sel.anchorOffset;
+        } else if (node === inputEl) {
+          // Empty or at start
+          val = inputEl.textContent || '';
+          selPos = 0;
+        } else {
+          return;
+        }
+      } catch (_) { return; }
+    }
+
+    const at = val.lastIndexOf('@', selPos - 1);
+    let hasAt = at >= 0;
+    let inlineQuery = '';
+
+    if (hasAt) {
+      const raw = val.slice(at + 1, selPos);
+      if (/[\s\n\t\"']/.test(raw)) {
+        hasAt = false;
       } else {
-        return;
+        inlineTyping = true;
+        inlineQuery = raw;
       }
+    }
 
-      const at = val.lastIndexOf('@', selPos - 1);
-      let hasAt = at >= 0;
-      let inlineQuery = '';
-
+    clearTimeout(inlineAtTimer);
+    inlineAtTimer = setTimeout(() => {
       if (hasAt) {
-        const raw = val.slice(at + 1, selPos);
-        if (/[\s\n\t\"']/.test(raw)) {
-          hasAt = false;
-        } else {
-          inlineTyping = true;
-          inlineQuery = raw;
-        }
+        if (!open) openMenu();
+        if (!pickerOpen) openPicker();
+        // Ensure panel reflects inline mode styling
+        try { pickerPanel?.classList.toggle('inline-mode', true); } catch (_) { }
+        // Do NOT mirror text into the picker's search input while inline typing
+        if (!inlineTyping && pickerSearch) pickerSearch.value = inlineQuery;
+        lastQuery = inlineQuery;
+        if (inlineQuery) requestSearch(inlineQuery);
+        else { try { vscode.postMessage({ command: 'mentionWorkspaceRecent' }); } catch (_) { } }
+      } else {
+        // No active @ token near caret -> close dialog and exit inline mode
+        inlineTyping = false;
+        try { pickerPanel?.classList.remove('inline-mode'); } catch (_) { }
+        if (open) closeMenu();
       }
-
-      clearTimeout(inlineAtTimer);
-      inlineAtTimer = setTimeout(() => {
-        if (hasAt) {
-          if (!open) openMenu();
-          if (!pickerOpen) openPicker();
-          // Ensure panel reflects inline mode styling
-          try { pickerPanel?.classList.toggle('inline-mode', true); } catch (_) { }
-          // Do NOT mirror text into the picker's search input while inline typing
-          if (!inlineTyping && pickerSearch) pickerSearch.value = inlineQuery;
-          lastQuery = inlineQuery;
-          if (inlineQuery) requestSearch(inlineQuery);
-          else { try { vscode.postMessage({ command: 'mentionWorkspaceRecent' }); } catch (_) { } }
-        } else {
-          // No active @ token near caret -> close dialog and exit inline mode
-          inlineTyping = false;
-          try { pickerPanel?.classList.remove('inline-mode'); } catch (_) { }
-          if (open) closeMenu();
-        }
-      }, 120);
-    } catch (_) { }
+    }, 120);
   });
 
   document.addEventListener('mousedown', (e) => {
@@ -440,6 +474,7 @@ export function initMentionsUI(vscode, opts) {
   let t;
   pickerSearch?.addEventListener('input', () => {
     const q = String(pickerSearch.value || '').trim();
+    if (pickerSearch) pickerSearch.scrollLeft = pickerSearch.scrollWidth;
     if (q === lastQuery) return;
     lastQuery = q;
     clearTimeout(t);

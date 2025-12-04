@@ -61,7 +61,7 @@ export function getHistoryHtml(): string {
         /* Search */
         .hx-search { position: relative; z-index: 10; padding: 0 24px 12px; background: transparent; }
         .hx-search .wrap { position: relative; }
-        .hx-input { position: relative; width: 100%; padding: 10px 16px 10px 40px; background: var(--vscode-input-background); color: inherit; border: 1px solid var(--vscode-input-border); border-radius: 8px; outline: none; font-size: 13px; }
+        .hx-input { position: relative; width: 100%; padding: 10px 16px 10px 16px; background: var(--vscode-input-background); color: inherit; border: 1px solid var(--vscode-input-border); border-radius: 8px; outline: none; font-size: 13px; font-weight: 500;}
         .hx-input:focus { border-color: var(--vscode-focusBorder); }
         .hx-search .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #9ca3af; pointer-events: none; }
         

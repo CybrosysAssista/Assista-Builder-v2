@@ -1,4 +1,4 @@
-import { initMentionsUI } from './mentions.js';
+import { initMentionsUI } from '../mentions/mentions.js';
 
 export function initWelcomeUI(vscode, opts = {}) {
   // opts is kept for future expansion; we intentionally insert into the welcome input
@@ -37,15 +37,24 @@ export function initWelcomeUI(vscode, opts = {}) {
   function fallbackInsertAtCursor(text) {
     const el = input();
     if (!el) return;
-    const start = el.selectionStart ?? el.value.length;
-    const end = el.selectionEnd ?? el.value.length;
-    const before = el.value.slice(0, start);
-    const after = el.value.slice(end);
-    el.value = `${before}${text}${after}`;
-    const pos = start + text.length;
-    try { el.selectionStart = el.selectionEnd = pos; } catch (_) { }
-    el.dispatchEvent(new Event('input'));
     el.focus();
+    try {
+      const sel = window.getSelection();
+      if (sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        const textNode = document.createTextNode(text);
+        range.insertNode(textNode);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        el.innerText += text;
+      }
+    } catch (e) {
+      el.innerText += text;
+    }
+    el.dispatchEvent(new Event('input'));
   }
 
   // Reuse the mentions module exactly like chat, but bound to the welcome input
@@ -83,10 +92,10 @@ export function initWelcomeUI(vscode, opts = {}) {
   // Buttons
   sendBtn()?.addEventListener('click', (e) => {
     e.preventDefault();
-    const val = String(input()?.value || '').trim();
+    const val = String(input()?.innerText || '').trim();
     if (!val) return;
     routeSend(val);
-    try { input().value = ''; } catch (_) { }
+    try { input().innerText = ''; } catch (_) { }
     hideWelcome();
   });
 
@@ -98,11 +107,19 @@ export function initWelcomeUI(vscode, opts = {}) {
   input()?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const val = String(input()?.value || '').trim();
+      const val = String(input()?.innerText || '').trim();
       if (!val) return;
       routeSend(val);
-      try { input().value = ''; } catch (_) { }
+      try { input().innerText = ''; } catch (_) { }
       hideWelcome();
+    }
+  });
+
+  // Fix: Ensure placeholder shows when cleared
+  input()?.addEventListener('input', () => {
+    const el = input();
+    if (el && (el.innerHTML === '<br>' || el.textContent.trim() === '')) {
+      el.innerHTML = '';
     }
   });
 
