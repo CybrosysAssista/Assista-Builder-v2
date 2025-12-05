@@ -98,6 +98,8 @@ export async function runAgent(
     reset: cfg.resetSession,
   };
 
+  // Persist user message immediately so it exists before tools run
+
   // Log request before calling orchestrator
   // console.log('[Assista X] Request to orchestrator:',requestPayload);
   // console.log('[Assista X] context:',context);
@@ -112,9 +114,6 @@ export async function runAgent(
     abortSignal,
     onProgress
   );
-
-  // Log response after orchestrator call
-  // console.log('[Assista X] Response from orchestrator:', response);
 
   return response;
 }
