@@ -5,6 +5,7 @@ export function getWelcomeHtml(assets: {
   code: string;
   model: string;
   dropdown: string;
+  modelMenuHtml: string;
 }): string {
   return `
   <div class="welcome-container" role="region" aria-label="Welcome">
@@ -18,7 +19,7 @@ export function getWelcomeHtml(assets: {
       <button id="welcomePlusBtn" class="welcome-icon-btn" title="Add">
         <img src="${assets.plus}" alt="Add" />
       </button>
-      <input id="welcomeInput" type="text" placeholder="Plan, @ for context, / for commands" />
+      <div id="welcomeInput" contenteditable="true" role="textbox" aria-multiline="false" placeholder="Plan, @ for context, / for commands"></div>
       <button id="welcomeSendBtn" class="welcome-icon-btn" title="Send">
         <img src="${assets.submit}" alt="Send" />
       </button>
@@ -48,24 +49,8 @@ export function getWelcomeHtml(assets: {
           <button class="item" data-mode="chat"><span>Chat</span><span class="desc" style="opacity:.6;font-size:11px">Chat with Assista</span></button>
         </div>
       </div>
-
-      <div class="menu" id="welcomeModelMenuRoot">
-        <button id="welcomeModelToggle" class="chip-btn" title="Model">
-          <img class="chip-icon" src="${assets.model}" alt="Model icon" />
-          <span id="welcomeModelLabel">GPT-5</span>
-          <img class="dropdown-icon" src="${assets.dropdown}" alt="Dropdown" />
-        </button>
-        <div id="welcomeModelMenu" class="dropdown" role="listbox">
-          <div class="section-title">Recently Used</div>
-          <button class="item" data-model="gpt5-low"><span>GPT-5 (low reasoning)</span><span style="opacity:.6;font-size:11px">0.5x</span></button>
-          <button class="item" data-model="gpt5-high"><span>GPT-5 (high reasoning)</span><span style="opacity:.6;font-size:11px">3x</span></button>
-          <div class="section-title">Recommended</div>
-          <button class="item" data-model="gpt4"><span>GPT-4</span><span style="opacity:.6;font-size:11px">2x</span></button>
-          <button class="item" data-model="sonnet-4.5"><span>Claude Sonnet 4.5</span><span style="opacity:.6;font-size:11px">2x</span></button>
-          <button class="item" data-model="sonnet-4-thinking"><span>Claude Sonnet 4.5 Thinking</span><span style="opacity:.6;font-size:11px">3x</span></button>
-          <button class="item custom" data-action="custom-api"><span>Use custom API key…</span></button>
-        </div>
-      </div>
+      
+      ${assets.modelMenuHtml}
     </div>
 
     <!-- Independent Mention Menu for Welcome Screen -->

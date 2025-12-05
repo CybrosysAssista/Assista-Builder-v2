@@ -1,0 +1,872 @@
+/* Chat Interface Styles */
+
+/* Force VS Code UI font in chat area (but not messages) */
+#messages,
+.chatbox textarea,
+.chatbox-toolbar,
+.chip-btn,
+.icon-btn {
+    font-family: var(--vscode-font-family, Sans-Serif);
+}
+
+#messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    -webkit-mask-image: linear-gradient(to bottom, black 96%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease-in;
+}
+
+#messages.active {
+    opacity: 1;
+}
+
+/* User message container - right aligned with flex */
+.message-row:has(.message.user) {
+    display: flex;
+    padding: 10px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+/* AI message container - transparent, no box */
+.message-row:has(.message.ai) {
+    display: flex;
+    padding: 10px 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    border: none;
+    background: transparent;
+    font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
+    color: #CDCDCD;
+    font-size: 13px;
+    line-height: 16px;
+}
+
+/* System and error message containers */
+.message-row:has(.message.system),
+.message-row:has(.message.error) {
+    display: flex;
+    justify-content: center;
+}
+
+/* User message bubble - compact, pill-shaped, auto-width */
+.message.user {
+    background: rgba(188, 132, 135, 0.05);
+    color: var(--vscode-editor-foreground);
+    border: 0.5px solid rgba(188, 132, 135, 0.50);
+    border-radius: 16px 0 16px 16px;
+    padding: 8px 16px;
+    max-width: fit-content;
+    word-break: break-word;
+    white-space: pre-wrap;
+    font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* AI message - full width, no bubble background */
+.message.ai {
+    background: transparent;
+    color: #CDCDCD;
+    font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 16px;
+    padding: 0;
+    border-radius: 0;
+    width: 100%;
+    max-width: 100%;
+    word-break: break-word;
+    white-space: normal;
+    box-shadow: none;
+    align-self: stretch;
+}
+
+/* System messages */
+.message.system {
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    padding: 8px 12px;
+    border-radius: 8px;
+    max-width: 80%;
+    font-size: 12px;
+    text-align: center;
+}
+
+/* Error messages */
+.message.error {
+    background: rgba(255, 0, 0, 0.1);
+    color: var(--vscode-errorForeground);
+    border: 1px solid var(--vscode-errorForeground, rgba(255, 0, 0, 0.3));
+    padding: 10px 14px;
+    border-radius: 8px;
+    max-width: 80%;
+    width: fit-content;
+    box-sizing: border-box;
+    font-size: 13px;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.message.markdown {
+    white-space: normal;
+    line-height: 1.6;
+    font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
+    color: #CDCDCD;
+    font-size: 13px;
+}
+
+/* Force ALL markdown content to have the same size */
+.message.markdown * {
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+}
+
+.message.markdown p {
+    margin: 0 0 0.8em;
+}
+
+.message.markdown p:last-child {
+    margin-bottom: 0;
+}
+
+.message.markdown pre {
+    background: var(--vscode-textCodeBlock-background, rgba(255, 255, 255, 0.05));
+    color: var(--vscode-editor-foreground, #E1E4E8);
+    padding: 0;
+    overflow-x: auto;
+    font-size: var(--vscode-editor-font-size, 13px) !important;
+    line-height: 1.5;
+    border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+    font-family: var(--vscode-editor-font-family, "Fira Code", monospace);
+    white-space: pre;
+    word-break: normal;
+    overflow-wrap: normal;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    align-self: stretch;
+}
+
+.message.markdown code {
+    font-family: var(--vscode-editor-font-family, "Fira Code", monospace);
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-size: var(--vscode-editor-font-size, 13px) !important;
+    color: #FFAB70;
+}
+
+.message.markdown pre code {
+    padding: 8px;
+    background: transparent;
+    font-size: inherit !important;
+    white-space: pre;
+    color: inherit;
+}
+
+/* Syntax Highlighting */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-tag {
+    color: #F97583 !important;
+}
+
+.hljs-string,
+.hljs-template-tag {
+    color: #9ECBFF !important;
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-function,
+.hljs-section {
+    color: #B392F0 !important;
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable.constant_,
+.hljs-property {
+    color: #FFAB70 !important;
+}
+
+.hljs-type,
+.hljs-built_in,
+.hljs-literal {
+    color: #79B8FF !important;
+}
+
+.hljs-variable,
+.hljs-params,
+.hljs-operator,
+.hljs-punctuation {
+    color: #E1E4E8 !important;
+}
+
+.hljs-comment,
+.hljs-quote {
+    color: #6A737D !important;
+    font-style: italic;
+}
+
+.hljs-number {
+    color: #FFAB70 !important;
+}
+
+.token.keyword {
+    color: #F97583 !important;
+}
+
+.token.string {
+    color: #9ECBFF !important;
+}
+
+.token.class-name,
+.token.function {
+    color: #B392F0 !important;
+}
+
+.token.property,
+.token.attr-name {
+    color: #FFAB70 !important;
+}
+
+.token.builtin,
+.token.type-alias {
+    color: #79B8FF !important;
+}
+
+.token.comment {
+    color: #6A737D !important;
+}
+
+/* Code Block Wrapper and Header */
+.code-block-wrapper {
+    margin: 0.85em 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+}
+
+.code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+}
+
+.code-filename {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground, #9ca3af);
+    font-family: var(--vscode-font-family, Sans-Serif);
+}
+
+.code-copy-btn {
+    background: transparent;
+    border: none;
+    color: var(--vscode-descriptionForeground, #9ca3af);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+}
+
+.code-copy-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--vscode-editor-foreground);
+}
+
+.code-block-wrapper pre {
+    margin: 0;
+    border-radius: 0;
+    border: none;
+}
+
+.message.markdown ul,
+.message.markdown ol {
+    padding-left: 1.4em;
+    margin: 0.5em 0 0.75em;
+}
+
+.message.markdown li+li {
+    margin-top: 0.35em;
+}
+
+.message.markdown blockquote {
+    border-left: 3px solid var(--vscode-editorLineNumber-foreground, rgba(255, 255, 255, 0.25));
+    margin: 0.75em 0;
+    padding-left: 0.85em;
+    color: var(--vscode-descriptionForeground);
+}
+
+.message.markdown table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.75em 0;
+    font-size: 12px;
+}
+
+.message.markdown th,
+.message.markdown td {
+    border: 1px solid var(--vscode-panel-border, rgba(255, 255, 255, 0.1));
+    padding: 6px 8px;
+    text-align: left;
+}
+
+.message.markdown a {
+    color: var(--vscode-textLink-foreground, #3794ff);
+    text-decoration: none;
+}
+
+.message.markdown a:hover {
+    text-decoration: underline;
+}
+
+/* Input bar container at the bottom */
+.input-bar {
+    padding: 0px 8px 8px 8px;
+    border-top: none;
+    background: transparent;
+}
+
+/* Chatbox styled like the reference */
+.chatbox {
+    background: #2a2a2a;
+    border: 1px solid var(--vscode-input-border, #3a3a3a);
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    overflow: visible;
+}
+
+.chatbox textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 12px 14px 8px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    color: inherit;
+    resize: none;
+}
+
+.chatbox-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px 8px 8px;
+}
+
+/* Chat Input (Rich Text) */
+#chatInput {
+    width: 100%;
+    max-height: 200px;
+    min-height: 44px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--vscode-input-foreground);
+    font-family: var(--vscode-font-family);
+    font-size: 13px;
+    line-height: 20px;
+    resize: none;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    display: block;
+    padding: 6px 8px;
+    box-sizing: border-box;
+}
+
+#chatInput:empty:before {
+    content: attr(placeholder);
+    color: var(--vscode-input-placeholderForeground);
+    pointer-events: none;
+    display: block;
+}
+
+/* Mention Chip */
+.mention-chip {
+    display: inline-flex;
+    align-items: center;
+    background-color: rgba(82, 98, 143, 0.5);
+    color: #feffff;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin: 0 2px;
+    font-family: monospace;
+    font-size: 0.9em;
+    vertical-align: middle;
+    cursor: default;
+    user-select: none;
+    border: 1px solid #3b82f6;
+    white-space: nowrap;
+}
+
+.mention-chip .file-icon,
+.mention-chip svg {
+    width: 14px;
+    height: 14px;
+    margin-right: 2px;
+    vertical-align: middle;
+}
+
+.chatbox-toolbar .left,
+.chatbox-toolbar .right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chatbox-toolbar .left {
+    gap: 6px;
+}
+
+.chatbox-toolbar .right {
+    gap: 6px;
+}
+
+.chatbox-toolbar .right .icon-btn {
+    padding: 4px;
+}
+
+.chatbox-toolbar .right .icon-svg {
+    width: 14px;
+    height: 14px;
+}
+
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+}
+
+.icon-btn:hover {
+    background: var(--vscode-editorWidget-background);
+}
+
+/* Mode button (Code/Agent) - boxed style */
+#modeToggle {
+    display: flex;
+    padding: 4px 8px;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    border-radius: 5px;
+    border: 0.5px solid #3a3a3a;
+    background: #2a2a2a;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+}
+
+#modeToggle:hover {
+    color: inherit;
+    background: var(--vscode-editorWidget-background);
+}
+
+/* Model button (GPT-5) - transparent style */
+#modelToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 6px;
+}
+
+#modelToggle:hover {
+    color: inherit;
+    background: transparent;
+}
+
+.menu {
+    position: relative;
+}
+
+.dropdown {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 8px;
+    width: 260px;
+    background: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-panel-border, rgba(255, 255, 255, 0.12));
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    display: none;
+    overflow: hidden;
+    z-index: 9999;
+}
+
+.dropdown.visible {
+    display: block;
+}
+
+.dropdown .section-title {
+    padding: 8px 10px;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(255, 255, 255, 0.08));
+}
+
+.dropdown button.item {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    background: transparent;
+    color: inherit;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    cursor: pointer;
+}
+
+/* Specific style for model dropdown items to be single line */
+#modelDropdown button.item {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dropdown button.item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.dropdown button.item .desc {
+    display: block;
+    opacity: 0.6;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+.dropdown .item.custom {
+    border-top: 1px solid var(--vscode-panel-border, rgba(255, 255, 255, 0.08));
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.send-btn {
+    padding: 6px;
+    border-radius: 9999px;
+}
+
+.send-btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.icon-svg {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+}
+
+/* Mode icon container and icons */
+#modeIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    position: relative;
+}
+
+#modeIcon .mode-icon-chat,
+#modeIcon .mode-icon-agent {
+    width: 14px;
+    height: 14px;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#sendBtn {
+    background: transparent;
+    color: inherit;
+}
+
+#sendBtn.hidden {
+    display: none;
+}
+
+#stopBtn {
+    background: var(--vscode-errorForeground);
+    color: var(--vscode-editor-background);
+    display: none;
+}
+
+#stopBtn.visible {
+    display: inline-flex;
+}
+
+/* Question/Suggestion UI */
+.question-container {
+    background: var(--vscode-editorWidget-background, #252526);
+    border: 1px solid var(--vscode-panel-border, rgba(255, 255, 255, 0.12));
+    border-radius: 0px 16px 16px 16px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    min-width: 300px;
+    max-width: 500px;
+}
+
+.question-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vscode-editor-foreground, #CCCCCC);
+    margin-bottom: 12px;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.question-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.question-suggestion-btn {
+    background: var(--vscode-button-secondaryBackground, rgba(255, 255, 255, 0.08));
+    color: var(--vscode-button-secondaryForeground, #CCCCCC);
+    border: 1px solid var(--vscode-input-border, rgba(128, 128, 128, 0.4));
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.question-suggestion-btn:hover {
+    background: var(--vscode-button-secondaryHoverBackground, rgba(255, 255, 255, 0.12));
+    border-color: var(--vscode-focusBorder, #007ACC);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.question-suggestion-btn:active {
+    transform: translateY(0);
+}
+
+.question-mode-badge {
+    background: var(--vscode-badge-background, rgba(128, 128, 128, 0.3));
+    color: var(--vscode-badge-foreground, #CCCCCC);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-weight: 500;
+}
+
+.question-cancel-btn {
+    background: transparent;
+    color: var(--vscode-descriptionForeground, #999999);
+    border: 1px solid var(--vscode-input-border, rgba(128, 128, 128, 0.4));
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s ease;
+}
+
+.question-cancel-btn:hover {
+    background: var(--vscode-button-secondaryHoverBackground, rgba(255, 255, 255, 0.08));
+    color: var(--vscode-editor-foreground, #CCCCCC);
+}
+
+.question-suggestion-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.question-selected {
+    border: 2px solid var(--vscode-testing-iconPassed, #4caf50) !important;
+    background: var(--vscode-button-secondaryBackground, rgba(76, 175, 80, 0.1)) !important;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.question-selected:hover {
+    background: var(--vscode-button-secondaryBackground, rgba(76, 175, 80, 0.15)) !important;
+    transform: none;
+}
+
+/* Responsive Design for Chat Interface */
+@media (max-width: 400px) {
+    .input-bar {
+        padding: 8px;
+    }
+
+    .chatbox {
+        border-radius: 8px;
+    }
+
+    .chatbox textarea {
+        padding: 8px 10px 6px 10px;
+        font-size: 12px;
+    }
+
+    .chatbox-toolbar {
+        padding: 0 6px 6px 6px;
+    }
+
+    .chatbox-toolbar .left,
+    .chatbox-toolbar .right {
+        gap: 4px;
+    }
+
+    .chip-btn {
+        font-size: 11px;
+        padding: 2px 3px;
+        gap: 3px;
+    }
+
+    .icon-btn {
+        padding: 4px;
+    }
+
+    .icon-svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .chatbox-toolbar .right .icon-svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .dropdown {
+        width: 200px;
+        margin-bottom: 6px;
+    }
+
+    .dropdown .section-title {
+        font-size: 10px;
+        padding: 6px 8px;
+    }
+
+    .dropdown button.item {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    .message {
+        padding: 10px 12px;
+        max-width: 90%;
+        font-size: 13px;
+    }
+
+    #messages {
+        padding: 12px 8px;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 280px) {
+    .input-bar {
+        padding: 6px;
+    }
+
+    .chatbox {
+        border-radius: 6px;
+    }
+
+    .chatbox textarea {
+        padding: 6px 8px 4px 8px;
+        font-size: 11px;
+        min-height: 36px;
+    }
+
+    .chatbox-toolbar {
+        padding: 0 4px 4px 4px;
+    }
+
+    .chatbox-toolbar .left,
+    .chatbox-toolbar .right {
+        gap: 3px;
+    }
+
+    .chip-btn {
+        font-size: 10px;
+        padding: 1px 2px;
+        gap: 2px;
+    }
+
+    .chip-btn span {
+        display: none;
+    }
+
+    .icon-btn {
+        padding: 3px;
+    }
+
+    .icon-svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .chatbox-toolbar .right .icon-svg {
+        width: 10px;
+        height: 10px;
+    }
+
+    .dropdown {
+        width: 160px;
+    }
+
+    .dropdown button.item {
+        padding: 5px 6px;
+        font-size: 11px;
+    }
+
+    .message {
+        padding: 8px 10px;
+        max-width: 95%;
+        font-size: 12px;
+        border-radius: 8px;
+    }
+
+    #messages {
+        padding: 8px 6px;
+        gap: 4px;
+    }
+}

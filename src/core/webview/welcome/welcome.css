@@ -75,7 +75,7 @@
     max-width: 520px;
 }
 
-#welcomeScreen .welcome-input input {
+#welcomeScreen #welcomeInput {
     flex: 1;
     background: transparent;
     border: none;
@@ -84,6 +84,17 @@
     font-size: 13px;
     padding: 6px;
     min-width: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    cursor: text;
+    text-align: left;
+}
+
+#welcomeScreen #welcomeInput:empty:before {
+    content: attr(placeholder);
+    color: var(--vscode-input-placeholderForeground);
+    pointer-events: none;
+    display: block;
 }
 
 #welcomeScreen .welcome-icon-btn {
@@ -164,7 +175,8 @@
 
 #welcomeScreen .dropdown {
     position: absolute;
-    top: calc(100% + 6px);
+    /* Open downward under the trigger */
+    top: calc(100% + 8px);
     bottom: auto;
     left: 0;
     background: var(--vscode-editorWidget-background, #2a2a2a);
@@ -176,6 +188,15 @@
     min-width: fit-content;
     overflow: hidden;
     z-index: 10000;
+    /* Cap height and scroll if too tall to stay on-screen */
+    max-height: min(60vh, 320px);
+    overflow-y: auto;
+}
+
+/* Align the model dropdown to the right edge of its trigger to reduce right overflow */
+#welcomeScreen #welcomeModelDropdown {
+    right: 0;
+    left: auto;
 }
 
 #welcomeScreen .dropdown.visible {
@@ -218,6 +239,18 @@
     flex-direction: row;
     align-items: center;
     gap: 8px;
+}
+
+/* Ensure model items lay out in one line like chat */
+#welcomeScreen #welcomeModelDropdown .item {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Prevent the right-side multiplier from wrapping to the next line */
+#welcomeScreen #welcomeModelDropdown .item span:last-child {
+    white-space: nowrap;
 }
 
 #welcomeScreen .dropdown .item:hover {
@@ -350,7 +383,7 @@
 /* Splash Screen Animation */
 #welcomeScreen.splash-mode {
     /* Container fade is subtle */
-    animation: fadeIn 0.8s ease-out forwards;
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
 #welcomeScreen.splash-mode .welcome-container {
@@ -362,7 +395,7 @@
     /* Logo specifically animates in */
     opacity: 0;
     /* Start hidden */
-    animation: logoEntry 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation: logoEntry 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 #welcomeScreen.splash-mode .welcome-logo {
@@ -387,11 +420,11 @@
 
 /* Transition to full welcome screen */
 #welcomeScreen .welcome-container {
-    transition: gap 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: gap 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 #welcomeScreen .welcome-logo {
-    transition: width 1.2s cubic-bezier(0.2, 0.8, 0.2, 1), height 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 #welcomeScreen.transitioning .welcome-container {
@@ -407,33 +440,33 @@
     overflow: visible;
     visibility: visible;
     /* Longer duration for luxurious flow */
-    transition: max-height 1.2s cubic-bezier(0.2, 0.8, 0.2, 1), margin 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-    animation: slideUpFadeIn 1.2s ease-out forwards;
+    transition: max-height 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), margin 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: slideUpFadeIn 0.8s ease-out forwards;
 }
 
 /* Specific max-heights to ensure smooth animation speed */
 #welcomeScreen.transitioning .welcome-greeting {
     max-height: 40px;
     /* Tight fit for text */
-    animation-delay: 0.1s;
+    animation-delay: 0.05s;
 }
 
 #welcomeScreen.transitioning .welcome-tagline {
     max-height: 30px;
     /* Tight fit for small text */
-    animation-delay: 0.2s;
+    animation-delay: 0.1s;
 }
 
 #welcomeScreen.transitioning .welcome-input {
     max-height: 60px;
     /* Tight fit for input */
-    animation-delay: 0.3s;
+    animation-delay: 0.15s;
 }
 
 #welcomeScreen.transitioning .welcome-actions {
     max-height: 60px;
     /* Tight fit for buttons */
-    animation-delay: 0.4s;
+    animation-delay: 0.2s;
 }
 
 /* Keyframe Animations */

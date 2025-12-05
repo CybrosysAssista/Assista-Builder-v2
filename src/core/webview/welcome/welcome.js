@@ -1,4 +1,4 @@
-import { initMentionsUI } from './mentions.js';
+import { initMentionsUI } from '../mentions/mentions.js';
 
 export function initWelcomeUI(vscode, opts = {}) {
   // opts is kept for future expansion; we intentionally insert into the welcome input
@@ -12,8 +12,33 @@ export function initWelcomeUI(vscode, opts = {}) {
   const modeMenu = () => document.getElementById('welcomeModeMenu');
   const modeLabel = () => document.getElementById('welcomeModeLabel');
   const modelToggle = () => document.getElementById('welcomeModelToggle');
-  const modelMenu = () => document.getElementById('welcomeModelMenu');
+  const modelMenu = () => document.getElementById('welcomeModelDropdown');
   const modelLabel = () => document.getElementById('welcomeModelLabel');
+  const toolbarMount = () => document.getElementById('welcomeToolbarMount');
+  const chatToolbarLeft = () => document.querySelector('.chatbox .chatbox-toolbar .left');
+
+  function moveMenusToWelcome() {
+    const mount = toolbarMount();
+    if (!mount) return;
+    const mode = document.getElementById('modeMenu');
+    const model = document.getElementById('modelMenu');
+    try {
+      if (mode) mount.appendChild(mode);
+      if (model) mount.appendChild(model);
+    } catch (_) { /* no-op */ }
+  }
+
+  function moveMenusBackToChat() {
+    const left = chatToolbarLeft();
+    if (!left) return;
+    const mode = document.getElementById('modeMenu');
+    const model = document.getElementById('modelMenu');
+    try {
+      // Maintain original order: mode first, then model
+      if (mode) left.appendChild(mode);
+      if (model) left.appendChild(model);
+    } catch (_) { /* no-op */ }
+  }
 
   function showWelcome() {
     root.style.display = '';
@@ -21,12 +46,25 @@ export function initWelcomeUI(vscode, opts = {}) {
     root.offsetHeight;
     root.classList.add('active');
     root.setAttribute('aria-hidden', 'false');
+
+    // Sync model selection from chat state
+    if (opts.chat && opts.chat.getSelectedModelLabel) {
+      const label = opts.chat.getSelectedModelLabel();
+      if (label && modelLabel()) {
+        modelLabel().textContent = label;
+      }
+    }
+
+    // Reuse exact chat toolbar HTML inside welcome
+    moveMenusToWelcome();
   }
 
   function hideWelcome() {
     // Remove active class to trigger fade-out
     root.classList.remove('active');
     root.setAttribute('aria-hidden', 'true');
+    // Move menus back to chat toolbar so chat view has them
+    moveMenusBackToChat();
     // Wait for fade-out animation to complete before hiding
     setTimeout(() => {
       root.style.display = 'none';
@@ -37,15 +75,24 @@ export function initWelcomeUI(vscode, opts = {}) {
   function fallbackInsertAtCursor(text) {
     const el = input();
     if (!el) return;
-    const start = el.selectionStart ?? el.value.length;
-    const end = el.selectionEnd ?? el.value.length;
-    const before = el.value.slice(0, start);
-    const after = el.value.slice(end);
-    el.value = `${before}${text}${after}`;
-    const pos = start + text.length;
-    try { el.selectionStart = el.selectionEnd = pos; } catch (_) { }
-    el.dispatchEvent(new Event('input'));
     el.focus();
+    try {
+      const sel = window.getSelection();
+      if (sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        const textNode = document.createTextNode(text);
+        range.insertNode(textNode);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        el.innerText += text;
+      }
+    } catch (e) {
+      el.innerText += text;
+    }
+    el.dispatchEvent(new Event('input'));
   }
 
   // Reuse the mentions module exactly like chat, but bound to the welcome input
@@ -83,10 +130,10 @@ export function initWelcomeUI(vscode, opts = {}) {
   // Buttons
   sendBtn()?.addEventListener('click', (e) => {
     e.preventDefault();
-    const val = String(input()?.value || '').trim();
+    const val = String(input()?.innerText || '').trim();
     if (!val) return;
     routeSend(val);
-    try { input().value = ''; } catch (_) { }
+    try { input().innerText = ''; } catch (_) { }
     hideWelcome();
   });
 
@@ -98,11 +145,19 @@ export function initWelcomeUI(vscode, opts = {}) {
   input()?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const val = String(input()?.value || '').trim();
+      const val = String(input()?.innerText || '').trim();
       if (!val) return;
       routeSend(val);
-      try { input().value = ''; } catch (_) { }
+      try { input().innerText = ''; } catch (_) { }
       hideWelcome();
+    }
+  });
+
+  // Fix: Ensure placeholder shows when cleared
+  input()?.addEventListener('input', () => {
+    const el = input();
+    if (el && (el.innerHTML === '<br>' || el.textContent.trim() === '')) {
+      el.innerHTML = '';
     }
   });
 
@@ -139,9 +194,22 @@ export function initWelcomeUI(vscode, opts = {}) {
   modelMenu()?.addEventListener('click', (e) => {
     const btn = e.target.closest('button.item');
     if (!btn) return;
+    const action = btn.getAttribute('data-action');
     const mdl = btn.getAttribute('data-model');
     const label = btn.querySelector('span')?.textContent || 'GPT-5';
     if (modelLabel()) modelLabel().textContent = label;
+
+    try {
+      if (action === 'custom-api') {
+        // Set chat model to custom-api and open settings so user can add key
+        opts.chat?.setSelectedModel?.('custom-api', 'Custom API');
+        vscode.postMessage({ command: 'loadSettings' });
+      } else if (mdl) {
+        // Propagate selected model to chat so Send won't be blocked unexpectedly
+        opts.chat?.setSelectedModel?.(mdl, label);
+      }
+    } catch (_) { /* no-op */ }
+
     closeMenus();
   });
 
@@ -156,6 +224,8 @@ export function initWelcomeUI(vscode, opts = {}) {
     root.style.display = '';
     root.classList.add('active', 'splash-mode');
     root.setAttribute('aria-hidden', 'false');
+    // Ensure menus are shown within welcome during splash
+    moveMenusToWelcome();
 
     // After splash animation plays, transition to full welcome
     setTimeout(() => {
@@ -165,8 +235,8 @@ export function initWelcomeUI(vscode, opts = {}) {
       // Remove transitioning class after animation completes
       setTimeout(() => {
         root.classList.remove('transitioning');
-      }, 1000);
-    }, 800);
+      }, 800);
+    }, 550);
   }
 
   // Expose helpers

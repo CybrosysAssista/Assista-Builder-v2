@@ -1,18 +1,26 @@
-import { initChatUI } from './chat.js';
-import { initSettingsUI } from './settings.js';
-import { initHistoryUI } from './history.js';
-import { initWelcomeUI } from './welcome.js';
+import { initChatUI } from '../chat/chat.js';
+import { initSettingsUI } from '../settings/settings.js';
+import { initHistoryUI } from '../history/history.js';
+import { initWelcomeUI } from '../welcome/welcome.js';
 
 const vscode = acquireVsCodeApi();
 
 const chat = initChatUI(vscode);
 const settings = initSettingsUI(vscode);
 const history = initHistoryUI(vscode);
-const welcome = initWelcomeUI(vscode, { insertAtCursor: chat.insertAtCursor });
+const welcome = initWelcomeUI(vscode, { insertAtCursor: chat.insertAtCursor, chat });
 
 const bootState = typeof vscode.getState === 'function' ? vscode.getState() : undefined;
-if (bootState && Array.isArray(bootState.messages)) {
-    chat.renderSession(bootState.activeSessionId, bootState.messages);
+if (bootState) {
+    if (Array.isArray(bootState.messages)) {
+        chat.renderSession(bootState.activeSessionId, bootState.messages);
+    }
+    if (bootState.selectedModel) {
+        chat.setSelectedModel(bootState.selectedModel, bootState.selectedModelLabel);
+    }
+    if (bootState.selectedMode) {
+        chat.setSelectedMode(bootState.selectedMode);
+    }
 }
 
 window.addEventListener('message', (event) => {
@@ -85,13 +93,18 @@ window.addEventListener('message', (event) => {
             if (history && typeof history.closeHistory === 'function') history.closeHistory();
             if (settings && typeof settings.closeSettings === 'function') settings.closeSettings();
 
-            // Trigger splash screen animation
-            if (welcome && typeof welcome.showSplashAnimation === 'function') {
+            // Trigger splash screen animation only if no pending message
+            // If we have a pending message, we want to transition immediately to chat
+            const hasPending = typeof chat.hasPendingMessage === 'function' && chat.hasPendingMessage();
+            if (!hasPending && welcome && typeof welcome.showSplashAnimation === 'function') {
                 welcome.showSplashAnimation();
             }
             // Clear session state (persist as empty/welcome)
             const newSessionId = message.payload?.sessionId || null;
             chat.renderSession(newSessionId, []);
+            if (typeof chat.handleNewSessionInitialized === 'function') {
+                chat.handleNewSessionInitialized();
+            }
             break;
         case 'sessionHydrated': {
             const payload = message.payload || {};

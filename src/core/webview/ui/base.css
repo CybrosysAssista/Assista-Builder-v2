@@ -1,0 +1,72 @@
+/* Base styles - Common/Global */
+
+:root {
+  color-scheme: var(--vscode-color-scheme, dark light);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vscode-font-family, Sans-Serif);
+  background: var(--vscode-sideBar-background);
+  color: var(--vscode-editor-foreground);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.1));
+  background: var(--vscode-sideBar-background);
+}
+
+.top-bar .title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.top-bar button {
+  border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, inherit);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.top-bar button:hover {
+  background: var(--vscode-button-secondaryHoverBackground, rgba(255,255,255,0.08));
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  color: inherit;
+  background: var(--vscode-input-background);
+}
+
+/* Neutral focus for chat textarea: no colored outline/border */
+textarea:focus,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--vscode-input-border, rgba(128,128,128,0.4));
+  box-shadow: none;
+}

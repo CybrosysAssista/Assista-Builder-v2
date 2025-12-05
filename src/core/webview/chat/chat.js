@@ -1,4 +1,4 @@
-import { initMentionsUI } from './mentions.js';
+import { initMentionsUI } from '../mentions/mentions.js';
 
 export function initChatUI(vscode) {
     const messagesEl = document.getElementById('messages');
@@ -28,6 +28,7 @@ export function initChatUI(vscode) {
     let showModeMenu = false;
     let showModelMenu = false;
     let optimisticUserMessage = null; // Store text of optimistic message to ensure it persists
+    let pendingUserMessage = null; // Store message to send after new session is initialized
 
     function showChatArea() {
         try {
@@ -381,6 +382,11 @@ export function initChatUI(vscode) {
         inputEl.dispatchEvent(new Event('input'));
     }
 
+
+
+    // We need to store messages globally in this closure to persist them when model changes
+    let currentMessages = [];
+
     function renderSession(sessionId, messages) {
         if (!messagesEl) {
             return;
@@ -388,6 +394,7 @@ export function initChatUI(vscode) {
 
         messagesEl.innerHTML = "";
         activeSessionId = sessionId;
+        currentMessages = Array.isArray(messages) ? messages : [];
 
         // Reset streaming state
         streamingMessageBubble = null;
@@ -445,6 +452,12 @@ export function initChatUI(vscode) {
         }
 
         if (!messages || !messages.length) {
+            // If we have a pending user message, we are in the middle of initialization
+            // Do not show welcome screen/splash, as we will transition to chat shortly
+            if (pendingUserMessage) {
+                return;
+            }
+
             if (welcomeEl) {
                 // Trigger splash animation every time welcome screen is shown
                 if (typeof window.showSplashAnimation === 'function') {
@@ -462,10 +475,17 @@ export function initChatUI(vscode) {
 
         toggleBusy(false);
 
+        persistState();
+    }
+
+    function persistState() {
         try {
             vscode.setState?.({
                 activeSessionId,
-                messages: Array.isArray(messages) ? messages : [],
+                messages: currentMessages,
+                selectedMode,
+                selectedModel,
+                selectedModelLabel: modelLabel ? modelLabel.textContent : undefined
             });
         } catch (_) {
             // ignore persistence issues
@@ -498,6 +518,12 @@ export function initChatUI(vscode) {
             return;
         }
 
+        // Validate model selection
+        if (selectedModel !== 'custom-api') {
+            appendMessage("You don't have the subscription. You need to have the subscription to access this model.", 'system');
+            return;
+        }
+
         const historyPage = document.getElementById('historyPage');
         const settingsPage = document.getElementById('settingsPage');
 
@@ -514,13 +540,26 @@ export function initChatUI(vscode) {
         if (isNewSession) {
             delete inputEl.dataset.isNewSession;
             // We are starting a fresh session.
-            // Store the text so we can force-render it until backend syncs
-            optimisticUserMessage = text;
+            // Queue the message to be sent after the session is initialized
+            pendingUserMessage = { text, mode: selectedMode, model: selectedModel };
             // Tell backend to reset session.
             vscode.postMessage({ command: 'newChat' });
+            return;
         }
 
-        vscode.postMessage({ command: "userMessage", text, mode: selectedMode });
+        vscode.postMessage({ command: "userMessage", text, mode: selectedMode, model: selectedModel });
+    }
+
+    function handleNewSessionInitialized() {
+        if (pendingUserMessage) {
+            const { text, mode, model } = pendingUserMessage;
+            optimisticUserMessage = text;
+            vscode.postMessage({ command: "userMessage", text, mode, model });
+            pendingUserMessage = null;
+
+            // Force re-render to show the optimistic message and switch to chat view
+            renderSession(activeSessionId, []);
+        }
     }
 
     // --- New UI: toolbar behaviors ---
@@ -556,12 +595,18 @@ export function initChatUI(vscode) {
         }
 
         // Optional: inform host of mode change in the future
+        persistState();
     }
 
     function applyModel(model, labelText) {
         selectedModel = model;
         if (modelLabel && labelText) modelLabel.textContent = labelText;
-        // Optional: map to actual provider/model config later
+
+        // Sync to welcome screen
+        const welcomeLabel = document.getElementById('welcomeModelLabel');
+        if (welcomeLabel && labelText) welcomeLabel.textContent = labelText;
+
+        persistState();
     }
 
     // Toggle menus
@@ -592,12 +637,8 @@ export function initChatUI(vscode) {
         if (!btn) return;
         const action = btn.getAttribute('data-action');
         if (action === 'custom-api') {
-            // Open Settings page so the user can enter a custom API key
+            applyModel('custom-api', 'Custom API');
             closeMenus();
-            // Use the backend message to properly open settings with data loaded
-            try {
-                vscode.postMessage({ command: 'openCustomApiSettings' });
-            } catch (_) { }
             return;
         }
         const model = btn.getAttribute('data-model');
@@ -657,10 +698,20 @@ export function initChatUI(vscode) {
             }
         });
 
-        inputEl.addEventListener("input", () => {
+        inputEl.addEventListener('input', () => {
             try {
+                // Fix: contenteditable often leaves a <br> when cleared, preventing :empty from working
+                if (inputEl.innerHTML === '<br>' || inputEl.textContent.trim() === '') {
+                    inputEl.innerHTML = '';
+                }
+
+                // Auto-resize
                 inputEl.style.height = 'auto';
                 inputEl.style.height = `${Math.min(Math.max(inputEl.scrollHeight, 28), 160)}px`;
+
+                // Mention logic
+                // ... (existing mention logic is handled by mentions.js via initMentionsUI)
+
                 // Enable/disable send button
                 if (sendBtn) sendBtn.disabled = !inputEl.innerText.trim();
             } catch (_) {
@@ -810,5 +861,14 @@ export function initChatUI(vscode) {
         setMentionRecentNames,
         setPickerItems,
         showQuestion,
+        sendMessage,
+        getSelectedMode: () => selectedMode,
+        getSelectedModel: () => selectedModel,
+        getSelectedModelLabel: () => modelLabel ? modelLabel.textContent : 'GPT-5 (low reasoning)',
+        // Allow other modules (e.g., welcome.js) to set the selected model
+        setSelectedModel: (id, label) => applyModel(id, label),
+        setSelectedMode: (mode) => applyMode(mode),
+        handleNewSessionInitialized,
+        hasPendingMessage: () => !!pendingUserMessage,
     };
-}
+};
