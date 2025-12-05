@@ -4,7 +4,8 @@ import type { InternalMessage } from './types.js';
 import { ALL_TOOLS, executeToolByName, findToolByName, readFileTool } from '../tools/registry.js';
 import { safeParseJson } from '../tools/toolUtils.js';
 import { log } from 'console';
-
+import { convertInternalToSession } from '../runtime/agent.js';
+import { writeSessionMessages } from '../runtime/sessionManager.js';
 // const MAX_TOOL_ITERATIONS = 8;
 
 /**
@@ -61,6 +62,7 @@ export async function runAgentOrchestrator(
 
     const toolCalls: Array<{ id: string; name: string; args: string }> = [];
     let assistantContent: InternalMessage['content'] = [];
+    let streamedText = ''; // For saving text content
     let isStreaming = false;
     // console.log('[Assista X] Starting to process stream...');
     // Process stream
@@ -74,8 +76,8 @@ export async function runAgentOrchestrator(
       // console.log('[Assista X] Event type:', event.type);
       switch (event.type) {
         case 'text':
+          streamedText += event.text;
           finalResponse += event.text;
-          assistantContent.push({ type: 'text', text: event.text });
           // Send text chunks to UI in real-time via onProgress
           if (!isStreaming) {
             // Initialize streaming message
@@ -89,8 +91,8 @@ export async function runAgentOrchestrator(
 
         case 'reasoning':
           // Include reasoning in response
+          streamedText += event.text;
           finalResponse += event.text;
-          assistantContent.push({ type: 'reasoning', text: event.text });
           // Stream reasoning similarly
           if (!isStreaming) {
             onProgress?.(JSON.stringify({ type: 'stream_start', text: event.text }));
@@ -137,12 +139,25 @@ export async function runAgentOrchestrator(
       }
     }
     console.log('[Assista X] Assistant content:', assistantContent);
-    // If we have assistant content, add it to messages
+    console.log('[Assista X] Final Streamed Text:', streamedText);
     if (assistantContent.length > 0) {
       internalMessages.push({
         role: 'assistant',
-        content: assistantContent,
+        content: assistantContent
       });
+      assistantContent = [];
+    }
+    if (streamedText.trim()) {
+      internalMessages.push({
+        role: 'assistant',
+        content: [
+          { type: 'text', text: streamedText }
+        ],
+        timestamp: Date.now()
+      });
+    
+      streamedText = "";
+      // finalResponse = "";
     }
 
     // If we have tool calls, execute them and continue loop
@@ -191,12 +206,13 @@ export async function runAgentOrchestrator(
         });
       }
 
-      // Reset final response for next iteration
+      // Reset for next iteration
       finalResponse = '';
+      streamedText = '';
       // Continue loop to send tool results back to model
       continue;
     }
-
+    await writeSessionMessages(context, convertInternalToSession(internalMessages));
     // No tool calls - we have final response
     return finalResponse.trim();
   }

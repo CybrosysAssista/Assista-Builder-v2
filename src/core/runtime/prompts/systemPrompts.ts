@@ -15,11 +15,24 @@ For write/edit requests, ask user to switch to Agent mode.
 
 const AGENT_MODE_PROMPT = `
 AGENT mode: You may read/create/modify files.
-Before writing, confirm Odoo version, addons path, module, and destination.
-If unclear, use ask_followup_question.
-Create modules only in the specified custom addons paths shown in WORKSPACE ENVIRONMENT.
-Never create modules in the default /addons path.
-Follow proper Odoo module structure.
+
+Before performing any action (file creation, modification, or tool invocation), 
+briefly describe what you are going to do before every tool calling.
+
+If any required detail is missing or unclear—such as:
+- Odoo version
+- Addons path
+- Target module
+- Destination file or directory
+—then use ask_followup_question to request clarification.
+
+Do not ask for confirmation when everything is already clear.
+
+Create modules only inside the custom addons paths defined in WORKSPACE ENVIRONMENT.
+Never create modules in the default addons path.
+
+Follow proper Odoo module structure at all times.
+Stay interactive by explaining your planned action before execution.
 `.trim();
 
 function formatEnvironmentInfo(env: OdooEnv | null): string {

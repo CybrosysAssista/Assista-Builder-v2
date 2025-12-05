@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { readSessionMessages, clearActiveSession, writeSessionMessages } from './sessionManager.js';
+import { readSessionMessages, clearActiveSession } from './sessionManager.js';
 import { getActiveProviderConfig } from '../config/configService.js';
 import { getSystemInstruction } from './prompts/systemPrompts.js';
 import { createProvider } from '../providers/factory.js';
@@ -26,7 +26,7 @@ function convertSessionToInternal(sessionMessages: ChatMessage[]): InternalMessa
 /**
  * Convert internal messages back to session format
  */
-function convertInternalToSession(internalMessages: InternalMessage[]): ChatMessage[] {
+export function convertInternalToSession(internalMessages: InternalMessage[]): ChatMessage[] {
   return internalMessages
     .filter(msg => msg.role === 'user' || msg.role === 'assistant')
     .map(msg => {
@@ -98,14 +98,6 @@ export async function runAgent(
     reset: cfg.resetSession,
   };
 
-  // Persist user message immediately so it exists before tools run
-  const userMessage: ChatMessage = {
-    role: 'user',
-    content: userContent,
-    timestamp: Date.now()
-  };
-  await writeSessionMessages(context, [...sessionHistory, userMessage]);
-
   // Log request before calling orchestrator
   // console.log('[Assista X] Request to orchestrator:',requestPayload);
   // console.log('[Assista X] context:',context);
@@ -123,21 +115,6 @@ export async function runAgent(
 
   // Log response after orchestrator call
   // console.log('[Assista X] Response from orchestrator:', response);
-
-  // Convert back to session format and persist
-  // Re-read session history to get the latest state
-  const currentSessionHistory = await readSessionMessages(context);
-
-  const updatedSessionHistory: ChatMessage[] = [
-    ...currentSessionHistory,
-    {
-      role: 'assistant',
-      content: response,
-      timestamp: Date.now(),
-    },
-  ];
-
-  await writeSessionMessages(context, updatedSessionHistory);
 
   return response;
 }
