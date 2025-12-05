@@ -28,6 +28,7 @@ export function initChatUI(vscode) {
     let showModeMenu = false;
     let showModelMenu = false;
     let optimisticUserMessage = null; // Store text of optimistic message to ensure it persists
+    let pendingUserMessage = null; // Store message to send after new session is initialized
 
     function showChatArea() {
         try {
@@ -381,6 +382,11 @@ export function initChatUI(vscode) {
         inputEl.dispatchEvent(new Event('input'));
     }
 
+
+
+    // We need to store messages globally in this closure to persist them when model changes
+    let currentMessages = [];
+
     function renderSession(sessionId, messages) {
         if (!messagesEl) {
             return;
@@ -388,6 +394,7 @@ export function initChatUI(vscode) {
 
         messagesEl.innerHTML = "";
         activeSessionId = sessionId;
+        currentMessages = Array.isArray(messages) ? messages : [];
 
         // Reset streaming state
         streamingMessageBubble = null;
@@ -445,6 +452,12 @@ export function initChatUI(vscode) {
         }
 
         if (!messages || !messages.length) {
+            // If we have a pending user message, we are in the middle of initialization
+            // Do not show welcome screen/splash, as we will transition to chat shortly
+            if (pendingUserMessage) {
+                return;
+            }
+
             if (welcomeEl) {
                 // Trigger splash animation every time welcome screen is shown
                 if (typeof window.showSplashAnimation === 'function') {
@@ -462,10 +475,17 @@ export function initChatUI(vscode) {
 
         toggleBusy(false);
 
+        persistState();
+    }
+
+    function persistState() {
         try {
             vscode.setState?.({
                 activeSessionId,
-                messages: Array.isArray(messages) ? messages : [],
+                messages: currentMessages,
+                selectedMode,
+                selectedModel,
+                selectedModelLabel: modelLabel ? modelLabel.textContent : undefined
             });
         } catch (_) {
             // ignore persistence issues
@@ -500,7 +520,7 @@ export function initChatUI(vscode) {
 
         // Validate model selection
         if (selectedModel !== 'custom-api') {
-            appendMessage('Please select "Custom API" to use the chat.', 'system');
+            appendMessage("You don't have the subscription. You need to have the subscription to access this model.", 'system');
             return;
         }
 
@@ -520,13 +540,26 @@ export function initChatUI(vscode) {
         if (isNewSession) {
             delete inputEl.dataset.isNewSession;
             // We are starting a fresh session.
-            // Store the text so we can force-render it until backend syncs
-            optimisticUserMessage = text;
+            // Queue the message to be sent after the session is initialized
+            pendingUserMessage = { text, mode: selectedMode, model: selectedModel };
             // Tell backend to reset session.
             vscode.postMessage({ command: 'newChat' });
+            return;
         }
 
         vscode.postMessage({ command: "userMessage", text, mode: selectedMode, model: selectedModel });
+    }
+
+    function handleNewSessionInitialized() {
+        if (pendingUserMessage) {
+            const { text, mode, model } = pendingUserMessage;
+            optimisticUserMessage = text;
+            vscode.postMessage({ command: "userMessage", text, mode, model });
+            pendingUserMessage = null;
+
+            // Force re-render to show the optimistic message and switch to chat view
+            renderSession(activeSessionId, []);
+        }
     }
 
     // --- New UI: toolbar behaviors ---
@@ -562,6 +595,7 @@ export function initChatUI(vscode) {
         }
 
         // Optional: inform host of mode change in the future
+        persistState();
     }
 
     function applyModel(model, labelText) {
@@ -571,6 +605,8 @@ export function initChatUI(vscode) {
         // Sync to welcome screen
         const welcomeLabel = document.getElementById('welcomeModelLabel');
         if (welcomeLabel && labelText) welcomeLabel.textContent = labelText;
+
+        persistState();
     }
 
     // Toggle menus
@@ -831,5 +867,8 @@ export function initChatUI(vscode) {
         getSelectedModelLabel: () => modelLabel ? modelLabel.textContent : 'GPT-5 (low reasoning)',
         // Allow other modules (e.g., welcome.js) to set the selected model
         setSelectedModel: (id, label) => applyModel(id, label),
+        setSelectedMode: (mode) => applyMode(mode),
+        handleNewSessionInitialized,
+        hasPendingMessage: () => !!pendingUserMessage,
     };
-}
+};
