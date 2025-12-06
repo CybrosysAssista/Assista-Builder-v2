@@ -205,7 +205,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                             await writeSessionMessages(this._context, newMessages);
 
                             // Immediately sync UI to show the question as answered
-                            void this.syncActiveSession();
+                            // void this.syncActiveSession();
                         } catch (error) {
                             console.error('[AssistaX] Failed to save question/answer to history:', error);
                         }
@@ -326,18 +326,6 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         this._view?.webview.postMessage(payload ? { type, payload } : { type });
     }
 
-    private async renderMarkdownToHtml(markdown: string): Promise<string | undefined> {
-        if (!markdown.trim()) {
-            return undefined;
-        }
-        try {
-            return await vscode.commands.executeCommand<string>('markdown.api.render', markdown);
-        } catch (error) {
-            console.warn('[AssistaX] Failed to render markdown via VS Code API:', error);
-            return undefined;
-        }
-    }
-
     private async sendAssistantMessage(
         text: string,
         type: 'assistantMessage' | 'error' | 'systemMessage' = 'assistantMessage'
@@ -347,8 +335,8 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         }
 
         if (type === 'assistantMessage') {
-            const html = await this.renderMarkdownToHtml(text);
-            this._view.webview.postMessage({ type, text, html });
+            // Send raw markdown for client-side rendering
+            this._view.webview.postMessage({ type, text, markdown: text });
             return;
         }
 
@@ -363,7 +351,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         // Check if this is a structured JSON streaming message
         try {
             const parsed = JSON.parse(msg);
-            
+
             // Handle streaming messages
             if (parsed.type === 'stream_start' || parsed.type === 'stream_append' || parsed.type === 'stream_end') {
                 this._view.webview.postMessage({
@@ -376,12 +364,11 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             // Not JSON - treat as plain text message
         }
 
-        // Plain text message - render as markdown
-        const html = await this.renderMarkdownToHtml(msg);
+        // Plain text message - send as markdown for client-side rendering
         this._view.webview.postMessage({
             type: 'assistantMessage',
             text: msg,
-            html
+            markdown: msg
         });
     }
 
@@ -390,30 +377,30 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         if (this._abortController) {
             this._abortController.abort();
         }
-        
+
         // Create new AbortController for this request
         this._abortController = new AbortController();
         const abortController = this._abortController;
-        
+
         try {
             const startTime = Date.now();
-            const response = await runAgent({ 
-                contents: text, 
-                mode, 
+            const response = await runAgent({
+                contents: text,
+                mode,
                 abortSignal: abortController.signal,
                 onProgress: (msg: string) => this.handleProgressMessage(msg)
             }, this._context, this._odooEnvService);
-            
+
             // Check if request was cancelled
             if (abortController.signal.aborted) {
                 return;
             }
-            
+
             const elapsed = Date.now() - startTime;
             console.log(`[AssistaX] Total completion time taken in ${elapsed}ms`);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
             await this.sendAssistantMessage(reply);
-            void this.syncActiveSession();
+            // void this.syncActiveSession();
         } catch (error: any) {
             // Don't show error if request was cancelled
             if (abortController.signal.aborted) {
@@ -431,7 +418,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
 
     private async mapMessageForWebview(
         message: ChatMessage
-    ): Promise<{ role: string; content: string; html?: string; timestamp?: number; suggestions?: any; selection?: string }> {
+    ): Promise<{ role: string; content: string; markdown?: string; timestamp?: number; suggestions?: any; selection?: string }> {
         const base = {
             role: message.role,
             content: message.content,
@@ -440,8 +427,8 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             selection: message.selection
         };
         if (message.role === 'assistant') {
-            const html = await this.renderMarkdownToHtml(message.content);
-            return { ...base, html };
+            // Send markdown for client-side rendering
+            return { ...base, markdown: message.content };
         }
         return base;
     }
@@ -467,7 +454,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         }
         const pending = this._pendingHydration;
         this._pendingHydration = undefined;
-        await this.queueHydration(pending.sessionId, pending.messages);
+        // await this.queueHydration(pending.sessionId, pending.messages);
     }
 
     private async syncActiveSession(): Promise<void> {

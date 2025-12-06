@@ -83,6 +83,21 @@ export function getHtmlForWebview(
   const mentionsCssUri = getCssUri(['core', 'webview', 'mentions', 'mentions.css']);
   const settingsCssUri = getCssUri(['core', 'webview', 'settings', 'settings.css']);
 
+  // Markdown rendering libraries
+  const markedScript = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'libs', 'marked.js'));
+  const dompurifyScript = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'libs', 'purify.min.js'));
+  const hljsScript = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'libs', 'highlight.js'));
+  const hljsCss = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'libs', 'highlight.css'));
+
+  // Helper to get JS URI with fallback
+  const getJsUri = (pathSegments: string[]) => {
+    const outPath = vscode.Uri.joinPath(extensionUri, 'out', ...pathSegments).fsPath;
+    const path = fs.existsSync(outPath) ? ['out', ...pathSegments] : ['src', ...pathSegments];
+    return webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...path));
+  };
+
+  const markdownRendererUri = getJsUri(['core', 'webview', 'utils', 'markdownRenderer.js']);
+
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -95,6 +110,7 @@ export function getHtmlForWebview(
     <link rel="stylesheet" href="${chatCssUri}">
     <link rel="stylesheet" href="${mentionsCssUri}">
     <link rel="stylesheet" href="${settingsCssUri}">
+    <link rel="stylesheet" href="${hljsCss}">
   </head>
   <body>
     
@@ -180,6 +196,11 @@ export function getHtmlForWebview(
       window.__ASSISTA_ICON_FILES_BASE__ = '${iconsFilesBase}';
       window.__ASSISTA_ICON_FOLDERS_BASE__ = '${iconsFoldersBase}';
     </script>
+    <!-- Markdown rendering libraries -->
+    <script nonce="${nonce}" src="${markedScript}"></script>
+    <script nonce="${nonce}" src="${dompurifyScript}"></script>
+    <script nonce="${nonce}" src="${hljsScript}"></script>
+    <script nonce="${nonce}" src="${markdownRendererUri}"></script>
     <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
   </body>
 </html>`;

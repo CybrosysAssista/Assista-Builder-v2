@@ -36,13 +36,15 @@ window.addEventListener('message', (event) => {
             if (typeof chat.replaceStreamingMessage === 'function') {
                 chat.replaceStreamingMessage(
                     String(message.text || ''),
-                    typeof message.html === 'string' ? message.html : undefined
+                    typeof message.html === 'string' ? message.html : undefined,
+                    typeof message.markdown === 'string' ? message.markdown : undefined
                 );
             } else {
                 chat.appendMessage(
                     String(message.text || ''),
                     'ai',
-                    typeof message.html === 'string' ? message.html : undefined
+                    typeof message.html === 'string' ? message.html : undefined,
+                    typeof message.markdown === 'string' ? message.markdown : undefined
                 );
             }
             chat.toggleBusy(false);
