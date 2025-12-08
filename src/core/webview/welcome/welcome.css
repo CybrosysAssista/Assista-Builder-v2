@@ -1,7 +1,7 @@
 #welcomeScreen {
-    --welcome-fg: #d1d5db;
-    --welcome-muted: #9ca3af;
-    --welcome-bg: #1e1e1e;
+    --welcome-fg: var(--vscode-editor-foreground);
+    --welcome-muted: var(--vscode-descriptionForeground);
+    --welcome-bg: var(--vscode-editor-background);
 }
 
 #welcomeScreen {
@@ -67,9 +67,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #2a2a2a;
-    border: 1px solid #3a3a3a;
-    border-radius: 9999px;
+    background: var(--vscode-input-background, #2a2a2a);
+    border: 1px solid var(--vscode-input-border, #3a3a3a);
+    border-radius: 10px;
     padding: 6px 10px;
     width: 100%;
     max-width: 520px;
@@ -88,6 +88,8 @@
     word-break: break-word;
     cursor: text;
     text-align: left;
+    max-height: 160px;
+    overflow-y: auto;
 }
 
 #welcomeScreen #welcomeInput:empty:before {
@@ -134,9 +136,9 @@
     align-items: center;
     gap: 6px;
     font-size: 12px;
-    color: #cbd5e1;
-    background: #2a2a2a;
-    border: 1px solid #3a3a3a;
+    color: var(--vscode-editor-foreground, #cbd5e1);
+    background: var(--vscode-input-background, #2a2a2a);
+    border: 1px solid var(--vscode-input-border, #3a3a3a);
     border-radius: 8px;
     padding: 6px 10px;
     cursor: pointer;
@@ -149,7 +151,7 @@
 }
 
 #welcomeScreen .chip-btn:hover {
-    background: #373737;
+    background: var(--vscode-list-hoverBackground, #373737);
 }
 
 #welcomeScreen .chip-icon {
@@ -179,8 +181,8 @@
     top: calc(100% + 8px);
     bottom: auto;
     left: 0;
-    background: var(--vscode-editorWidget-background, #2a2a2a);
-    border: 1px solid var(--vscode-panel-border, #3a3a3a);
+    background: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-panel-border);
     border-radius: 8px;
     box-shadow: 0 12px 36px rgba(0, 0, 0, .35);
     display: none;
@@ -206,8 +208,8 @@
 #welcomeScreen .dropdown .section-title {
     padding: 8px 10px;
     font-size: 11px;
-    color: var(--vscode-descriptionForeground, #9ca3af);
-    border-bottom: 1px solid var(--vscode-panel-border, rgba(255, 255, 255, 0.08));
+    color: var(--vscode-descriptionForeground);
+    border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 #welcomeScreen .dropdown .item {
@@ -235,7 +237,7 @@
 }
 
 #welcomeScreen .dropdown .item.custom {
-    border-top: 1px solid var(--vscode-panel-border, rgba(255, 255, 255, 0.08));
+    border-top: 1px solid var(--vscode-panel-border);
     flex-direction: row;
     align-items: center;
     gap: 8px;

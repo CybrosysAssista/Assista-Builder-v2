@@ -7,7 +7,7 @@ export function getSettingsModalHtml(): string {
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Ubuntu', sans-serif; }
         /* Ensure no outer padding/margins so sidebar is flush to the panel edge */
         html, body, #settingsPage { margin: 0 !important; padding: 0 !important; font-family: 'Ubuntu', sans-serif; }
-        .sidebar { width: 48px; border-right: 0.5px solid #2A2A2A; display: flex; flex-direction: column; overflow-y: auto; transition: width 0.3s ease; background-color: transparent; box-shadow: none; align-items: center; padding-top: 10px; }
+        .sidebar { width: 48px; border-right: 0.5px solid var(--vscode-panel-border); display: flex; flex-direction: column; overflow-y: auto; transition: width 0.3s ease; background-color: transparent; box-shadow: none; align-items: center; padding-top: 10px; }
         .sidebar.collapsed { width: 50px; }
         .sidebar-item { 
           display: flex;
@@ -21,11 +21,11 @@ export function getSettingsModalHtml(): string {
           flex-shrink: 0;
           border-radius: 7px;
           cursor: pointer;
-          color: #CDCDCD;
+          color: var(--vscode-editor-foreground);
           transition: background-color 0.2s;
           margin-bottom: 8px;
         }
-        .sidebar-item:hover { background-color: #2a2d2e; }
+        .sidebar-item:hover { background-color: var(--vscode-list-hoverBackground); }
         .sidebar-item.active { 
           border-radius: 7px;
           border: 0.5px solid rgba(188, 132, 135, 0.50);
@@ -45,8 +45,8 @@ export function getSettingsModalHtml(): string {
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; padding: 12px 24px; border-bottom: none; flex-wrap: nowrap; column-gap: 12px; }
         .header-buttons { display: flex; gap: 10px; }
         .btn { padding: 8px 16px; border: none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; }
-        .btn.btn-save { background-color: #0e639c; color: white; }
-        .btn.btn-done { background-color: #3c3c3c; color: #cccccc; }
+        .btn.btn-save { background-color: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+        .btn.btn-done { background-color: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
         .btn.btn-get-api { 
           display: inline-flex;
           min-width: fit-content;
@@ -57,43 +57,43 @@ export function getSettingsModalHtml(): string {
           align-self: stretch;
           border-radius: 8px;
           border: 0.5px solid rgba(188, 132, 135, 0.50);
-          background: rgba(188, 132, 135, 0.05);
-          color: #CDCDCD;
+          background: var(--vscode-button-secondaryBackground);
+          color: var(--vscode-button-secondaryForeground);
           padding: 6px 12px;
           white-space: nowrap;
           cursor: pointer;
           font-size: 13px;
           flex-shrink: 0;
         }
-        .btn.btn-get-api:hover { background: rgba(188, 132, 135, 0.1); }
+        .btn.btn-get-api:hover { background: var(--vscode-button-secondaryHoverBackground); }
         .api-key-row { display: flex; gap: 10px; align-items: center; }
         .api-key-row input[type="password"] { flex: 1; }
         .section { margin-bottom: 16px; }
         /* Ensure content aligns with subheader padding */
         .content-body { display: flex; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; min-height: calc(100vh - 120px); }
         .settings-container { margin: 0; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; }
-        .section-title { font-family: 'Ubuntu', sans-serif; font-size: 13px; color: #CDCDCD; margin-bottom: 8px; font-weight: 400; font-style: normal; line-height: normal; flex: 1 0 0; }
-        .section-description { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: #CDCDCD; margin-bottom: 15px; font-weight: 400; font-style: normal; line-height: normal; }
+        .section-title { font-family: 'Ubuntu', sans-serif; font-size: 13px; color: var(--vscode-editor-foreground); margin-bottom: 8px; font-weight: 400; font-style: normal; line-height: normal; flex: 1 0 0; }
+        .section-description { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: var(--vscode-editor-foreground); margin-bottom: 15px; font-weight: 400; font-style: normal; line-height: normal; }
         /* Make content section headings bold with gradient (e.g., General Settings h2) */
         .settings-container h2, .content-body h2 { font-family: 'Ubuntu', sans-serif; font-size: 20px; font-style: normal; font-weight: 700; line-height: normal; background: linear-gradient(91deg, #E3B2B3 0%, #BC8487 99.58%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .profile-row { display: flex; align-items: center; margin-bottom: 15px; }
         .profile-row select { flex: 1; }
         .inline-buttons { display: flex; gap: 5px; margin-left: 10px; }
-        .icon-btn { background: none; border: none; color: #cccccc; cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; }
+        .icon-btn { background: none; border: none; color: var(--vscode-editor-foreground); cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; }
         .checkbox-group { display: flex; align-items: center; margin-bottom: 12px; }
         .checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; cursor: pointer; }
         .checkbox-group label { font-size: 13px; }
-        .info-text { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: #CDCDCD; margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
-        .info-box { background-color: #252526; padding: 15px; border-radius: 4px; margin-top: 15px; font-family: 'Ubuntu', sans-serif; font-size: 12px; line-height: 1.6; color: #CDCDCD; font-weight: 400; }
+        .info-text { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
+        .info-box { background-color: var(--vscode-editorWidget-background); padding: 15px; border-radius: 4px; margin-top: 15px; font-family: 'Ubuntu', sans-serif; font-size: 12px; line-height: 1.6; color: var(--vscode-editor-foreground); font-weight: 400; }
         
         /* Neutral focus for Settings fields: no colored outline/border */
         select:focus, select:focus-visible,
         input[type="text"]:focus, input[type="text"]:focus-visible,
         input[type="password"]:focus, input[type="password"]:focus-visible {
           outline: none;
-          border-color: #2A2A2A;
+          border-color: var(--vscode-focusBorder);
           box-shadow: none;
-          background-color: #1F1F1F;
+          background-color: var(--vscode-input-background);
         }
         /* focus style intentionally neutralized via rules above */
 
@@ -105,8 +105,8 @@ export function getSettingsModalHtml(): string {
           right: 0;
           max-height: 300px;
           overflow-y: auto;
-          background-color: #2d2d2d;
-          border: 1px solid #3c3c3c;
+          background-color: var(--vscode-dropdown-background);
+          border: 1px solid var(--vscode-dropdown-border);
           border-radius: 3px;
           margin-top: 4px;
           z-index: 1000;
@@ -116,19 +116,19 @@ export function getSettingsModalHtml(): string {
           padding: 8px 12px;
           cursor: pointer;
           font-size: 13px;
-          color: #cccccc;
+          color: var(--vscode-dropdown-foreground);
           transition: background-color 0.15s;
         }
         .model-dropdown-item:hover {
-          background-color: #3c3c3c;
+          background-color: var(--vscode-list-hoverBackground);
         }
         .model-dropdown-item.selected {
-          background-color: #094771;
+          background-color: var(--vscode-list-activeSelectionBackground);
         }
         .model-dropdown-empty {
           padding: 12px;
           text-align: center;
-          color: #888;
+          color: var(--vscode-descriptionForeground);
           font-size: 12px;
         }
 
@@ -138,9 +138,9 @@ export function getSettingsModalHtml(): string {
           width: 100%; 
           padding: 0 10px; 
           height: 28px;
-          background: #1F1F1F; 
-          color: #CDCDCD; 
-          border: 0.5px solid #2A2A2A; 
+          background: var(--vscode-input-background); 
+          color: var(--vscode-input-foreground); 
+          border: 0.5px solid var(--vscode-input-border); 
           border-radius: 8px; 
           font-size: 13px; 
           text-align: left; 
@@ -151,7 +151,7 @@ export function getSettingsModalHtml(): string {
           font-family: 'Ubuntu', sans-serif;
           font-weight: 400;
         }
-        .stx-dd-btn:hover { background: #252525; }
+        .stx-dd-btn:hover { background: var(--vscode-list-hoverBackground); }
         .stx-dd-btn:focus { outline: none; }
         .stx-dd-chevron { 
           opacity: 0.7; 
@@ -167,9 +167,9 @@ export function getSettingsModalHtml(): string {
           top: calc(100% + 4px); 
           left: 0; 
           width: 100%; 
-          background: #383535ff; 
-          border: 1px solid #2A2A2A; 
-          color: #CDCDCD;
+          background: var(--vscode-dropdown-background); 
+          border: 1px solid var(--vscode-dropdown-border); 
+          color: var(--vscode-dropdown-foreground);
           border-radius: 8px; 
           box-shadow: 0 4px 12px rgba(0,0,0,0.25); 
           display: none; 
@@ -184,10 +184,10 @@ export function getSettingsModalHtml(): string {
           border-radius: 4px;
           font-family: 'Ubuntu', sans-serif;
         }
-        .stx-dd-item:hover { background: #2A2A2A; }
+        .stx-dd-item:hover { background: var(--vscode-list-hoverBackground); }
         .stx-dd-item.active { 
-          background: linear-gradient(90deg, #0E639C 0%, #094771 100%); 
-          color: #FFFFFF; 
+          background: var(--vscode-list-activeSelectionBackground); 
+          color: var(--vscode-list-activeSelectionForeground); 
         }
 
         /* Reusable input field style matching Provider dropdown */
@@ -198,9 +198,9 @@ export function getSettingsModalHtml(): string {
           padding: 0 10px;
           justify-content: space-between;
           align-items: center;
-          background-color: #1F1F1F;
-          border: 0.5px solid #2A2A2A;
-          color: #CDCDCD;
+          background-color: var(--vscode-input-background);
+          border: 0.5px solid var(--vscode-input-border);
+          color: var(--vscode-input-foreground);
           border-radius: 8px;
           font-family: 'Ubuntu', sans-serif;
           font-size: 13px;
@@ -208,11 +208,11 @@ export function getSettingsModalHtml(): string {
           box-sizing: border-box;
           outline: none;
         }
-        .settings-input:hover { background: #252525; }
-        .settings-input:focus { border-color: #2A2A2A; background-color: #1F1F1F; }
+        .settings-input:hover { background: var(--vscode-list-hoverBackground); }
+        .settings-input:focus { border-color: var(--vscode-focusBorder); background-color: var(--vscode-input-background); }
 
         /* Subheading for active section (text only) */
-        .subheader { display: flex; align-items: center; height: 32px; padding: 0 12px; color: #cccccc; background-color: #1f1f1f; margin-bottom: 5px; }
+        .subheader { display: flex; align-items: center; height: 32px; padding: 0 12px; color: var(--vscode-editor-foreground); background-color: var(--vscode-editorWidget-background); margin-bottom: 5px; }
         .subheader .subheader-text { font-size: 14px; font-weight: 500; }
 
         /* Responsive tweaks */
@@ -286,13 +286,13 @@ export function getSettingsModalHtml(): string {
 
         /* Confirm overlay (Unsaved Changes) */
         .stx-confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 99999; }
-        .stx-confirm { width: 520px; max-width: calc(100% - 24px); background: #1f1f1f; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; color: #e5e7eb; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
-        .stx-confirm .hd { padding: 16px 20px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; gap: 8px; align-items: center; }
-        .stx-confirm .bd { padding: 16px 20px; color: #cbd5e1; }
-        .stx-confirm .ft { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
-        .stx-btn { padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: #e5e7eb; cursor: pointer; }
-        .stx-btn:hover { background: rgba(255,255,255,0.1); }
-        .stx-btn.primary { background: #0e639c; border-color: #0b4f7a; color: #fff; }
+        .stx-confirm { width: 520px; max-width: calc(100% - 24px); background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-panel-border); border-radius: 12px; color: var(--vscode-editor-foreground); box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+        .stx-confirm .hd { padding: 16px 20px; font-weight: 700; border-bottom: 1px solid var(--vscode-panel-border); display: flex; gap: 8px; align-items: center; }
+        .stx-confirm .bd { padding: 16px 20px; color: var(--vscode-descriptionForeground); }
+        .stx-confirm .ft { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--vscode-panel-border); }
+        .stx-btn { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--vscode-button-border); background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); cursor: pointer; }
+        .stx-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+        .stx-btn.primary { background: var(--vscode-button-background); border-color: var(--vscode-button-border); color: var(--vscode-button-foreground); }
         
         /* Back button styling */
         /* Back button styling matching history page */
@@ -303,7 +303,7 @@ export function getSettingsModalHtml(): string {
             gap: 8px;
             background: transparent;
             border: none;
-            color: #CDCDCD;
+            color: var(--vscode-editor-foreground);
             cursor: pointer;
             font-family: inherit;
             font-size: 14px;
@@ -311,7 +311,7 @@ export function getSettingsModalHtml(): string {
             transition: opacity 0.2s;
         }
         .back-btn:hover { opacity: 0.8; }
-        .back-btn svg { fill: #CDCDCD; }
+        .back-btn svg { fill: var(--vscode-editor-foreground); }
         
         /* Settings title section */
         .settings-title-section { padding: 0 24px; margin-bottom: 16px; }
@@ -327,7 +327,7 @@ export function getSettingsModalHtml(): string {
           -webkit-text-fill-color: transparent;
           margin: 0 0 4px 0; 
         }
-        .settings-subtitle { font-family: 'Ubuntu', sans-serif; font-size: 13px; color: #CDCDCD; margin: 0; font-weight: 400; font-style: normal; line-height: normal; }
+        .settings-subtitle { font-family: 'Ubuntu', sans-serif; font-size: 13px; color: var(--vscode-descriptionForeground); margin: 0; font-weight: 400; font-style: normal; line-height: normal; }
         
         /* Profile & Usage Styles */
         .profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 0 4px; max-width: 800px; }
@@ -354,9 +354,9 @@ export function getSettingsModalHtml(): string {
           flex: 1 0 0;
           align-self: stretch;
         }
-        .user-name { font-size: 15px; font-weight: 500; color: #E0E0E0; margin-bottom: 0; }
-        .user-email { font-size: 13px; color: #9D9D9D; margin-bottom: 0; }
-        .user-meta { font-size: 12px; color: #666; display: flex; align-items: center; gap: 4px; }
+        .user-name { font-size: 15px; font-weight: 500; color: var(--vscode-editor-foreground); margin-bottom: 0; }
+        .user-email { font-size: 13px; color: var(--vscode-descriptionForeground); margin-bottom: 0; }
+        .user-meta { font-size: 12px; color: var(--vscode-descriptionForeground); display: flex; align-items: center; gap: 4px; }
         .logout-btn { 
           display: flex;
           padding: 10px 16px;
@@ -364,9 +364,9 @@ export function getSettingsModalHtml(): string {
           align-items: center;
           gap: 10px;
           border-radius: 8px;
-          border: 0.5px solid #2A2A2A;
-          background: #1F1F1F;
-          color: #CCCCCC;
+          border: 0.5px solid var(--vscode-button-border);
+          background: var(--vscode-button-secondaryBackground);
+          color: var(--vscode-button-secondaryForeground);
           font-size: 12px;
           cursor: pointer;
         }
@@ -378,14 +378,14 @@ export function getSettingsModalHtml(): string {
           margin-top: 8px; 
           max-width: 800px; 
         }
-        .usage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 14px; color: #E0E0E0; }
-        .usage-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #666; }
-        .badge { background: #252526; padding: 2px 6px; border-radius: 4px; border: 1px solid #333; font-size: 11px; color: #CCC; }
+        .usage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 14px; color: var(--vscode-editor-foreground); }
+        .usage-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--vscode-descriptionForeground); }
+        .badge { background: var(--vscode-badge-background); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--vscode-panel-border); font-size: 11px; color: var(--vscode-badge-foreground); }
         .usage-stats { margin-bottom: 16px; }
-        .usage-label { display: flex; justify-content: space-between; font-size: 12px; color: #9D9D9D; margin-bottom: 8px; }
-        .progress-bar { height: 8px; background: #2A2A2A; border-radius: 4px; overflow: hidden; }
+        .usage-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--vscode-descriptionForeground); margin-bottom: 8px; }
+        .progress-bar { height: 8px; background: var(--vscode-progressBar-background); border-radius: 4px; overflow: hidden; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, #E3B2B3 0%, #BC8487 100%); border-radius: 4px; }
-        .upgrade-btn { width: 100%; padding: 10px; background: transparent; border: 1px solid #BC8487; color: #E0E0E0; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
+        .upgrade-btn { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--vscode-button-border); color: var(--vscode-button-foreground); border-radius: 8px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
         .upgrade-btn:hover { background: rgba(188, 132, 135, 0.1); }
       </style>
       <div class="header">
