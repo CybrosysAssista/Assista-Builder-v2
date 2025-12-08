@@ -698,6 +698,34 @@ export function initChatUI(vscode) {
             }
         });
 
+        // Handle paste event to strip HTML formatting and paste only plain text
+        inputEl.addEventListener('paste', (event) => {
+            event.preventDefault();
+
+            // Get plain text from clipboard
+            const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+
+            // Insert plain text at cursor position
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+
+            // Insert text as text node (not HTML)
+            const textNode = document.createTextNode(text);
+            range.insertNode(textNode);
+
+            // Move cursor to end of inserted text
+            range.setStartAfter(textNode);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            // Trigger input event to update UI
+            inputEl.dispatchEvent(new Event('input'));
+        });
+
         inputEl.addEventListener('input', () => {
             try {
                 // Fix: contenteditable often leaves a <br> when cleared, preventing :empty from working

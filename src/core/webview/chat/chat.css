@@ -48,7 +48,7 @@
     border: none;
     background: transparent;
     font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
-    color: #CDCDCD;
+    color: var(--vscode-editor-foreground);
     font-size: 13px;
     line-height: 16px;
 }
@@ -80,7 +80,7 @@
 /* AI message - full width, no bubble background */
 .message.ai {
     background: transparent;
-    color: #CDCDCD;
+    color: var(--vscode-editor-foreground);
     font-family: var(--vscode-font-family, "Segoe UI", "Helvetica Neue", sans-serif);
     font-size: 13px;
     font-style: normal;
@@ -352,8 +352,8 @@
 
 /* Chatbox styled like the reference */
 .chatbox {
-    background: #2a2a2a;
-    border: 1px solid var(--vscode-input-border, #3a3a3a);
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
     border-radius: 12px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
     overflow: visible;
@@ -480,8 +480,8 @@
     align-items: center;
     gap: 2px;
     border-radius: 5px;
-    border: 0.5px solid #3a3a3a;
-    background: #2a2a2a;
+    border: 0.5px solid var(--vscode-input-border);
+    background: var(--vscode-input-background);
     font-size: 12px;
     color: var(--vscode-descriptionForeground);
     cursor: pointer;
