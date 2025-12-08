@@ -724,7 +724,7 @@ export function initChatUI(vscode) {
 
     // Plus, Mic, Settings placeholders (Mention handled by mentions.js)
     addBtn?.addEventListener('click', () => {
-        try { vscode.postMessage({ command: 'quickActions' }); } catch (_) { }
+        try { vscode.postMessage({ command: 'newChat' }); } catch (_) { }
     });
     // Mention UI fully handled by mentions.js
 
