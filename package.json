@@ -231,7 +231,8 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && npm run copy-webview-assets",
+    "copy-webview-assets": "mkdir -p out/core/webview/utils && cp src/core/webview/utils/markdownRenderer.js out/core/webview/utils/markdownRenderer.js 2>/dev/null || true",
     "watch": "tsc -watch -p ./",
     "lint": "eslint . --ext .ts,.js",
     "pretest": "npm run compile && npm run lint",
@@ -239,6 +240,8 @@
   },
   "devDependencies": {
     "@types/diff": "^7.0.2",
+    "@types/dompurify": "^3.0.5",
+    "@types/marked": "^5.0.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.102.0",
@@ -254,6 +257,9 @@
     "@google/genai": "^1.0.0",
     "@xmldom/xmldom": "^0.8.11",
     "diff": "^7.0.0",
+    "dompurify": "^3.3.0",
+    "highlight.js": "^11.11.1",
+    "marked": "^17.0.1",
     "ts-node": "^10.9.2",
     "zod": "^4.1.12"
   }
