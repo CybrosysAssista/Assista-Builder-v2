@@ -193,6 +193,6 @@ hljs.registerLanguage('xl', require('./languages/xl'));
 hljs.registerLanguage('xquery', require('./languages/xquery'));
 hljs.registerLanguage('zephir', require('./languages/zephir'));
 
-hljs.HighlightJS = hljs
-hljs.default = hljs
+hljs.HighlightJS = hljs;
+hljs.default = hljs;
 module.exports = hljs;

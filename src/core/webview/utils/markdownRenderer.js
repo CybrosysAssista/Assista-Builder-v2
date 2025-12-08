@@ -5,6 +5,21 @@
 
 // Track if marked has been configured
 let markedConfigured = false;
+let librariesReady = false;
+
+/**
+ * Wait for libraries to be available
+ */
+function waitForLibraries(callback, maxRetries = 50) {
+    if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined' && typeof hljs !== 'undefined') {
+        librariesReady = true;
+        callback();
+    } else if (maxRetries > 0) {
+        setTimeout(() => waitForLibraries(callback, maxRetries - 1), 50);
+    } else {
+        console.error('[AssistaX] Markdown libraries failed to load');
+    }
+}
 
 /**
  * Configure marked options for markdown parsing
@@ -27,8 +42,8 @@ function configureMarked() {
                 if (typeof hljs === 'undefined') {
                     return code;
                 }
-                    return hljs.highlightAuto(code).value;
-
+                
+                // Try language-specific highlighting first
                 if (lang && hljs.getLanguage(lang)) {
                     try {
                         return hljs.highlight(code, { language: lang }).value;
@@ -37,7 +52,7 @@ function configureMarked() {
                     }
                 }
                 
-                // Auto-detect language if not specified
+                // Fallback to auto-detect language if not specified or language-specific failed
                 try {
                     return hljs.highlightAuto(code).value;
                 } catch (err) {
@@ -71,8 +86,8 @@ function sanitizeHtml(html) {
             'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
             'hr', 'span', 'div', 'sub', 'sup'
         ],
-        ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'rel', 'id'],
-        ALLOWED_DATA_ATTR: false,
+        ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'target', 'rel', 'id', 'style'],
+        ALLOWED_DATA_ATTR: true,
         ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
     });
 }
@@ -96,17 +111,32 @@ function renderMarkdown(markdown, isStreaming) {
 
     try {
         // For streaming, we want to handle incomplete markdown gracefully
-        // Marked can handle partial markdown, but we'll add some safety
         let markdownToRender = markdown;
         
-        // If streaming and markdown ends with incomplete code block, close it temporarily
         if (isStreaming) {
-            // Count backticks to see if we have an unclosed code block
+            // Handle unclosed code blocks
             const backtickMatches = markdown.match(/```/g);
             if (backtickMatches && backtickMatches.length % 2 === 1) {
-                // Odd number of backticks means unclosed code block
-                // Add a closing backtick temporarily for rendering
                 markdownToRender = markdown + '\n```';
+            }
+            
+            // Handle unclosed inline code
+            const inlineCodeMatches = markdown.match(/`/g);
+            if (inlineCodeMatches && inlineCodeMatches.length % 2 === 1) {
+                markdownToRender = markdownToRender + '`';
+            }
+            
+            // Handle unclosed bold
+            const boldMatches = markdownToRender.match(/\*\*/g);
+            if (boldMatches && boldMatches.length % 2 === 1) {
+                markdownToRender = markdownToRender + '**';
+            }
+            
+            // Handle unclosed italic (count single asterisks, excluding **)
+            const textWithoutBold = markdownToRender.replace(/\*\*/g, '');
+            const italicMatches = textWithoutBold.match(/\*/g);
+            if (italicMatches && italicMatches.length % 2 === 1) {
+                markdownToRender = markdownToRender + '*';
             }
         }
         
@@ -119,12 +149,26 @@ function renderMarkdown(markdown, isStreaming) {
         return cleanHtml;
     } catch (error) {
         console.error('[AssistaX] Markdown rendering error:', error);
-        // Fallback: escape HTML and convert line breaks
-        return markdown
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/\n/g, '<br>');
+        
+        // Try rendering paragraph by paragraph for better error recovery
+        try {
+            const paragraphs = markdown.split('\n\n');
+            const rendered = paragraphs.map(para => {
+                try {
+                    return marked.parse(para);
+                } catch {
+                    return '<p>' + para.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
+                }
+            });
+            return sanitizeHtml(rendered.join(''));
+        } catch {
+            // Ultimate fallback: escape HTML and convert line breaks
+            return markdown
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, '<br>');
+        }
     }
 }
 
@@ -135,8 +179,14 @@ function isMarkdownAvailable() {
     return typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined';
 }
 
-// Export for use in webview
+// Initialize when libraries are ready
 if (typeof window !== 'undefined') {
+    waitForLibraries(() => {
+        configureMarked();
+        console.log('[AssistaX] Markdown libraries loaded');
+        window.dispatchEvent(new CustomEvent('markdown-ready'));
+    });
+    
     window.markdownRenderer = {
         renderMarkdown: function(markdown) {
             // Default to streaming mode for better real-time rendering

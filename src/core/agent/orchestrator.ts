@@ -39,7 +39,7 @@ export async function runAgentOrchestrator(
 
   // Filter tools based on mode: chat = read_file only, agent = all tools
   const mode = params.config?.mode || 'agent';
-  const tools = mode === 'chat' ? [readFileTool] : ALL_TOOLS;
+  const tools = mode === 'chat' ? [] : ALL_TOOLS;
   // let iterations = 0;
   let finalResponse = '';
 

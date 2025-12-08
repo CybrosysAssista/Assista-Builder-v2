@@ -246,6 +246,8 @@ export function initChatUI(vscode) {
     let streamingTextBuffer = '';
     let streamingRenderTimeout = null;
     let streamingRow = null;
+    let lastRenderedContent = '';
+    let lastRenderedHtml = '';
 
     function appendMessage(text, sender, html, markdown) {
         if (!messagesEl || (!text && !html && !markdown)) {
@@ -304,15 +306,21 @@ export function initChatUI(vscode) {
             streamingRow.appendChild(streamingMessageBubble);
             messagesEl.appendChild(streamingRow);
             streamingTextBuffer = '';
+            lastRenderedContent = '';
+            lastRenderedHtml = '';
         }
 
         // Append text to buffer
         streamingTextBuffer += text;
 
-        // Render markdown in real-time as chunks arrive (no debounce for true real-time)
+        // Only render if content actually changed
+        if (streamingTextBuffer === lastRenderedContent) {
+            return;
+        }
+
+        // Render markdown in real-time as chunks arrive
         if (typeof window.markdownRenderer !== 'undefined' && window.markdownRenderer.renderMarkdown) {
             // Use requestAnimationFrame for smooth rendering tied to browser refresh rate
-            // This provides true real-time rendering without hardcoded delays
             if (streamingRenderTimeout) {
                 cancelAnimationFrame(streamingRenderTimeout);
             }
@@ -321,19 +329,29 @@ export function initChatUI(vscode) {
                 try {
                     // Use streaming mode for real-time rendering
                     const renderedHtml = window.markdownRenderer.renderMarkdown(streamingTextBuffer);
-                    streamingMessageBubble.innerHTML = renderedHtml;
-                    // Enhance markdown content (syntax highlighting, code blocks, etc.)
-                    enhanceMarkdownContent(streamingMessageBubble);
+                    
+                    // Only update DOM if HTML actually changed (compare cached string, not DOM)
+                    if (lastRenderedHtml !== renderedHtml) {
+                        streamingMessageBubble.innerHTML = renderedHtml;
+                        // Enhance markdown content (syntax highlighting, code blocks, etc.)
+                        enhanceMarkdownContent(streamingMessageBubble);
+                        lastRenderedHtml = renderedHtml;
+                    }
+                    
+                    lastRenderedContent = streamingTextBuffer;
                 } catch (error) {
                     console.error('[AssistaX] Error rendering streaming markdown:', error);
                     // Fallback to plain text if rendering fails
                     streamingMessageBubble.textContent = streamingTextBuffer;
+                    lastRenderedContent = streamingTextBuffer;
+                    lastRenderedHtml = '';
                 }
                 streamingRenderTimeout = null;
             });
         } else {
             // Fallback: show plain text if markdown renderer not available
             streamingMessageBubble.textContent = streamingTextBuffer;
+            lastRenderedContent = streamingTextBuffer;
         }
 
         // Scroll to bottom smoothly
@@ -367,6 +385,8 @@ export function initChatUI(vscode) {
         // Reset other state but keep row reference
         streamingMessageBubble = null;
         streamingTextBuffer = '';
+        lastRenderedContent = '';
+        lastRenderedHtml = '';
     }
 
     function replaceStreamingMessage(text, html, markdown) {
@@ -402,6 +422,8 @@ export function initChatUI(vscode) {
                 streamingMessageBubble = null;
                 streamingTextBuffer = '';
                 streamingRow = null;
+                lastRenderedContent = '';
+                lastRenderedHtml = '';
                 return;
             }
         }
@@ -413,6 +435,8 @@ export function initChatUI(vscode) {
         streamingMessageBubble = null;
         streamingTextBuffer = '';
         streamingRow = null;
+        lastRenderedContent = '';
+        lastRenderedHtml = '';
     }
 
     function clearInput() {
@@ -459,6 +483,8 @@ export function initChatUI(vscode) {
         streamingMessageBubble = null;
         streamingTextBuffer = '';
         streamingRow = null;
+        lastRenderedContent = '';
+        lastRenderedHtml = '';
         if (streamingRenderTimeout) {
             cancelAnimationFrame(streamingRenderTimeout);
             streamingRenderTimeout = null;
@@ -563,6 +589,8 @@ export function initChatUI(vscode) {
         streamingMessageBubble = null;
         streamingTextBuffer = '';
         streamingRow = null;
+        lastRenderedContent = '';
+        lastRenderedHtml = '';
         if (streamingRenderTimeout) {
             cancelAnimationFrame(streamingRenderTimeout);
             streamingRenderTimeout = null;
