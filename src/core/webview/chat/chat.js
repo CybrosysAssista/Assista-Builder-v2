@@ -27,8 +27,7 @@ export function initChatUI(vscode) {
     let selectedModel = 'gpt5-low';
     let showModeMenu = false;
     let showModelMenu = false;
-    let optimisticUserMessage = null; // Store text of optimistic message to ensure it persists
-    let pendingUserMessage = null; // Store message to send after new session is initialized
+    // optimisticUserMessage removed - we don't need it!
 
     function showChatArea() {
         try {
@@ -265,7 +264,7 @@ export function initChatUI(vscode) {
 
         if (sender === "ai") {
             bubble.classList.add("markdown");
-            
+
             // Prefer client-side markdown rendering (use complete mode for final messages)
             if (markdown && typeof window.markdownRenderer !== 'undefined') {
                 const renderFn = window.markdownRenderer.renderMarkdownComplete || window.markdownRenderer.renderMarkdown;
@@ -277,7 +276,7 @@ export function initChatUI(vscode) {
             } else {
                 bubble.textContent = text;
             }
-            
+
             enhanceMarkdownContent(bubble);
         } else {
             bubble.textContent = text;
@@ -316,7 +315,7 @@ export function initChatUI(vscode) {
             if (streamingRenderTimeout) {
                 cancelAnimationFrame(streamingRenderTimeout);
             }
-            
+
             streamingRenderTimeout = requestAnimationFrame(() => {
                 try {
                     // Use streaming mode for real-time rendering
@@ -383,7 +382,7 @@ export function initChatUI(vscode) {
             if (bubble) {
                 // Replace the streaming bubble content with the final rendered message
                 bubble.classList.add('markdown');
-                
+
                 // Prefer client-side markdown rendering (use complete mode for final messages)
                 if (markdown && typeof window.markdownRenderer !== 'undefined') {
                     const renderFn = window.markdownRenderer.renderMarkdownComplete || window.markdownRenderer.renderMarkdown;
@@ -395,9 +394,9 @@ export function initChatUI(vscode) {
                 } else {
                     bubble.textContent = text;
                 }
-                
+
                 enhanceMarkdownContent(bubble);
-                
+
                 // Reset streaming state
                 streamingMessageBubble = null;
                 streamingTextBuffer = '';
@@ -464,22 +463,7 @@ export function initChatUI(vscode) {
             streamingRenderTimeout = null;
         }
 
-
-
-        // Handle optimistic user message
-        if (optimisticUserMessage) {
-            // Check if the new messages list already contains our message
-            const hasIt = messages && messages.some(m => m.role === 'user' && m.content === optimisticUserMessage);
-            if (hasIt) {
-                // Backend has synced it, we can stop tracking
-                optimisticUserMessage = null;
-            } else {
-                // Backend hasn't synced it yet (or sent empty list), so we must inject it
-                if (!messages) messages = [];
-                // We assume the optimistic message is the first one in this new session
-                messages.unshift({ role: 'user', content: optimisticUserMessage });
-            }
-        }
+        // optimisticUserMessage logic REMOVED
 
         if (Array.isArray(messages)) {
             messages.forEach((message) => {
@@ -512,12 +496,6 @@ export function initChatUI(vscode) {
         }
 
         if (!messages || !messages.length) {
-            // If we have a pending user message, we are in the middle of initialization
-            // Do not show welcome screen/splash, as we will transition to chat shortly
-            if (pendingUserMessage) {
-                return;
-            }
-
             if (welcomeEl) {
                 // Trigger splash animation every time welcome screen is shown
                 if (typeof window.showSplashAnimation === 'function') {
@@ -553,9 +531,6 @@ export function initChatUI(vscode) {
     }
 
     function clearMessages() {
-        // If we have an optimistic message pending, don't clear!
-        if (optimisticUserMessage) return;
-
         if (messagesEl) {
             messagesEl.innerHTML = "";
         }
@@ -564,7 +539,7 @@ export function initChatUI(vscode) {
         streamingTextBuffer = '';
         streamingRow = null;
         if (streamingRenderTimeout) {
-            cancelAnimationFrame(streamingRenderTimeout);
+            clearTimeout(streamingRenderTimeout);
             streamingRenderTimeout = null;
         }
     }
@@ -596,30 +571,7 @@ export function initChatUI(vscode) {
         clearInput();
         toggleBusy(true);
 
-        const isNewSession = inputEl.dataset.isNewSession === 'true';
-        if (isNewSession) {
-            delete inputEl.dataset.isNewSession;
-            // We are starting a fresh session.
-            // Queue the message to be sent after the session is initialized
-            pendingUserMessage = { text, mode: selectedMode, model: selectedModel };
-            // Tell backend to reset session.
-            vscode.postMessage({ command: 'newChat' });
-            return;
-        }
-
         vscode.postMessage({ command: "userMessage", text, mode: selectedMode, model: selectedModel });
-    }
-
-    function handleNewSessionInitialized() {
-        if (pendingUserMessage) {
-            const { text, mode, model } = pendingUserMessage;
-            optimisticUserMessage = text;
-            vscode.postMessage({ command: "userMessage", text, mode, model });
-            pendingUserMessage = null;
-
-            // Force re-render to show the optimistic message and switch to chat view
-            renderSession(activeSessionId, []);
-        }
     }
 
     // --- New UI: toolbar behaviors ---
@@ -724,7 +676,7 @@ export function initChatUI(vscode) {
 
     // Plus, Mic, Settings placeholders (Mention handled by mentions.js)
     addBtn?.addEventListener('click', () => {
-        try { vscode.postMessage({ command: 'newChat' }); } catch (_) { }
+        try { vscode.postMessage({ command: 'quickActions' }); } catch (_) { }
     });
     // Mention UI fully handled by mentions.js
 
@@ -955,8 +907,6 @@ export function initChatUI(vscode) {
         getSelectedModelLabel: () => modelLabel ? modelLabel.textContent : 'GPT-5 (low reasoning)',
         // Allow other modules (e.g., welcome.js) to set the selected model
         setSelectedModel: (id, label) => applyModel(id, label),
-        setSelectedMode: (mode) => applyMode(mode),
-        handleNewSessionInitialized,
-        hasPendingMessage: () => !!pendingUserMessage,
+        setSelectedMode: (mode) => applyMode(mode)
     };
 };
