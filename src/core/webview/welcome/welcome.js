@@ -116,8 +116,6 @@ export function initWelcomeUI(vscode, opts = {}) {
         // Chat input is a contenteditable div, so we must set innerText/textContent, not value
         chatInput.innerText = text;
         chatInput.textContent = text;
-        // Signal that this is a new session start
-        chatInput.dataset.isNewSession = 'true';
         try { chatInput.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) { }
         chatSend.click();
       } else {
