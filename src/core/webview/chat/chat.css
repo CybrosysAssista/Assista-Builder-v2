@@ -303,6 +303,67 @@
     border: none;
 }
 
+/* Tool Execution UI Styles */
+.tool-execution-wrapper {
+    margin: 0.85em 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+    background: var(--vscode-textCodeBlock-background, rgba(255, 255, 255, 0.05));
+}
+
+.tool-execution-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.tool-execution-filename {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground, #9ca3af);
+    font-family: var(--vscode-font-family, Sans-Serif);
+}
+
+.tool-execution-status {
+    background: transparent;
+    border: none;
+    color: var(--vscode-descriptionForeground, #9ca3af);
+    cursor: default;
+    padding: 4px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.tool-execution-status.completed {
+    color: #4ade80;
+}
+
+.tool-execution-status.error {
+    color: var(--vscode-errorForeground, #f87171);
+}
+
+.tool-execution-status.loading {
+    color: var(--vscode-descriptionForeground, #9ca3af);
+}
+
+.tool-loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .message.markdown ul,
 .message.markdown ol {
     padding-left: 1.4em;
@@ -685,16 +746,6 @@
 
 .question-suggestion-btn:active {
     transform: translateY(0);
-}
-
-.question-mode-badge {
-    background: var(--vscode-badge-background, rgba(128, 128, 128, 0.3));
-    color: var(--vscode-badge-foreground, #CCCCCC);
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 12px;
-    margin-left: 8px;
-    font-weight: 500;
 }
 
 .question-cancel-btn {

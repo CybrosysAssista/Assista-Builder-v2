@@ -2,7 +2,8 @@
   "name": "assista-x",
   "displayName": "assista-x",
   "description": "VS Code extension for Assista X (Odoo AI Assistant)",
-  "version": "0.0.1",
+  "publisher": "cybrosys-assista-ltd",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.102.0"
   },
@@ -232,7 +233,7 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./ && npm run copy-webview-assets",
-    "copy-webview-assets": "mkdir -p out/core/webview/utils && cp src/core/webview/utils/markdownRenderer.js out/core/webview/utils/markdownRenderer.js 2>/dev/null || true",
+    "copy-webview-assets": "mkdir -p out/core/webview/utils out/core/webview/ui out/core/webview/chat out/core/webview/welcome out/core/webview/mentions out/core/webview/settings out/core/webview/history && cp src/core/webview/utils/markdownRenderer.js out/core/webview/utils/markdownRenderer.js 2>/dev/null || true && cp src/core/webview/ui/main.js out/core/webview/ui/main.js 2>/dev/null || true && cp src/core/webview/ui/base.css out/core/webview/ui/base.css 2>/dev/null || true && cp src/core/webview/chat/chat.js out/core/webview/chat/chat.js 2>/dev/null || true && cp src/core/webview/chat/chat.css out/core/webview/chat/chat.css 2>/dev/null || true && cp src/core/webview/welcome/welcome.js out/core/webview/welcome/welcome.js 2>/dev/null || true && cp src/core/webview/welcome/welcome.css out/core/webview/welcome/welcome.css 2>/dev/null || true && cp src/core/webview/mentions/mentions.js out/core/webview/mentions/mentions.js 2>/dev/null || true && cp src/core/webview/mentions/mentions.css out/core/webview/mentions/mentions.css 2>/dev/null || true && cp src/core/webview/settings/settings.js out/core/webview/settings/settings.js 2>/dev/null || true && cp src/core/webview/settings/settings.css out/core/webview/settings/settings.css 2>/dev/null || true && cp src/core/webview/history/history.js out/core/webview/history/history.js 2>/dev/null || true",
     "watch": "tsc -watch -p ./",
     "lint": "eslint . --ext .ts,.js",
     "pretest": "npm run compile && npm run lint",
@@ -256,6 +257,7 @@
   "dependencies": {
     "@google/genai": "^1.0.0",
     "@xmldom/xmldom": "^0.8.11",
+    "ajv": "^8.12.0",
     "diff": "^7.0.0",
     "dompurify": "^3.3.0",
     "highlight.js": "^11.11.1",

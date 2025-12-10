@@ -38,13 +38,14 @@ function ensureState(context: vscode.ExtensionContext): SessionState {
 
 function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
     return messages
-        .filter((message) => typeof message.content === 'string' && message.content.trim().length > 0)
+        .filter((message) => (typeof message.content === 'string' && message.content.trim().length > 0) || (message.toolExecutions && message.toolExecutions.length > 0))
         .map((message) => ({
             role: message.role,
             content: message.content,
             timestamp: typeof message.timestamp === 'number' ? message.timestamp : Date.now(),
             suggestions: message.suggestions,
-            selection: message.selection
+            selection: message.selection,
+            toolExecutions: message.toolExecutions
         }));
 }
 
