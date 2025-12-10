@@ -245,6 +245,8 @@ export function initChatUI(vscode) {
     let streamingTextBuffer = '';
     let streamingRenderTimeout = null;
     let streamingRow = null;
+    // Track tool execution UI elements by toolId
+    const toolExecutionElements = new Map();
 
     function appendMessage(text, sender, html, markdown) {
         if (!messagesEl || (!text && !html && !markdown)) {
@@ -480,7 +482,7 @@ export function initChatUI(vscode) {
                     return;
                 } else {
                     const role =
-                        message.role === "assistant"
+                        (message.role === "assistant" || message.role === "tool")
                             ? "ai"
                             : message.role === "system"
                                 ? "system"
@@ -491,6 +493,18 @@ export function initChatUI(vscode) {
                         typeof message.html === "string" ? message.html : undefined,
                         typeof message.markdown === "string" ? message.markdown : undefined
                     );
+
+                    // Show tool executions if present
+                    if (message.toolExecutions && Array.isArray(message.toolExecutions)) {
+                        message.toolExecutions.forEach(exec => {
+                            showToolExecution({
+                                toolId: exec.toolId,
+                                toolName: exec.toolName,
+                                filename: exec.filename,
+                                status: exec.status
+                            });
+                        });
+                    }
                 }
             });
         }
@@ -799,12 +813,6 @@ export function initChatUI(vscode) {
             const button = document.createElement("button");
             button.className = "question-suggestion-btn";
             button.textContent = suggestion.text;
-            if (suggestion.mode) {
-                const modeBadge = document.createElement("span");
-                modeBadge.className = "question-mode-badge";
-                modeBadge.textContent = suggestion.mode;
-                button.appendChild(modeBadge);
-            }
 
             if (selectedAnswer) {
                 button.disabled = true;
@@ -886,6 +894,78 @@ export function initChatUI(vscode) {
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    function showToolExecution({ toolId, toolName, filename, status }) {
+        if (!messagesEl) return;
+        showChatArea();
+
+        // Create message row
+        const row = document.createElement("div");
+        row.className = "message-row";
+        row.setAttribute('data-tool-id', toolId);
+
+        // Create tool execution wrapper (similar to code-block-wrapper)
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tool-execution-wrapper';
+
+        // Create header (similar to code-block-header)
+        const header = document.createElement('div');
+        header.className = 'tool-execution-header';
+
+        const filenameSpan = document.createElement('span');
+        filenameSpan.className = 'tool-execution-filename';
+        filenameSpan.textContent = filename || toolName;
+
+        const statusBtn = document.createElement('button');
+        statusBtn.className = 'tool-execution-status';
+        statusBtn.title = status === 'loading' ? 'Writing file...' : 'Completed';
+
+        if (status === 'loading') {
+            // Show loading spinner
+            statusBtn.innerHTML = `<svg class="tool-loading-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"/></svg>`;
+            statusBtn.classList.add('loading');
+        } else {
+            // Show completed checkmark
+            statusBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+            statusBtn.classList.add('completed');
+        }
+
+        header.appendChild(filenameSpan);
+        header.appendChild(statusBtn);
+
+        wrapper.appendChild(header);
+        row.appendChild(wrapper);
+        messagesEl.appendChild(row);
+        messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+
+        // Store reference for updates
+        toolExecutionElements.set(toolId, { row, wrapper, header, statusBtn });
+    }
+
+    function updateToolExecution({ toolId, status, result }) {
+        const toolExec = toolExecutionElements.get(toolId);
+        if (!toolExec) return;
+
+        const { statusBtn } = toolExec;
+
+        // Update status button
+        if (status === 'completed') {
+            statusBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+            statusBtn.classList.remove('loading');
+            statusBtn.classList.add('completed');
+            statusBtn.title = 'Completed';
+        } else if (status === 'error') {
+            statusBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+            statusBtn.classList.remove('loading');
+            statusBtn.classList.add('error');
+            statusBtn.title = 'Error';
+        }
+
+        // Scroll to show updated element
+        if (messagesEl) {
+            messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+        }
+    }
+
     return {
         appendMessage,
         appendStreamingChunk,
@@ -902,6 +982,8 @@ export function initChatUI(vscode) {
         setPickerItems,
         showQuestion,
         sendMessage,
+        showToolExecution,
+        updateToolExecution,
         getSelectedMode: () => selectedMode,
         getSelectedModel: () => selectedModel,
         getSelectedModelLabel: () => modelLabel ? modelLabel.textContent : 'GPT-5 (low reasoning)',

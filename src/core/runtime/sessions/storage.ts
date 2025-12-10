@@ -33,6 +33,9 @@ function reviveSession(raw: any): ChatSession | undefined {
         if (typeof message.selection === 'string') {
             result.selection = message.selection;
         }
+        if (message.toolExecutions && Array.isArray(message.toolExecutions)) {
+            result.toolExecutions = message.toolExecutions;
+        }
         return result;
     }).filter(Boolean) : [];
 
@@ -79,6 +82,9 @@ export async function writePersistedSessions(
             }
             if (typeof message.selection === 'string') {
                 result.selection = message.selection;
+            }
+            if (message.toolExecutions && Array.isArray(message.toolExecutions)) {
+                result.toolExecutions = message.toolExecutions;
             }
             return result;
         })

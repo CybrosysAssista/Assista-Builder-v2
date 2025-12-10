@@ -14,7 +14,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   writeFileTool,
   applyDiffTool,
   // createFolderTool,
-  askFollowupQuestionTool,
+  // askFollowupQuestionTool,
 ];
 
 /**

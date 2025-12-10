@@ -69,6 +69,30 @@ window.addEventListener('message', (event) => {
             }
             break;
         }
+        case 'toolExecution': {
+            const payload = message.payload || {};
+            if (payload.type === 'tool_execution_start') {
+                // Show tool execution UI with loading state
+                if (typeof chat.showToolExecution === 'function') {
+                    chat.showToolExecution({
+                        toolId: payload.toolId,
+                        toolName: payload.toolName,
+                        filename: payload.filename,
+                        status: 'loading'
+                    });
+                }
+            } else if (payload.type === 'tool_execution_complete') {
+                // Update tool execution UI to completed state
+                if (typeof chat.updateToolExecution === 'function') {
+                    chat.updateToolExecution({
+                        toolId: payload.toolId,
+                        status: payload.status,
+                        result: payload.result
+                    });
+                }
+            }
+            break;
+        }
         case 'systemMessage':
             chat.appendMessage(String(message.text || ''), 'system');
             chat.toggleBusy(false);

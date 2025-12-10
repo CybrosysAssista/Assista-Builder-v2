@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession, readSessionMessages, writeSessionMessages } from '../runtime/sessionManager.js';
+import { ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession, readSessionMessages, writeSessionMessages } from '../runtime/sessionManager.js';
+import { ChatMessage } from '../runtime/sessions/types.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
 import { HistoryController } from './history/HistoryController.js';
@@ -150,6 +151,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 const id = typeof message.id === 'string' ? message.id : '';
                 if (id) {
                     const switched = await switchActiveSession(this._context, id);
+                    console.log('[AssistaX] Session opened from history:', switched);
                     this._view?.show?.(true);
                     await this.queueHydration(switched.id, switched.messages);
                     this.postMessage('historyOpened', { sessionId: switched.id });
@@ -360,6 +362,15 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 });
                 return;
             }
+
+            // Handle tool execution messages
+            if (parsed.type === 'tool_execution_start' || parsed.type === 'tool_execution_complete') {
+                this._view.webview.postMessage({
+                    type: 'toolExecution',
+                    payload: parsed
+                });
+                return;
+            }
         } catch {
             // Not JSON - treat as plain text message
         }
@@ -418,15 +429,16 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
 
     private async mapMessageForWebview(
         message: ChatMessage
-    ): Promise<{ role: string; content: string; markdown?: string; timestamp?: number; suggestions?: any; selection?: string }> {
+    ): Promise<{ role: string; content: string; markdown?: string; timestamp?: number; suggestions?: any; selection?: string; toolExecutions?: any[] }> {
         const base = {
             role: message.role,
             content: message.content,
             timestamp: message.timestamp,
             suggestions: message.suggestions,
-            selection: message.selection
+            selection: message.selection,
+            toolExecutions: message.toolExecutions
         };
-        if (message.role === 'assistant') {
+        if ((message.role as any) === 'assistant' || (message.role as any) === 'tool') {
             // Send markdown for client-side rendering
             return { ...base, markdown: message.content };
         }

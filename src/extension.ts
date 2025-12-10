@@ -4,26 +4,26 @@ import { registerAllCommands } from './core/commands/index.js';
 import { OdooEnvironmentService } from './core/utils/odooDetection.js';
 
 export function activate(context: vscode.ExtensionContext) {
-    const odooEnvService = new OdooEnvironmentService(context);
-    
-    const provider = new AssistaXProvider(
-        context.extensionUri,
-        context,
-        odooEnvService
-    );
+	const odooEnvService = new OdooEnvironmentService(context);
 
-    const registration = vscode.window.registerWebviewViewProvider(
-        AssistaXProvider.viewType,
-        provider,
-        { webviewOptions: { retainContextWhenHidden: true } }
-    );
+	const provider = new AssistaXProvider(
+		context.extensionUri,
+		context,
+		odooEnvService
+	);
 
-    context.subscriptions.push(registration);
+	const registration = vscode.window.registerWebviewViewProvider(
+		AssistaXProvider.viewType,
+		provider,
+		{ webviewOptions: { retainContextWhenHidden: true } }
+	);
 
-    const commandDisposables = registerAllCommands(context, provider);
-    context.subscriptions.push(...commandDisposables);
+	context.subscriptions.push(registration);
 
-    context.subscriptions.push(odooEnvService);
+	const commandDisposables = registerAllCommands(context, provider);
+	context.subscriptions.push(...commandDisposables);
+
+	context.subscriptions.push(odooEnvService);
 }
 
 export function deactivate() { }
