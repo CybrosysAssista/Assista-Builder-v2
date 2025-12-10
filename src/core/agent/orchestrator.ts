@@ -63,14 +63,14 @@ export async function runAgentOrchestrator(
     const toolCalls: Array<{ id: string; name: string; args: string }> = [];
     let streamedText = "";
     let isStreaming = false;
-    
+
     // Process stream
     for await (const event of stream) {
       // Check if cancelled
       if (abortSignal?.aborted) {
         throw new Error('Request cancelled');
       }
-      
+
       switch (event.type) {
         case 'text':
         case 'reasoning':
@@ -112,18 +112,18 @@ export async function runAgentOrchestrator(
           break;
       }
     }
-    
+
     console.log('[Assista X] Final Streamed Text:', streamedText);
     console.log('[Assista X] Tool Calls:', toolCalls);
 
     // Build assistant message with both text and tool calls
     const assistantContent: any[] = [];
-    
+
     // Add text content if present
     if (streamedText.trim()) {
       assistantContent.push({ type: 'text', text: streamedText });
     }
-    
+
     // Add tool use blocks
     for (const toolCall of toolCalls) {
       assistantContent.push({
@@ -133,7 +133,7 @@ export async function runAgentOrchestrator(
         input: safeParseJson(toolCall.args),
       });
     }
-    
+
     // Push single assistant message with all content
     if (assistantContent.length > 0) {
       internalMessages.push({
@@ -186,11 +186,17 @@ export async function runAgentOrchestrator(
             content: resultContent,
           }],
         });
+
+        // Check if tool requested to stop execution (e.g. user rejected changes)
+        if (toolResult.stop) {
+          await writeSessionMessages(context, convertInternalToSession(internalMessages));
+          return finalResponse.trim() || "Operation cancelled by tool.";
+        }
       }
-      
+
       // Reset for next iteration
       finalResponse = '';
-      
+
       // Continue loop to send tool results back to model
       continue;
     }

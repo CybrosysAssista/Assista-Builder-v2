@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { getSettingsModalHtml } from '../settings/settingsHtml.js';
 import { getHistoryHtml } from '../history/historyHtml.js';
 import { getWelcomeHtml } from '../welcome/welcomeHtml.js';
+import { getReviewBannerHtml } from '../review/reviewHtml.js';
 
 function getNonce(): string {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -81,7 +82,9 @@ export function getHtmlForWebview(
   const baseCssUri = getCssUri(['core', 'webview', 'ui', 'base.css']);
   const chatCssUri = getCssUri(['core', 'webview', 'chat', 'chat.css']);
   const mentionsCssUri = getCssUri(['core', 'webview', 'mentions', 'mentions.css']);
+
   const settingsCssUri = getCssUri(['core', 'webview', 'settings', 'settings.css']);
+  const reviewCssUri = getCssUri(['core', 'webview', 'review', 'review.css']);
 
   // Markdown rendering libraries
   const markedScript = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'libs', 'marked.js'));
@@ -109,7 +112,9 @@ export function getHtmlForWebview(
     <link rel="stylesheet" href="${baseCssUri}">
     <link rel="stylesheet" href="${chatCssUri}">
     <link rel="stylesheet" href="${mentionsCssUri}">
+
     <link rel="stylesheet" href="${settingsCssUri}">
+    <link rel="stylesheet" href="${reviewCssUri}">
     <link rel="stylesheet" href="${hljsCss}">
   </head>
   <body>
@@ -127,6 +132,7 @@ export function getHtmlForWebview(
     ${getSettingsModalHtml()}
     ${getHistoryHtml()}
     <div class="input-bar">
+      ${getReviewBannerHtml()}
       <div class="chatbox">
         <div id="chatInput" contenteditable="true" role="textbox" aria-multiline="true" placeholder="Ask anything (Ctrl+L)"></div>
         <div class="chatbox-toolbar">

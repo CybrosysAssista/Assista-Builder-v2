@@ -13,7 +13,7 @@ function configureMarked() {
     if (markedConfigured) {
         return true; // Already configured
     }
-    
+
     if (typeof marked === 'undefined') {
         console.warn('[AssistaX] marked library not available');
         return false;
@@ -23,11 +23,11 @@ function configureMarked() {
         marked.setOptions({
             breaks: true, // Convert line breaks to <br>
             gfm: true,   // GitHub Flavored Markdown
-            highlight: function(code, lang) {
+            highlight: function (code, lang) {
                 if (typeof hljs === 'undefined') {
                     return code;
                 }
-                    return hljs.highlightAuto(code).value;
+                return hljs.highlightAuto(code).value;
 
                 if (lang && hljs.getLanguage(lang)) {
                     try {
@@ -36,7 +36,7 @@ function configureMarked() {
                         console.warn('[AssistaX] Highlight.js error:', err);
                     }
                 }
-                
+
                 // Auto-detect language if not specified
                 try {
                     return hljs.highlightAuto(code).value;
@@ -45,7 +45,7 @@ function configureMarked() {
                 }
             }
         });
-        
+
         markedConfigured = true;
         return true;
     } catch (error) {
@@ -98,7 +98,7 @@ function renderMarkdown(markdown, isStreaming) {
         // For streaming, we want to handle incomplete markdown gracefully
         // Marked can handle partial markdown, but we'll add some safety
         let markdownToRender = markdown;
-        
+
         // If streaming and markdown ends with incomplete code block, close it temporarily
         if (isStreaming) {
             // Count backticks to see if we have an unclosed code block
@@ -109,13 +109,13 @@ function renderMarkdown(markdown, isStreaming) {
                 markdownToRender = markdown + '\n```';
             }
         }
-        
+
         // Parse markdown to HTML
         const html = marked.parse(markdownToRender);
-        
+
         // Sanitize to prevent XSS
         const cleanHtml = sanitizeHtml(html);
-        
+
         return cleanHtml;
     } catch (error) {
         console.error('[AssistaX] Markdown rendering error:', error);
@@ -138,15 +138,14 @@ function isMarkdownAvailable() {
 // Export for use in webview
 if (typeof window !== 'undefined') {
     window.markdownRenderer = {
-        renderMarkdown: function(markdown) {
+        renderMarkdown: function (markdown) {
             // Default to streaming mode for better real-time rendering
             return renderMarkdown(markdown, true);
         },
-        renderMarkdownComplete: function(markdown) {
+        renderMarkdownComplete: function (markdown) {
             // For final/complete markdown
             return renderMarkdown(markdown, false);
         },
         isMarkdownAvailable
     };
 }
-
