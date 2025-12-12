@@ -40,7 +40,9 @@ export function initChatUI(vscode) {
             }
 
             // Smoothly hide welcome screen
-            if (welcomeEl) {
+            if (typeof window.hideWelcome === 'function') {
+                window.hideWelcome();
+            } else if (welcomeEl) {
                 if (welcomeEl.classList.contains("active")) {
                     welcomeEl.classList.remove("active");
                     welcomeEl.setAttribute("aria-hidden", "true");
@@ -510,16 +512,14 @@ export function initChatUI(vscode) {
         }
 
         if (!messages || !messages.length) {
-            if (welcomeEl) {
-                // Trigger splash animation every time welcome screen is shown
-                if (typeof window.showSplashAnimation === 'function') {
-                    window.showSplashAnimation();
-                } else {
-                    // Fallback if animation not available
-                    welcomeEl.style.display = "";
-                    welcomeEl.classList.add("active");
-                    welcomeEl.setAttribute("aria-hidden", "false");
-                }
+            // Show welcome screen if no messages
+            if (typeof window.showWelcome === 'function') {
+                window.showWelcome();
+            } else if (welcomeEl) {
+                // Fallback if helper not available
+                welcomeEl.style.display = "";
+                welcomeEl.classList.add("active");
+                welcomeEl.setAttribute("aria-hidden", "false");
             }
         } else {
             showChatArea();

@@ -12,8 +12,11 @@ const welcome = initWelcomeUI(vscode, { insertAtCursor: chat.insertAtCursor, cha
 
 const bootState = typeof vscode.getState === 'function' ? vscode.getState() : undefined;
 if (bootState) {
-    if (Array.isArray(bootState.messages)) {
+    if (Array.isArray(bootState.messages) && bootState.messages.length > 0) {
         chat.renderSession(bootState.activeSessionId, bootState.messages);
+    } else {
+        chat.renderSession(bootState.activeSessionId || null, []);
+        if (welcome && typeof welcome.showWelcome === 'function') welcome.showWelcome();
     }
     if (bootState.selectedModel) {
         chat.setSelectedModel(bootState.selectedModel, bootState.selectedModelLabel);
@@ -21,6 +24,9 @@ if (bootState) {
     if (bootState.selectedMode) {
         chat.setSelectedMode(bootState.selectedMode);
     }
+} else {
+    chat.renderSession(null, []);
+    if (welcome && typeof welcome.showWelcome === 'function') welcome.showWelcome();
 }
 
 window.addEventListener('message', (event) => {
@@ -98,7 +104,8 @@ window.addEventListener('message', (event) => {
             chat.toggleBusy(false);
             break;
         case 'clear':
-            chat.clearMessages();
+            chat.renderSession(chat.getActiveSessionId(), []);
+            if (welcome && typeof welcome.showWelcome === 'function') welcome.showWelcome();
             chat.toggleBusy(false);
             break;
         case 'error':

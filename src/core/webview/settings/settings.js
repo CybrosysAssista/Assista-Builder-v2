@@ -321,8 +321,13 @@ export function initSettingsUI(vscode) {
         // Only restore chat UI if History is NOT currently visible
         const historyVisible = !!historyPage && historyPage.style.display !== 'none';
         if (!historyVisible) {
-            if (messagesEl) messagesEl.style.display = '';
-            if (inputBar) inputBar.style.display = '';
+            const hasMessages = messagesEl && messagesEl.querySelectorAll('.message-row').length > 0;
+            if (!hasMessages && typeof window.showWelcome === 'function') {
+                window.showWelcome();
+            } else {
+                if (messagesEl) messagesEl.style.display = '';
+                if (inputBar) inputBar.style.display = '';
+            }
         }
         // Unlock document scroll and ensure we are at top to remove any perceived gap
         try {
