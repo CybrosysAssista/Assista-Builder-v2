@@ -1,5 +1,8 @@
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import * as vscode from 'vscode';
+import { applyVisualDiff } from '../utils/decorationUtils.js';
+
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
 import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
 
@@ -93,8 +96,9 @@ export const writeFileTool: ToolDefinition = {
         };
       }
 
-      // Write file
-      await fs.writeFile(fullPath, args.content, 'utf-8');
+      // Apply visual diff and trigger review (Centralized)
+      // The utility will handle reading original content and setting up the review
+      await applyVisualDiff(fullPath, args.content, 'Agent wrote to');
 
       const actualLines = args.content.split(/\r?\n/).length;
       return {

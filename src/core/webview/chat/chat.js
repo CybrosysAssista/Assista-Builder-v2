@@ -1,4 +1,5 @@
 import { initMentionsUI } from '../mentions/mentions.js';
+import { initReviewUI } from '../review/review.js';
 
 export function initChatUI(vscode) {
     const messagesEl = document.getElementById('messages');
@@ -20,6 +21,9 @@ export function initChatUI(vscode) {
     const micBtn = document.getElementById('micBtn');
     const settingsBtn = document.getElementById('settingsBtn');
 
+    // Initialize Review UI
+    const { showReviewBanner, hideReviewBanner } = initReviewUI(vscode);
+
     let isBusy = false;
     let activeSessionId;
     // Local UI state (vanilla JS equivalent of React state)
@@ -27,7 +31,6 @@ export function initChatUI(vscode) {
     let selectedModel = 'gpt5-low';
     let showModeMenu = false;
     let showModelMenu = false;
-    // optimisticUserMessage removed - we don't need it!
 
     function showChatArea() {
         try {
@@ -467,10 +470,18 @@ export function initChatUI(vscode) {
             streamingRenderTimeout = null;
         }
 
-        // optimisticUserMessage logic REMOVED
 
         if (Array.isArray(messages)) {
             messages.forEach((message) => {
+                if (message.command === 'requestReview') {
+                    showReviewBanner(message.text || 'Changes pending review');
+                    return;
+                }
+
+                if (message.command === 'showQuestion') {
+                    showQuestion(message.id, message.question, message.suggestions);
+                    return;
+                }
                 if (message.suggestions && message.suggestions.length > 0) {
                     showQuestion(
                         null, // No active questionId for history
@@ -723,6 +734,8 @@ export function initChatUI(vscode) {
                 sendMessage();
             }
         });
+
+
 
         // Handle paste event to strip HTML formatting and paste only plain text
         inputEl.addEventListener('paste', (event) => {

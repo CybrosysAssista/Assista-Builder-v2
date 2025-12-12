@@ -409,6 +409,15 @@
     padding: 0px 8px 8px 8px;
     border-top: none;
     background: transparent;
+    display: flex;
+    flex-direction: column;
+}
+
+/* When banner is visible, remove top radius of chatbox to make them look connected */
+.input-bar.has-review .chatbox {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: none;
 }
 
 /* Chatbox styled like the reference */

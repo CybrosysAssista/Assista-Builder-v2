@@ -43,6 +43,7 @@ export interface ToolResult {
     message: string;
     code?: string;
   };
+  stop?: boolean;
 }
 
 /**

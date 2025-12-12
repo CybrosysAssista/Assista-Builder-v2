@@ -1,0 +1,67 @@
+/* Review Changes Banner */
+.review-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    padding: 8px 12px;
+    margin-bottom: 0;
+    z-index: 10;
+    position: relative;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.review-info {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--vscode-descriptionForeground);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.review-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.review-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-family: inherit;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.review-btn.accept {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}
+
+.review-btn.accept:hover {
+    background: var(--vscode-button-hoverBackground);
+}
+
+.review-btn.reject {
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    border: 1px solid var(--vscode-widget-border);
+}
+
+.review-btn.reject:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-foreground);
+}
+
+/* When banner is visible, remove top radius of chatbox to make them look connected */
+.input-bar.has-review .chatbox {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: none;
+}

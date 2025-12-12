@@ -9,6 +9,7 @@ import { runAgent } from "../runtime/agent.js";
 import { MentionController } from './mentions/MentionController.js';
 import { OdooEnvironmentService } from '../utils/odooDetection.js';
 import { questionManager } from '../utils/questionManager.js';
+import { reviewManager } from '../utils/reviewManager.js';
 
 export class AssistaXProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaXView';
@@ -28,6 +29,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         private readonly _odooEnvService: OdooEnvironmentService
     ) { }
 
+
     resolveWebviewView(
         webviewView: vscode.WebviewView,
         _context: vscode.WebviewViewResolveContext,
@@ -36,14 +38,24 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
         this._view = webviewView;
 
         webviewView.webview.options = {
+            // Allow scripts in the webview
             enableScripts: true,
-            localResourceRoots: [this._extensionUri]
+            localResourceRoots: [
+                this._extensionUri
+            ]
         };
 
         webviewView.webview.html = getHtmlForWebview(webviewView.webview, this._extensionUri);
 
         // Register webview provider with question manager
         questionManager.registerWebviewProvider({
+            postMessage: (type: string, payload?: any) => {
+                this.postMessage(type, payload);
+            }
+        });
+
+        // Register webview provider with review manager
+        reviewManager.registerWebviewProvider({
             postMessage: (type: string, payload?: any) => {
                 this.postMessage(type, payload);
             }
@@ -222,6 +234,13 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 if (questionId) {
                     questionManager.handleCancel(questionId);
                 }
+                return;
+            }
+
+            // Handle review response
+            if (message.command === 'reviewResponse') {
+                const answer = message.answer === 'accept' ? 'accept' : 'reject';
+                reviewManager.handleReviewResponse(answer);
                 return;
             }
         });
