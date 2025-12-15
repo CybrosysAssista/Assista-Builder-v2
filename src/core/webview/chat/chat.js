@@ -501,7 +501,8 @@ export function initChatUI(vscode) {
                                 toolId: exec.toolId,
                                 toolName: exec.toolName,
                                 filename: exec.filename,
-                                status: exec.status
+                                status: exec.status,
+                                args: exec.args
                             });
                         });
                     }
@@ -894,7 +895,7 @@ export function initChatUI(vscode) {
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    function showToolExecution({ toolId, toolName, filename, status }) {
+    function showToolExecution({ toolId, toolName, filename, status, args }) {
         if (!messagesEl) return;
         showChatArea();
 
@@ -903,64 +904,175 @@ export function initChatUI(vscode) {
         row.className = "message-row";
         row.setAttribute('data-tool-id', toolId);
 
-        // Create tool execution wrapper (similar to code-block-wrapper)
-        const wrapper = document.createElement('div');
-        wrapper.className = 'tool-execution-wrapper';
+        // Main Container
+        const container = document.createElement('div');
+        container.className = 'composer-code-block-container composer-message-codeblock';
 
-        // Create header (similar to code-block-header)
+        // Header
         const header = document.createElement('div');
-        header.className = 'tool-execution-header';
+        header.className = 'composer-code-block-header';
 
-        const filenameSpan = document.createElement('span');
-        filenameSpan.className = 'tool-execution-filename';
-        filenameSpan.textContent = filename || toolName;
+        // File Info
+        const fileInfo = document.createElement('div');
+        fileInfo.className = 'composer-code-block-file-info';
 
-        const statusBtn = document.createElement('button');
-        statusBtn.className = 'tool-execution-status';
-        statusBtn.title = status === 'loading' ? 'Writing file...' : 'Completed';
+        // Icon
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'composer-primary-toolcall-icon';
+        // Simple file icon SVG
+        iconSpan.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
 
+        // Filename
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'composer-code-block-filename';
+        nameSpan.textContent = filename || toolName || 'Command';
+
+        // Status Text (Diff stats position)
+        const statusTextSpan = document.createElement('span');
+        statusTextSpan.className = 'composer-code-block-status';
+
+        fileInfo.appendChild(iconSpan);
+        fileInfo.appendChild(nameSpan);
+        fileInfo.appendChild(statusTextSpan);
+
+        // Right-side controls (spinner/checkmark)
+        const rightControls = document.createElement('div');
+        rightControls.style.display = 'flex';
+        rightControls.style.alignItems = 'center';
+
+        const statusIcon = document.createElement('div');
+        statusIcon.className = 'composer-status-icon';
         if (status === 'loading') {
-            // Show loading spinner
-            statusBtn.innerHTML = `<svg class="tool-loading-spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"/></svg>`;
-            statusBtn.classList.add('loading');
+            statusIcon.classList.add('loading');
+            statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"/></svg>`;
         } else {
-            // Show completed checkmark
-            statusBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
-            statusBtn.classList.add('completed');
+            statusIcon.classList.add('completed');
+            statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
         }
 
-        header.appendChild(filenameSpan);
-        header.appendChild(statusBtn);
+        rightControls.appendChild(statusIcon);
 
-        wrapper.appendChild(header);
-        row.appendChild(wrapper);
+        header.appendChild(fileInfo);
+        header.appendChild(rightControls);
+
+        // Content Area
+        const contentArea = document.createElement('div');
+        contentArea.className = 'composer-code-block-content';
+
+        // Populate content from args if available
+        if (args) {
+            let contentToShow = '';
+            // Check for various potential property names based on tool definitions
+            if (args.content) {
+                contentToShow = args.content; // write_to_file
+            } else if (args.diff) {
+                contentToShow = args.diff; // apply_diff
+            } else if (args.CodeContent) {
+                contentToShow = args.CodeContent;
+            } else if (args.ReplacementContent) {
+                contentToShow = args.ReplacementContent;
+            } else if (args.CommandLine) {
+                contentToShow = args.CommandLine;
+            } else if (args.Query) {
+                contentToShow = args.Query;
+            } else if (typeof args === 'object') {
+                // Format JSON nicely, excluding large fields handled above if mixed
+                const safeArgs = { ...args };
+                // Maybe show partial args? 
+                contentToShow = JSON.stringify(safeArgs, null, 2);
+            } else {
+                contentToShow = String(args);
+            }
+
+            if (contentToShow) {
+                const pre = document.createElement('pre');
+                pre.textContent = contentToShow;
+                contentArea.appendChild(pre);
+                contentArea.classList.add('visible');
+            }
+        }
+
+        container.appendChild(header);
+        container.appendChild(contentArea);
+
+        row.appendChild(container);
         messagesEl.appendChild(row);
         messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
 
-        // Store reference for updates
-        toolExecutionElements.set(toolId, { row, wrapper, header, statusBtn });
+        // Toggle content visibility on header click
+        header.addEventListener('click', () => {
+            if (contentArea.innerHTML.trim() !== "") {
+                if (contentArea.classList.contains('visible')) {
+                    contentArea.classList.remove('visible');
+                } else {
+                    contentArea.classList.add('visible');
+                }
+            }
+        });
+
+        // Store reference including contentArea and toolName
+        toolExecutionElements.set(toolId, { row, container, header, statusIcon, contentArea, toolName });
     }
 
     function updateToolExecution({ toolId, status, result }) {
         const toolExec = toolExecutionElements.get(toolId);
         if (!toolExec) return;
 
-        const { statusBtn } = toolExec;
+        const { statusIcon, contentArea, toolName } = toolExec;
 
-        // Update status button
+        // Update status
         if (status === 'completed') {
-            statusBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
-            statusBtn.classList.remove('loading');
-            statusBtn.classList.add('completed');
-            statusBtn.title = 'Completed';
+            statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+            statusIcon.classList.remove('loading');
+            statusIcon.classList.add('completed');
         } else if (status === 'error') {
-            statusBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
-            statusBtn.classList.remove('loading');
-            statusBtn.classList.add('error');
-            statusBtn.title = 'Error';
+            statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+            statusIcon.classList.remove('loading');
+            statusIcon.classList.add('error');
         }
 
-        // Scroll to show updated element
+        // Logic for content update:
+        // 1. If result is error, always append/show error.
+        // 2. If tool is a "write" type (write_to_file, replace, etc.), we usually prefer the Args content (Code).
+        //    Only show result if it's an error.
+        // 3. If tool is "read/search" type (view_file, search), the result IS the content. Show it.
+
+        const isWriteTool = ['write_to_file', 'replace_file_content', 'multi_replace_file_content', 'apply_diff'].includes(toolName);
+
+        if (result && status === 'error') {
+            const pre = document.createElement('pre');
+            pre.textContent = '\nError:\n' + JSON.stringify(result, null, 2);
+            // Append error to existing content (e.g. args)
+            contentArea.appendChild(pre);
+            contentArea.classList.add('visible');
+            // Auto open on error
+            if (!contentArea.classList.contains('visible')) contentArea.classList.add('visible');
+        } else if (result && !isWriteTool) {
+            // For non-write tools, show the result.
+            // If we already have args displayed, maybe append? OR replace?
+            // Usually result is more important for read tools.
+            const pre = document.createElement('pre');
+
+            // If result is object, format it. If string, just text.
+            let text = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+
+            // If we have preliminary content (args), render a divider or just replace.
+            // Replacing is cleaner for "view_file".
+            // Appending might be better for "find_by_name" (pattern -> result).
+
+            if (contentArea.innerHTML.trim() !== '') {
+                // Append with divider
+                const hr = document.createElement('hr');
+                hr.style.cssText = 'border: 0; border-top: 1px solid var(--vscode-widget-border); margin: 8px 0;';
+                contentArea.appendChild(hr);
+            }
+
+            pre.textContent = text;
+            contentArea.appendChild(pre);
+            contentArea.classList.add('visible');
+        }
+
+        // Scroll to updated element
         if (messagesEl) {
             messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
         }

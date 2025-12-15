@@ -179,7 +179,8 @@ export async function runAgentOrchestrator(
           toolName: toolCall.name,
           toolId: toolCall.id,
           filename: filename,
-          status: 'loading'
+          status: 'loading',
+          args: args
         }));
 
         // Execute tool

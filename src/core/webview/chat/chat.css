@@ -18,6 +18,7 @@
     flex-direction: column;
     gap: 12px;
     -webkit-mask-image: linear-gradient(to bottom, black 96%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 96%, transparent 100%);
     opacity: 0;
     transition: opacity 0.4s ease-in;
 }
@@ -303,62 +304,116 @@
     border: none;
 }
 
-/* Tool Execution UI Styles */
-.tool-execution-wrapper {
+/* Tool Execution UI Styles (Composer Style) */
+.composer-code-block-container {
     margin: 0.85em 0;
-    border-radius: 10px;
+    border-radius: 6px;
     overflow: hidden;
     border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
-    background: var(--vscode-textCodeBlock-background, rgba(255, 255, 255, 0.05));
+    background: var(--vscode-editor-background);
 }
 
-.tool-execution-header {
+.composer-code-block-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 6px 12px;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--vscode-editor-background);
+    border-bottom: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+    cursor: pointer;
 }
 
-.tool-execution-filename {
-    font-size: 12px;
-    color: var(--vscode-descriptionForeground, #9ca3af);
-    font-family: var(--vscode-font-family, Sans-Serif);
+.composer-code-block-file-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
 }
 
-.tool-execution-status {
-    background: transparent;
-    border: none;
-    color: var(--vscode-descriptionForeground, #9ca3af);
-    cursor: default;
-    padding: 4px;
-    border-radius: 4px;
-    display: inline-flex;
+.composer-primary-toolcall-icon {
+    display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.2s;
+    width: 16px;
+    height: 16px;
 }
 
-.tool-execution-status.completed {
-    color: #4ade80;
+.composer-code-block-filename {
+    font-family: var(--vscode-font-family, Sans-Serif);
+    font-size: 13px;
+    color: var(--vscode-editor-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.tool-execution-status.error {
+.composer-code-block-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.composer-code-block-status .diff-stat-added {
+    color: var(--vscode-gitDecoration-addedResourceForeground, #4ade80);
+}
+
+.composer-code-block-status .diff-stat-deleted {
+    color: var(--vscode-gitDecoration-deletedResourceForeground, #f87171);
+}
+
+.composer-status-icon {
+    display: flex;
+    align-items: center;
+}
+
+.composer-status-icon.completed {
+    color: var(--vscode-testing-iconPassed, #4ade80);
+}
+
+.composer-status-icon.error {
     color: var(--vscode-errorForeground, #f87171);
 }
 
-.tool-execution-status.loading {
+.composer-status-icon.loading {
     color: var(--vscode-descriptionForeground, #9ca3af);
+    animation: spin 1s linear infinite;
 }
 
-.tool-loading-spinner {
-    animation: spin 1s linear infinite;
+.composer-code-block-content {
+    background: var(--vscode-editor-background);
+    padding: 0;
+    display: none;
+    /* Hidden by default until content arrives */
+}
+
+.composer-code-block-content.visible {
+    display: block;
+}
+
+.composer-code-block-content pre {
+    margin: 0;
+    padding: 12px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: var(--vscode-editor-font-size, 13px);
+    overflow-x: auto;
+    color: var(--vscode-editor-foreground);
+    line-height: 1.5;
+}
+
+/* Diff Block mock-up */
+.composer-diff-block {
+    display: block;
+    height: auto;
+    max-height: 300px;
+    overflow: auto;
 }
 
 @keyframes spin {
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }

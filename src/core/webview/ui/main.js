@@ -78,7 +78,8 @@ window.addEventListener('message', (event) => {
                         toolId: payload.toolId,
                         toolName: payload.toolName,
                         filename: payload.filename,
-                        status: 'loading'
+                        status: 'loading',
+                        args: payload.args
                     });
                 }
             } else if (payload.type === 'tool_execution_complete') {
