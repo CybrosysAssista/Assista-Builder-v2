@@ -257,11 +257,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             this._history?.handleLoadHistory();
         }
 
-        // Don't auto-sync session on load - let welcome screen stay visible
-        // Sessions will be loaded only when user explicitly:
-        // 1. Opens a session from history
-        // 2. Sends a message (which triggers sync after message is sent)
-        // void this.syncActiveSession();
+        void this.syncActiveSession();
         void this.flushPendingHydration();
     }
 
