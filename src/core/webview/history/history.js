@@ -297,7 +297,7 @@ export function initHistoryUI(vscode) {
 
                 actions.appendChild(copyBtn);
                 actions.appendChild(delBtn);
-
+                          
                 row.appendChild(msg);
                 row.appendChild(actions);
                 main.appendChild(row);
