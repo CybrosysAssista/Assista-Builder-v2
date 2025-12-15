@@ -2,6 +2,7 @@ import { initChatUI } from '../chat/chat.js';
 import { initSettingsUI } from '../settings/settings.js';
 import { initHistoryUI } from '../history/history.js';
 import { initWelcomeUI } from '../welcome/welcome.js';
+import { initReviewUI } from '../review/review.js';
 
 const vscode = acquireVsCodeApi();
 
@@ -9,11 +10,15 @@ const chat = initChatUI(vscode);
 const settings = initSettingsUI(vscode);
 const history = initHistoryUI(vscode);
 const welcome = initWelcomeUI(vscode, { insertAtCursor: chat.insertAtCursor, chat });
+const review = initReviewUI(vscode);
 
 const bootState = typeof vscode.getState === 'function' ? vscode.getState() : undefined;
 if (bootState) {
-    if (Array.isArray(bootState.messages)) {
+    if (Array.isArray(bootState.messages) && bootState.messages.length > 0) {
         chat.renderSession(bootState.activeSessionId, bootState.messages);
+    } else {
+        chat.renderSession(bootState.activeSessionId || null, []);
+        if (welcome && typeof welcome.showWelcome === 'function') welcome.showWelcome();
     }
     if (bootState.selectedModel) {
         chat.setSelectedModel(bootState.selectedModel, bootState.selectedModelLabel);
@@ -21,6 +26,9 @@ if (bootState) {
     if (bootState.selectedMode) {
         chat.setSelectedMode(bootState.selectedMode);
     }
+} else {
+    chat.renderSession(null, []);
+    if (welcome && typeof welcome.showWelcome === 'function') welcome.showWelcome();
 }
 
 window.addEventListener('message', (event) => {
@@ -98,7 +106,8 @@ window.addEventListener('message', (event) => {
             chat.toggleBusy(false);
             break;
         case 'clear':
-            chat.clearMessages();
+            chat.renderSession(chat.getActiveSessionId(), []);
+            if (welcome && typeof welcome.showWelcome === 'function') welcome.showWelcome();
             chat.toggleBusy(false);
             break;
         case 'error':
@@ -205,6 +214,13 @@ window.addEventListener('message', (event) => {
             const payload = message.payload || {};
             if (payload.id && payload.question && Array.isArray(payload.suggestions)) {
                 chat.showQuestion?.(payload.id, payload.question, payload.suggestions);
+            }
+            break;
+        }
+        case 'requestReview': {
+            const payload = message.payload || {};
+            if (payload.text) {
+                review.showReviewBanner(payload.text);
             }
             break;
         }

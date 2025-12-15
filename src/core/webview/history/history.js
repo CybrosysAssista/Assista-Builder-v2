@@ -67,8 +67,14 @@ export function initHistoryUI(vscode) {
     function closeHistory() {
         if (!historyPage) return;
         historyPage.style.display = 'none';
-        messagesEl && (messagesEl.style.display = '');
-        inputBar && (inputBar.style.display = '');
+
+        const hasMessages = messagesEl && messagesEl.querySelectorAll('.message-row').length > 0;
+        if (!hasMessages && typeof window.showWelcome === 'function') {
+            window.showWelcome();
+        } else {
+            messagesEl && (messagesEl.style.display = '');
+            inputBar && (inputBar.style.display = '');
+        }
     }
 
     // Dropdown State
@@ -291,7 +297,7 @@ export function initHistoryUI(vscode) {
 
                 actions.appendChild(copyBtn);
                 actions.appendChild(delBtn);
-
+                          
                 row.appendChild(msg);
                 row.appendChild(actions);
                 main.appendChild(row);

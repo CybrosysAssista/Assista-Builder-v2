@@ -209,6 +209,12 @@ export async function runAgentOrchestrator(
             content: resultContent,
           }],
         });
+
+        // Check if tool requested to stop execution (e.g. user rejected changes)
+        if (toolResult.stop) {
+          await writeSessionMessages(context, convertInternalToSession(internalMessages));
+          return finalResponse.trim() || "Operation cancelled by tool.";
+        }
       }
 
       // Reset for next iteration

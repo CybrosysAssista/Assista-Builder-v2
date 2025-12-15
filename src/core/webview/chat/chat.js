@@ -1,4 +1,5 @@
 import { initMentionsUI } from '../mentions/mentions.js';
+import { initReviewUI } from '../review/review.js';
 
 export function initChatUI(vscode) {
     const messagesEl = document.getElementById('messages');
@@ -20,6 +21,9 @@ export function initChatUI(vscode) {
     const micBtn = document.getElementById('micBtn');
     const settingsBtn = document.getElementById('settingsBtn');
 
+    // Initialize Review UI
+    const { showReviewBanner, hideReviewBanner } = initReviewUI(vscode);
+
     let isBusy = false;
     let activeSessionId;
     // Local UI state (vanilla JS equivalent of React state)
@@ -27,7 +31,6 @@ export function initChatUI(vscode) {
     let selectedModel = 'gpt5-low';
     let showModeMenu = false;
     let showModelMenu = false;
-    // optimisticUserMessage removed - we don't need it!
 
     function showChatArea() {
         try {
@@ -40,7 +43,9 @@ export function initChatUI(vscode) {
             }
 
             // Smoothly hide welcome screen
-            if (welcomeEl) {
+            if (typeof window.hideWelcome === 'function') {
+                window.hideWelcome();
+            } else if (welcomeEl) {
                 if (welcomeEl.classList.contains("active")) {
                     welcomeEl.classList.remove("active");
                     welcomeEl.setAttribute("aria-hidden", "true");
@@ -465,10 +470,18 @@ export function initChatUI(vscode) {
             streamingRenderTimeout = null;
         }
 
-        // optimisticUserMessage logic REMOVED
 
         if (Array.isArray(messages)) {
             messages.forEach((message) => {
+                if (message.command === 'requestReview') {
+                    showReviewBanner(message.text || 'Changes pending review');
+                    return;
+                }
+
+                if (message.command === 'showQuestion') {
+                    showQuestion(message.id, message.question, message.suggestions);
+                    return;
+                }
                 if (message.suggestions && message.suggestions.length > 0) {
                     showQuestion(
                         null, // No active questionId for history
@@ -510,16 +523,14 @@ export function initChatUI(vscode) {
         }
 
         if (!messages || !messages.length) {
-            if (welcomeEl) {
-                // Trigger splash animation every time welcome screen is shown
-                if (typeof window.showSplashAnimation === 'function') {
-                    window.showSplashAnimation();
-                } else {
-                    // Fallback if animation not available
-                    welcomeEl.style.display = "";
-                    welcomeEl.classList.add("active");
-                    welcomeEl.setAttribute("aria-hidden", "false");
-                }
+            // Show welcome screen if no messages
+            if (typeof window.showWelcome === 'function') {
+                window.showWelcome();
+            } else if (welcomeEl) {
+                // Fallback if helper not available
+                welcomeEl.style.display = "";
+                welcomeEl.classList.add("active");
+                welcomeEl.setAttribute("aria-hidden", "false");
             }
         } else {
             showChatArea();
@@ -723,6 +734,8 @@ export function initChatUI(vscode) {
                 sendMessage();
             }
         });
+
+
 
         // Handle paste event to strip HTML formatting and paste only plain text
         inputEl.addEventListener('paste', (event) => {

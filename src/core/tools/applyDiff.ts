@@ -1,5 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as vscode from 'vscode';
+import { applyVisualDiff } from '../utils/decorationUtils.js';
+
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
 import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
 
@@ -38,16 +41,16 @@ function extractContext(original: string, matchLineIndex: number, radius: number
 
 function parseSearchReplaceBlocks(diff: string): SearchReplaceBlock[] {
   const blocks: SearchReplaceBlock[] = [];
-  
+
   // Match pattern: <<<<<<< SEARCH\n:start_line:N\n-------\n[content]\n=======\n[content]\n>>>>>>> REPLACE
   const blockRegex = /<<<<<<< SEARCH\s*\n:start_line:(\d+)\s*\n-------\s*\n([\s\S]*?)\n=======\s*\n([\s\S]*?)\n>>>>>>> REPLACE/g;
-  
+
   let match;
   while ((match = blockRegex.exec(diff)) !== null) {
     const startLine = parseInt(match[1], 10);
     const searchContent = match[2].trimEnd();
     const replaceContent = match[3].trimEnd();
-    
+
     if (!isNaN(startLine) && startLine > 0) {
       blocks.push({
         startLine,
@@ -56,7 +59,7 @@ function parseSearchReplaceBlocks(diff: string): SearchReplaceBlock[] {
       });
     }
   }
-  
+
   return blocks;
 }
 
@@ -155,7 +158,7 @@ export const applyDiffTool: ToolDefinition = {
 
       // Sort blocks by start line (apply from bottom to top to preserve line numbers)
       const sortedBlocks = [...blocks].sort((a, b) => b.startLine - a.startLine);
-      
+
       let modifiedContent = originalContent;
       const lines = originalContent.split(/\r?\n/);
       const errors: string[] = [];
@@ -163,7 +166,7 @@ export const applyDiffTool: ToolDefinition = {
       // Apply each block
       for (const block of sortedBlocks) {
         const startIdx = block.startLine - 1; // Convert to 0-based
-        
+
         if (startIdx < 0 || startIdx >= lines.length) {
           errors.push(`Block at line ${block.startLine}: Start line out of bounds`);
           continue;
@@ -172,7 +175,7 @@ export const applyDiffTool: ToolDefinition = {
         // Find the search content in the file
         const searchLines = block.searchContent.split(/\r?\n/);
         const searchLength = searchLines.length;
-        
+
         // Check if search content matches at startLine
         let found = true;
         for (let i = 0; i < searchLength; i++) {
@@ -188,7 +191,7 @@ export const applyDiffTool: ToolDefinition = {
           const contextStart = Math.max(0, startIdx - 5);
           const contextEnd = Math.min(lines.length, startIdx + searchLength + 5);
           const context = lines.slice(contextStart, contextEnd).join('\n');
-          
+
           errors.push(
             `Block at line ${block.startLine}: Search content does not match exactly. ` +
             `Expected to find at line ${block.startLine}:\n${block.searchContent}\n` +
@@ -212,9 +215,12 @@ export const applyDiffTool: ToolDefinition = {
         };
       }
 
-      // Write modified content
-      modifiedContent = lines.join('\n');
-      await fs.writeFile(fullPath, modifiedContent, 'utf-8');
+      // Calculate final new content (in memory)
+      const newText = lines.join('\n');
+
+      // Apply visual diff and trigger review (Centralized)
+      // We pass originalContent because we already have it from the diff calculation
+      await applyVisualDiff(fullPath, newText, 'Agent modified', originalContent);
 
       return {
         status: 'success',
@@ -234,4 +240,3 @@ export const applyDiffTool: ToolDefinition = {
     }
   },
 };
-

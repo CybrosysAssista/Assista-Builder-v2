@@ -145,6 +145,11 @@
     margin-bottom: 0;
 }
 
+/* Hide horizontal rules in markdown */
+.message.markdown hr {
+    display: none !important;
+}
+
 .message.markdown pre {
     background: var(--vscode-textCodeBlock-background, rgba(255, 255, 255, 0.05));
     color: var(--vscode-editor-foreground, #E1E4E8);
@@ -409,6 +414,15 @@
     padding: 0px 8px 8px 8px;
     border-top: none;
     background: transparent;
+    display: flex;
+    flex-direction: column;
+}
+
+/* When banner is visible, remove top radius of chatbox to make them look connected */
+.input-bar.has-review .chatbox {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: none;
 }
 
 /* Chatbox styled like the reference */
