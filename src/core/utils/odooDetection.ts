@@ -11,7 +11,7 @@ export class OdooEnvironmentService {
   private cache: OdooEnv | null = null;
   private disposables: vscode.Disposable[] = [];
 
-  constructor(private context: vscode.ExtensionContext) {
+  constructor() {
     this.disposables.push(
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.invalidate()),
       vscode.workspace.onDidSaveTextDocument(() => this.invalidate()),
@@ -53,7 +53,7 @@ export class OdooEnvironmentService {
       version = await this.findVersionFromReleasePy(root);
       if (version) break;
     }
-    if (!version) version = "not available";
+    version = version || "not available";
 
     const addons = await this.getAddonPaths(roots);
 
@@ -95,7 +95,7 @@ export class OdooEnvironmentService {
     const launchConf = await this.tryFindConfInLaunchJson(roots);
     if (launchConf) {
       const content = await fs.readFile(launchConf, "utf8");
-      return this.parseAddonsPath(content, path.dirname(launchConf));
+      return this.parseAddonsPath(content, path.dirname(launchConf), roots);
     }
 
     return await this.findAddonPathsFromRootConf(roots);
@@ -142,7 +142,7 @@ export class OdooEnvironmentService {
         for (const conf of confFiles) {
           try {
             const content = await fs.readFile(conf, "utf8");
-            const paths = this.parseAddonsPath(content, path.dirname(conf));
+            const paths = this.parseAddonsPath(content, path.dirname(conf), roots);
             for (const p of paths) {
               const normalized = path.normalize(p);
               if (!results.includes(normalized)) {
@@ -157,7 +157,7 @@ export class OdooEnvironmentService {
     return results;
   }
 
-  private parseAddonsPath(content: string, baseDir: string): string[] {
+  private parseAddonsPath(content: string, baseDir: string, workspaceRoots: string[]): string[] {
     const results: string[] = [];
 
     const line = content
@@ -180,13 +180,22 @@ export class OdooEnvironmentService {
       .map(p => p.trim())
       .filter(Boolean);
 
+    // Use the first workspace root as the reference for relative paths
+    const workspaceRoot = workspaceRoots.length > 0 ? workspaceRoots[0] : baseDir;
+
     for (const p of parts) {
       const cleaned = p.replace(/^['"]|['"]$/g, "");
-      const resolved = path.isAbsolute(cleaned)
-        ? cleaned
-        : path.resolve(baseDir, cleaned);
-
-      results.push(resolved);
+      
+      if (path.isAbsolute(cleaned)) {
+        // Convert absolute path to relative path from workspace root
+        const relative = path.relative(workspaceRoot, cleaned);
+        results.push(relative);
+      } else {
+        // Resolve relative path from baseDir, then make it relative to workspace root
+        const resolved = path.resolve(baseDir, cleaned);
+        const relative = path.relative(workspaceRoot, resolved);
+        results.push(relative);
+      }
     }
 
     return results;
