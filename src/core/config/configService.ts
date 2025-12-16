@@ -9,6 +9,12 @@ export interface AppSettings {
     providers: { [key: string]: ProviderConfig };
 }
 
+export interface RAGConfig {
+    enabled: boolean;
+    serverUrl: string;
+    topK: number;
+}
+
 /**
  * Get active provider configuration
  */
@@ -93,6 +99,20 @@ export async function getActiveProviderConfig(
     }
 
     return { provider: activeProvider, config: providerConfig };
+}
+
+/**
+ * Get RAG configuration
+ */
+export function getRAGConfig(): RAGConfig {
+    const configSection = vscode.workspace.getConfiguration('assistaX');
+    const ragConfig = configSection.get<any>('rag', {});
+    
+    return {
+        enabled: ragConfig.enabled !== undefined ? ragConfig.enabled : true,
+        serverUrl: ragConfig.serverUrl || 'https://odoo-rag.cyllo.cloud',
+        topK: ragConfig.topK || 5
+    };
 }
 
 

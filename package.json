@@ -226,6 +226,32 @@
           "type": "string",
           "default": "",
           "description": "Custom instructions appended to the system prompt for all modes."
+        },
+        "assistaX.rag": {
+          "type": "object",
+          "description": "RAG (Retrieval-Augmented Generation) configuration for Odoo documentation context.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable RAG to retrieve relevant Odoo documentation context before generating responses."
+            },
+            "serverUrl": {
+              "type": "string",
+              "default": "https://odoo-rag.cyllo.cloud",
+              "description": "RAG server URL for retrieving Odoo documentation context."
+            },
+            "topK": {
+              "type": "number",
+              "default": 5,
+              "description": "Number of top documents to retrieve from RAG server."
+            }
+          },
+          "default": {
+            "enabled": true,
+            "serverUrl": "https://odoo-rag.cyllo.cloud",
+            "topK": 5
+          }
         }
       }
     }
@@ -258,6 +284,7 @@
     "@google/genai": "^1.0.0",
     "@xmldom/xmldom": "^0.8.11",
     "ajv": "^8.12.0",
+    "axios": "^1.7.0",
     "diff": "^7.0.0",
     "dompurify": "^3.3.0",
     "highlight.js": "^11.11.1",
