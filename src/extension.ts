@@ -5,7 +5,7 @@ import { OdooEnvironmentService } from './core/utils/odooDetection.js';
 import { restoreDecorations } from './core/utils/decorationUtils.js';
 
 export function activate(context: vscode.ExtensionContext) {
-    const odooEnvService = new OdooEnvironmentService(context);
+    const odooEnvService = new OdooEnvironmentService();
 
     const provider = new AssistaXProvider(
         context.extensionUri,
