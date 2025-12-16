@@ -63,13 +63,15 @@ class ReviewManager {
      * Handle review response from webview
      */
     handleReviewResponse(answer: 'accept' | 'reject') {
-        // Find the pending review (there should only be one active review at a time usually)
+        // Resolve ALL pending reviews
         for (const [key, pending] of this.pendingReviews.entries()) {
             if (key.startsWith('review_')) {
                 pending.resolve(answer);
-                return;
             }
         }
+        // The map will be cleared by the individual resolve callbacks (which call delete),
+        // but to be safe and avoid concurrency weirdness if we change logic later:
+        // this.pendingReviews.clear(); // (Optional, but let's stick to the callback logic for now)
     }
 
     /**
@@ -80,7 +82,7 @@ class ReviewManager {
         message: string,
         fullPath: string,
         originalContent: string | null,
-        newContent: string,
+        newContent: string | null,
         uri: vscode.Uri
     ): void {
         this.requestReview(message).then(async (choice) => {
@@ -100,8 +102,18 @@ class ReviewManager {
                     }
                 }
             } else {
-                // User Accepted: Write the CLEAN new content
-                await fs.writeFile(fullPath, newContent, 'utf-8');
+                // User Accepted
+                if (newContent !== null) {
+                    // Write the CLEAN new content
+                    await fs.writeFile(fullPath, newContent, 'utf-8');
+                } else {
+                    // User accepted deletion
+                    try {
+                        await fs.unlink(fullPath);
+                    } catch (e) {
+                        // Ignore
+                    }
+                }
             }
         });
     }
