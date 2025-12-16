@@ -7,9 +7,7 @@ export function getHistoryHtml(): string {
         /* Pin History to the webview viewport to avoid any top gap from document scroll */
         #historyPage { position: fixed; inset: 0; height: 100vh; background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); overflow: hidden; }
         .hx-container { display: flex; flex-direction: column; height: 100%; }
-        /* Background dots */
-        .hx-bg { position: fixed; inset: 0; opacity: 0.04; pointer-events: none; }
-        .hx-bg .pattern { position: absolute; inset: 0; background-image: radial-gradient(circle at 2px 2px, #fff 1px, transparent 0); background-size: 46px 46px; }
+        /* Background dots - Removed */
         
         /* Header */
         .hx-header { 
@@ -233,7 +231,6 @@ export function getHistoryHtml(): string {
         .hx-btn.primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
       </style>
       
-      <div class="hx-bg"><div class="pattern"></div></div>
       <div class="hx-container">
         <div class="hx-header">
           <button class="hx-back-btn" id="historyDoneBtn">
