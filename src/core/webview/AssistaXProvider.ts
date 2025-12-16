@@ -219,7 +219,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                             await writeSessionMessages(this._context, newMessages);
 
                             // Immediately sync UI to show the question as answered
-                            // void this.syncActiveSession();
+                            void this.syncActiveSession();
                         } catch (error) {
                             console.error('[AssistaX] Failed to save question/answer to history:', error);
                         }
@@ -426,7 +426,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             console.log(`[AssistaX] Total completion time taken in ${elapsed}ms`);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
             await this.sendAssistantMessage(reply);
-            // void this.syncActiveSession();
+            void this.syncActiveSession();
         } catch (error: any) {
             // Don't show error if request was cancelled
             if (abortController.signal.aborted) {
