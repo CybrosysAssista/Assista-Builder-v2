@@ -1,12 +1,13 @@
 import * as vscode from "vscode";
 import { readSessionMessages, clearActiveSession } from "./sessionManager.js";
-import { getActiveProviderConfig } from "../config/configService.js";
+import { getActiveProviderConfig, getRAGConfig } from "../config/configService.js";
 import { getSystemInstruction } from "./prompts/systemPrompts.js";
 import { createProvider } from "../providers/factory.js";
 import { runAgentOrchestrator } from "../agent/orchestrator.js";
 import type { InternalMessage } from "../agent/types.js";
 import type { ChatMessage, ChatRole, ToolExecution } from "./sessions/types.js";
 import { OdooEnvironmentService } from "../utils/odooDetection.js";
+import { RAGService } from "../utils/ragService.js";
 
 /**
  * Convert session messages to internal message format
@@ -193,18 +194,41 @@ export async function runAgent(
   // Get environment and system instruction with mode
   const mode = params.mode || "agent";
   const environment = await odooEnvService.getEnvironment();
-  const systemInstruction = getSystemInstruction(
-    customInstructions,
-    mode,
-    environment
-  );
-  // console.log('environment', environment);
-  // console.log('systemInstruction', systemInstruction);
-  // Run orchestrator
+  
+  // Extract user content for RAG and orchestrator
   const userContent =
     typeof params.contents === "string"
       ? params.contents
       : String(params.contents || "");
+  
+  // Retrieve RAG context if enabled
+  let ragContext: string | undefined;
+  const ragConfig = getRAGConfig();
+  
+  if (ragConfig.enabled) {
+    try {
+      const ragService = new RAGService(ragConfig.serverUrl);
+      const ragResult = await ragService.retrieveContext(userContent, ragConfig.topK);
+      
+      if (ragResult.context && ragResult.context.trim().length > 0) {
+        ragContext = ragResult.context;
+        console.log(`[Assista X] RAG context retrieved: ${ragResult.totalChunks} chunks`);
+      }
+    } catch (error) {
+      // Fail gracefully - log warning but continue without RAG
+      console.warn(`[Assista X] RAG retrieval failed: ${error instanceof Error ? error.message : String(error)}. Continuing without RAG context.`);
+    }
+  }
+  
+  const systemInstruction = getSystemInstruction(
+    customInstructions,
+    mode,
+    environment,
+    ragContext
+  );
+  // console.log('environment', environment);
+  // console.log('systemInstruction', systemInstruction);
+  // Run orchestrator
 
   const requestPayload = {
     contents: userContent,

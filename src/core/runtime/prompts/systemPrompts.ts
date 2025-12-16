@@ -86,7 +86,8 @@ function formatEditorXml(): string {
 export function getSystemInstruction(
   custom?: string,
   mode: string = 'agent',
-  env?: OdooEnv | null
+  env?: OdooEnv | null,
+  ragContext?: string
 ): string {
 
   // 1. Build State XML
@@ -106,6 +107,11 @@ export function getSystemInstruction(
 - Do NOT ask for confirmation if the request is clear.
 - EXECUTE actions immediately using your tools.`;
 
+  // Build RAG context section if provided
+  const ragSection = ragContext 
+    ? `\n\n# Odoo Documentation Context\n${ragContext}\n`
+    : '';
+
   return `
 # Role
 You are Assista X, an expert Odoo AI Developer. You provide precise, minimal, and correct answers. 
@@ -121,7 +127,7 @@ ${stateBlock}
 3. **Safety:** Warn about unsafe operations (e.g., dropping tables, sudo() abuse) before executing.
 4. **Interactivity:** If key details (Odoo version, specific path) are missing from the context or request, ask the user before guessing.
 
-${modeInstruction}
+${modeInstruction}${ragSection}
 
 ${custom ? `# Custom User Instructions\n${custom.trim()}` : ''}
 `.trim();
