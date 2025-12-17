@@ -1,35 +1,35 @@
 import * as vscode from 'vscode';
-import type { AssistaXProvider } from '../webview/AssistaXProvider.js';
+import type { AssistaCoderProvider } from '../webview/AssistaCoderProvider.js';
 
 export function registerAllCommands(
     context: vscode.ExtensionContext,
-    provider: AssistaXProvider
+    provider: AssistaCoderProvider
 ): vscode.Disposable[] {
     const disposables: vscode.Disposable[] = [];
 
     disposables.push(
-        vscode.commands.registerCommand('assistaX.open', () => {
-            vscode.commands.executeCommand('workbench.view.extension.assistaXSidebar');
+        vscode.commands.registerCommand('assistaCoder.open', () => {
+            vscode.commands.executeCommand('workbench.view.extension.assistaCoderSidebar');
         })
     );
 
     disposables.push(
-        vscode.commands.registerCommand('assistaX.settings', async () => {
-            await vscode.commands.executeCommand('assistaX.open');
+        vscode.commands.registerCommand('assistaCoder.settings', async () => {
+            await vscode.commands.executeCommand('assistaCoder.open');
             provider.showSettings();
         })
     );
 
     disposables.push(
-        vscode.commands.registerCommand('assistaX.newChat', async () => {
-            await vscode.commands.executeCommand('assistaX.open');
+        vscode.commands.registerCommand('assistaCoder.newChat', async () => {
+            await vscode.commands.executeCommand('assistaCoder.open');
             await provider.startNewChat();
         })
     );
 
     disposables.push(
-        vscode.commands.registerCommand('assistaX.openHistory', async () => {
-            await vscode.commands.executeCommand('assistaX.open');
+        vscode.commands.registerCommand('assistaCoder.openHistory', async () => {
+            await vscode.commands.executeCommand('assistaCoder.open');
             provider.showHistory();
         })
     );

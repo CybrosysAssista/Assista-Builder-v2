@@ -21,10 +21,10 @@ export interface RAGConfig {
 export async function getActiveProviderConfig(
     context: vscode.ExtensionContext
 ): Promise<{ provider: string; config: ProviderConfig }> {
-    const configSection = vscode.workspace.getConfiguration('assistaX');
+    const configSection = vscode.workspace.getConfiguration('assistaCoder');
     let activeProvider = configSection.get<string>('activeProvider') || '';
-    const googleKey = await context.secrets.get('assistaX.apiKey.google');
-    const openrouterKey = await context.secrets.get('assistaX.apiKey.openrouter');
+    const googleKey = await context.secrets.get('assistaCoder.apiKey.google');
+    const openrouterKey = await context.secrets.get('assistaCoder.apiKey.openrouter');
 
     if (!activeProvider) {
         if (googleKey) {
@@ -41,7 +41,7 @@ export async function getActiveProviderConfig(
     }
 
     const providersConfig = configSection.get<any>('providers', {});
-    const secretKey = `assistaX.apiKey.${activeProvider}`;
+    const secretKey = `assistaCoder.apiKey.${activeProvider}`;
     const apiKey = activeProvider === 'google'
         ? googleKey
         : activeProvider === 'openrouter'
@@ -81,7 +81,7 @@ export async function getActiveProviderConfig(
         };
         const normalized = normalizeGoogleModelId(providerConfig.model);
         if (normalized !== providerConfig.model) {
-            console.warn(`[Assista X] Normalized Google model id '${providerConfig.model}' -> '${normalized}' for v1beta compatibility`);
+            console.warn(`[Assista Coder] Normalized Google model id '${providerConfig.model}' -> '${normalized}' for v1beta compatibility`);
             providerConfig.model = normalized;
         }
     }
@@ -105,7 +105,7 @@ export async function getActiveProviderConfig(
  * Get RAG configuration
  */
 export function getRAGConfig(): RAGConfig {
-    const configSection = vscode.workspace.getConfiguration('assistaX');
+    const configSection = vscode.workspace.getConfiguration('assistaCoder');
     const ragConfig = configSection.get<any>('rag', {});
     
     return {

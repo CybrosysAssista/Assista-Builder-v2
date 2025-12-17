@@ -7,7 +7,7 @@ export class SettingsController {
   ) { }
 
   public async handleLoadSettings() {
-    const config = vscode.workspace.getConfiguration('assistaX');
+    const config = vscode.workspace.getConfiguration('assistaCoder');
     const providers = config.get<any>('providers', {});
     const activeProvider = config.get<string>('activeProvider') || 'google';
     const googleModel = providers?.google?.model || '';
@@ -15,10 +15,10 @@ export class SettingsController {
     const openaiModel = providers?.openai?.model || '';
     const anthropicModel = providers?.anthropic?.model || '';
 
-    const googleKey = (await this.context.secrets.get('assistaX.apiKey.google')) || '';
-    const openrouterKey = (await this.context.secrets.get('assistaX.apiKey.openrouter')) || '';
-    const openaiKey = (await this.context.secrets.get('assistaX.apiKey.openai')) || '';
-    const anthropicKey = (await this.context.secrets.get('assistaX.apiKey.anthropic')) || '';
+    const googleKey = (await this.context.secrets.get('assistaCoder.apiKey.google')) || '';
+    const openrouterKey = (await this.context.secrets.get('assistaCoder.apiKey.openrouter')) || '';
+    const openaiKey = (await this.context.secrets.get('assistaCoder.apiKey.openai')) || '';
+    const anthropicKey = (await this.context.secrets.get('assistaCoder.apiKey.anthropic')) || '';
     const hasGoogleKey = !!googleKey;
     const hasOpenrouterKey = !!openrouterKey;
     const hasOpenaiKey = !!openaiKey;
@@ -58,7 +58,7 @@ export class SettingsController {
       const openaiModel = typeof message.openaiModel === 'string' ? message.openaiModel.trim() : '';
       const anthropicModel = typeof message.anthropicModel === 'string' ? message.anthropicModel.trim() : '';
 
-      const config = vscode.workspace.getConfiguration('assistaX');
+      const config = vscode.workspace.getConfiguration('assistaCoder');
       const providers = config.get<any>('providers', {});
       const nextProviders: any = { ...providers };
 
@@ -83,10 +83,10 @@ export class SettingsController {
       await config.update('providers', nextProviders, vscode.ConfigurationTarget.Global);
 
       if (['google', 'openrouter', 'openai', 'anthropic'].includes(activeProvider)) {
-        console.log(`[AssistaX] Updating activeProvider to: ${activeProvider}`);
+        console.log(`[AssistaCoder] Updating activeProvider to: ${activeProvider}`);
         await config.update('activeProvider', activeProvider, vscode.ConfigurationTarget.Global);
       } else {
-        console.warn(`[AssistaX] Invalid activeProvider: ${activeProvider}`);
+        console.warn(`[AssistaCoder] Invalid activeProvider: ${activeProvider}`);
       }
 
       // Save RAG config
@@ -98,31 +98,31 @@ export class SettingsController {
 
       // Save or delete Google API key
       if (googleKey) {
-        await this.context.secrets.store('assistaX.apiKey.google', googleKey);
+        await this.context.secrets.store('assistaCoder.apiKey.google', googleKey);
       } else {
         // User cleared the key - delete it from storage
-        await this.context.secrets.delete('assistaX.apiKey.google');
+        await this.context.secrets.delete('assistaCoder.apiKey.google');
       }
 
       // Save or delete OpenRouter API key
       if (openrouterKey) {
-        await this.context.secrets.store('assistaX.apiKey.openrouter', openrouterKey);
+        await this.context.secrets.store('assistaCoder.apiKey.openrouter', openrouterKey);
       } else {
         // User cleared the key - delete it from storage
-        await this.context.secrets.delete('assistaX.apiKey.openrouter');
+        await this.context.secrets.delete('assistaCoder.apiKey.openrouter');
       }
       if (openaiKey) {
-        await this.context.secrets.store('assistaX.apiKey.openai', openaiKey);
+        await this.context.secrets.store('assistaCoder.apiKey.openai', openaiKey);
       }
       if (anthropicKey) {
-        await this.context.secrets.store('assistaX.apiKey.anthropic', anthropicKey);
+        await this.context.secrets.store('assistaCoder.apiKey.anthropic', anthropicKey);
       }
 
 
-      const hasGoogleKey = !!(await this.context.secrets.get('assistaX.apiKey.google'));
-      const hasOpenrouterKey = !!(await this.context.secrets.get('assistaX.apiKey.openrouter'));
-      const hasOpenaiKey = !!(await this.context.secrets.get('assistaX.apiKey.openai'));
-      const hasAnthropicKey = !!(await this.context.secrets.get('assistaX.apiKey.anthropic'));
+      const hasGoogleKey = !!(await this.context.secrets.get('assistaCoder.apiKey.google'));
+      const hasOpenrouterKey = !!(await this.context.secrets.get('assistaCoder.apiKey.openrouter'));
+      const hasOpenaiKey = !!(await this.context.secrets.get('assistaCoder.apiKey.openai'));
+      const hasAnthropicKey = !!(await this.context.secrets.get('assistaCoder.apiKey.anthropic'));
 
       this.postMessage('settingsSaved', {
         success: true,
@@ -143,13 +143,13 @@ export class SettingsController {
     try {
       const provider = typeof message.provider === 'string' ? message.provider : '';
       const providedKey = typeof message.apiKey === 'string' ? message.apiKey.trim() : '';
-      const config = vscode.workspace.getConfiguration('assistaX');
+      const config = vscode.workspace.getConfiguration('assistaCoder');
 
       let models: Array<{ id: string; name?: string }> = [];
 
       if (provider === 'openrouter') {
         const baseUrl = config.get<string>('providers.openrouter.customUrl', 'https://openrouter.ai/api/v1') || 'https://openrouter.ai/api/v1';
-        const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.openrouter')) || '';
+        const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.openrouter')) || '';
 
         // OpenRouter allows listing models without an API key
         const url = `${baseUrl.replace(/\/$/, '')}/models`;
@@ -161,8 +161,8 @@ export class SettingsController {
         }
 
         // Optional custom headers same as completions
-        const referer = config.get<string>('openrouterHeaders.referer', 'https://assista-x.vscode')!;
-        const title = config.get<string>('openrouterHeaders.title', 'Assista X Extension')!;
+        const referer = config.get<string>('openrouterHeaders.referer', 'https://assista-coder.vscode')!;
+        const title = config.get<string>('openrouterHeaders.title', 'Assista Coder Extension')!;
         headers['HTTP-Referer'] = referer;
         headers['X-Title'] = title;
 
@@ -178,7 +178,7 @@ export class SettingsController {
           .filter((m) => !!m.id);
       } else if (provider === 'google') {
         // Use Google Generative Language public models endpoint
-        const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.google')) || '';
+        const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.google')) || '';
         if (!key) { throw new Error('Gemini API key is required to list models.'); }
         // Fetch all pages
         let nextPageToken: string | undefined;
@@ -211,7 +211,7 @@ export class SettingsController {
           .filter((m) => !!m.id && !seen.has(m.id) && (seen.add(m.id), true))
           .sort((a, b) => a.id.localeCompare(b.id));
       } else if (provider === 'openai') {
-        const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.openai')) || '';
+        const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.openai')) || '';
         if (!key) { throw new Error('OpenAI API key is required to list models.'); }
         const resp = await fetch('https://api.openai.com/v1/models', {
           method: 'GET',
@@ -233,7 +233,7 @@ export class SettingsController {
           .filter((m) => !seen.has(m.id) && (seen.add(m.id), true))
           .sort((a, b) => a.id.localeCompare(b.id));
       } else if (provider === 'anthropic') {
-        const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.anthropic')) || '';
+        const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.anthropic')) || '';
 
         // Try to fetch from API
         try {
@@ -261,7 +261,7 @@ export class SettingsController {
           // API endpoint doesn't exist or failed
         }
       } else if (provider === 'mistral') {
-        const key = providedKey || (await this.context.secrets.get('assistaX.apiKey.mistral')) || '';
+        const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.mistral')) || '';
         if (!key) { throw new Error('Mistral API key is required to list models.'); }
         const resp = await fetch('https://api.mistral.ai/v1/models', {
           method: 'GET',
@@ -296,7 +296,7 @@ export class SettingsController {
       const provider = typeof message.provider === 'string' ? message.provider : 'openrouter';
 
       if (provider === 'openrouter') {
-        const key = (await this.context.secrets.get('assistaX.apiKey.openrouter')) || '';
+        const key = (await this.context.secrets.get('assistaCoder.apiKey.openrouter')) || '';
         if (!key) {
           this.postMessage('usageData', { error: 'No API key found' });
           return;

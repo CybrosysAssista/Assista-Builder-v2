@@ -30,11 +30,11 @@ The webview sends a message to the extension host with:
 
 ### 2. Extension Host Receives User Message
 
-**Location:** `src/core/webview/AssistaXProvider.ts`
+**Location:** `src/core/webview/AssistaCoderProvider.ts`
 
-The `AssistaXProvider` receives the message in the `onDidReceiveMessage` handler:
+The `AssistaCoderProvider` receives the message in the `onDidReceiveMessage` handler:
 
-```67:74:src/core/webview/AssistaXProvider.ts
+```67:74:src/core/webview/AssistaCoderProvider.ts
             if (message.command === 'userMessage') {
                 const text = typeof message.text === 'string' ? message.text.trim() : '';
                 if (!text) {
@@ -48,11 +48,11 @@ The `AssistaXProvider` receives the message in the `onDidReceiveMessage` handler
 
 ### 3. Processing User Message
 
-**Location:** `src/core/webview/AssistaXProvider.ts`
+**Location:** `src/core/webview/AssistaCoderProvider.ts`
 
 The `handleUserMessage` method processes the user's message:
 
-```385:427:src/core/webview/AssistaXProvider.ts
+```385:427:src/core/webview/AssistaCoderProvider.ts
     private async handleUserMessage(text: string, mode: string = 'agent') {
         // Cancel any existing request
         if (this._abortController) {
@@ -78,7 +78,7 @@ The `handleUserMessage` method processes the user's message:
             }
 
             const elapsed = Date.now() - startTime;
-            console.log(`[AssistaX] Total completion time taken in ${elapsed}ms`);
+            console.log(`[AssistaCoder] Total completion time taken in ${elapsed}ms`);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
             await this.sendAssistantMessage(reply);
             // void this.syncActiveSession();
@@ -135,7 +135,7 @@ export async function runAgent(
 
   // Get provider configuration
   const { provider: providerName, config: providerConfig } = await getActiveProviderConfig(context);
-  const configSection = vscode.workspace.getConfiguration('assistaX');
+  const configSection = vscode.workspace.getConfiguration('assistaCoder');
   const customInstructions = configSection.get<string>('systemPrompt.customInstructions', '');
 
   // Create provider adapter
@@ -166,10 +166,10 @@ export async function runAgent(
   // Persist user message immediately so it exists before tools run
 
   // Log request before calling orchestrator
-  // console.log('[Assista X] Request to orchestrator:',requestPayload);
-  // console.log('[Assista X] context:',context);
-  // console.log('[Assista X] adapter:',adapter);
-  // console.log('[Assista X] Internal history:',internalHistory);
+  // console.log('[Assista Coder] Request to orchestrator:',requestPayload);
+  // console.log('[Assista Coder] context:',context);
+  // console.log('[Assista Coder] adapter:',adapter);
+  // console.log('[Assista Coder] Internal history:',internalHistory);
 
   const response = await runAgentOrchestrator(
     requestPayload,
@@ -249,7 +249,7 @@ The orchestrator processes the streaming response from the provider and builds t
 
         case 'usage':
           // Log usage if needed
-          console.log(`[Assista X] Usage: ${event.inputTokens} input, ${event.outputTokens} output tokens`);
+          console.log(`[Assista Coder] Usage: ${event.inputTokens} input, ${event.outputTokens} output tokens`);
           break;
 
         case 'error':
@@ -265,8 +265,8 @@ The orchestrator processes the streaming response from the provider and builds t
       }
     }
     
-    console.log('[Assista X] Final Streamed Text:', streamedText);
-    console.log('[Assista X] Tool Calls:', toolCalls);
+    console.log('[Assista Coder] Final Streamed Text:', streamedText);
+    console.log('[Assista Coder] Tool Calls:', toolCalls);
 
     // Build assistant message with both text and tool calls
     const assistantContent: any[] = [];
@@ -306,15 +306,15 @@ After processing (and tool execution if any), the orchestrator converts internal
     // No tool calls - we have final response
     // Note: Type assertion needed because TypeScript language server may cache old signature
     // The function signature in agent.ts does accept an optional second parameter
-    console.log('[AssistaX] Converting to session - toolExecutions map size:', toolExecutions.size);
+    console.log('[AssistaCoder] Converting to session - toolExecutions map size:', toolExecutions.size);
     if (toolExecutions.size > 0) {
-      console.log('[AssistaX] Tool executions in map:', Array.from(toolExecutions.entries()));
+      console.log('[AssistaCoder] Tool executions in map:', Array.from(toolExecutions.entries()));
     }
     const sessionMessages = (convertInternalToSession as (
       messages: typeof internalMessages,
       executions?: Map<string, ToolExecution>
     ) => ReturnType<typeof convertInternalToSession>)(internalMessages, toolExecutions.size > 0 ? toolExecutions : undefined);
-    console.log('[AssistaX] Session messages after conversion:', JSON.stringify(sessionMessages.map(m => ({
+    console.log('[AssistaCoder] Session messages after conversion:', JSON.stringify(sessionMessages.map(m => ({
       role: m.role,
       content: m.content.substring(0, 50) + '...',
       toolExecutions: m.toolExecutions
@@ -332,7 +332,7 @@ export function convertInternalToSession(
   internalMessages: InternalMessage[],
   toolExecutions?: Map<string, ToolExecution>
 ): ChatMessage[] {
-  console.log('[AssistaX] convertInternalToSession called with toolExecutions:', toolExecutions ? `Map(${toolExecutions.size})` : 'undefined');
+  console.log('[AssistaCoder] convertInternalToSession called with toolExecutions:', toolExecutions ? `Map(${toolExecutions.size})` : 'undefined');
   return internalMessages
     .filter(msg => msg.role === 'user' || msg.role === 'assistant')
     .map(msg => {
@@ -348,16 +348,16 @@ export function convertInternalToSession(
         
         // Extract tool executions for assistant messages
         if (msg.role === 'assistant' && toolExecutions) {
-          console.log('[AssistaX] Processing assistant message, looking for tool_use blocks');
+          console.log('[AssistaCoder] Processing assistant message, looking for tool_use blocks');
           for (const block of msg.content) {
             if (block.type === 'tool_use' && block.id) {
-              console.log('[AssistaX] Found tool_use block with id:', block.id, 'tool name:', (block as any).name);
+              console.log('[AssistaCoder] Found tool_use block with id:', block.id, 'tool name:', (block as any).name);
               const toolExec = toolExecutions.get(block.id);
               if (toolExec) {
-                console.log('[AssistaX] Found matching tool execution:', toolExec);
+                console.log('[AssistaCoder] Found matching tool execution:', toolExec);
                 toolExecs.push(toolExec);
               } else {
-                console.log('[AssistaX] No matching tool execution found for id:', block.id);
+                console.log('[AssistaCoder] No matching tool execution found for id:', block.id);
               }
             }
           }
@@ -372,7 +372,7 @@ export function convertInternalToSession(
       
       if (toolExecs.length > 0) {
         result.toolExecutions = toolExecs;
-        console.log('[AssistaX] Attached toolExecutions to message:', toolExecs.length, 'executions');
+        console.log('[AssistaCoder] Attached toolExecutions to message:', toolExecs.length, 'executions');
       }
       
       return result;
@@ -488,17 +488,17 @@ export async function writePersistedSessions(
 
 ### 1. User Selects Session from History
 
-**Location:** `src/core/webview/AssistaXProvider.ts`
+**Location:** `src/core/webview/AssistaCoderProvider.ts`
 
 When a user clicks on a session in the history:
 
-```148:159:src/core/webview/AssistaXProvider.ts
+```148:159:src/core/webview/AssistaCoderProvider.ts
             if (message.command === 'openSession') {
                 // Switch active session and hydrate webview
                 const id = typeof message.id === 'string' ? message.id : '';
                 if (id) {
                     const switched = await switchActiveSession(this._context, id);
-                    console.log('[AssistaX] Session opened from history:', switched);
+                    console.log('[AssistaCoder] Session opened from history:', switched);
                     this._view?.show?.(true);
                     await this.queueHydration(switched.id, switched.messages);
                     this.postMessage('historyOpened', { sessionId: switched.id });
@@ -531,11 +531,11 @@ export async function switchActiveSession(
 
 ### 3. Hydrating Webview with Session Messages
 
-**Location:** `src/core/webview/AssistaXProvider.ts`
+**Location:** `src/core/webview/AssistaCoderProvider.ts`
 
 The `queueHydration` method prepares messages for the webview:
 
-```447:460:src/core/webview/AssistaXProvider.ts
+```447:460:src/core/webview/AssistaCoderProvider.ts
     private async queueHydration(sessionId: string, messages: ChatMessage[]): Promise<void> {
         if (!this._view) {
             this._pendingHydration = { sessionId, messages: messages.map((msg) => ({ ...msg })) };
@@ -554,7 +554,7 @@ The `queueHydration` method prepares messages for the webview:
 
 The `mapMessageForWebview` method formats messages for display:
 
-```429:445:src/core/webview/AssistaXProvider.ts
+```429:445:src/core/webview/AssistaCoderProvider.ts
     private async mapMessageForWebview(
         message: ChatMessage
     ): Promise<{ role: string; content: string; markdown?: string; timestamp?: number; suggestions?: any; selection?: string; toolExecutions?: any[] }> {
@@ -733,7 +733,7 @@ export type ChatRole = 'system' | 'user' | 'assistant';
 ```
 USER MESSAGE FLOW:
 1. User types message → chat.js sends 'userMessage' command
-2. AssistaXProvider.handleUserMessage() receives it
+2. AssistaCoderProvider.handleUserMessage() receives it
 3. runAgent() is called
 4. runAgentOrchestrator() adds user message to internalMessages
 5. After processing, convertInternalToSession() converts to ChatMessage[]
@@ -769,6 +769,6 @@ SESSION RENDERING FLOW:
    - Switching the active session
    - Hydrating the webview with all messages from that session
    - Rendering each message in order using the `renderSession()` function
-5. **Messages are stored** in VS Code's `globalState` using the key `'assistaX.chat.sessions'`
-6. **The active session ID** is stored separately using the key `'assistaX.chat.activeSessionId'`
+5. **Messages are stored** in VS Code's `globalState` using the key `'assistaCoder.chat.sessions'`
+6. **The active session ID** is stored separately using the key `'assistaCoder.chat.activeSessionId'`
 

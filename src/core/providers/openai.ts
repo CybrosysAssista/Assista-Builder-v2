@@ -99,9 +99,9 @@ export class OpenAIAdapter implements ProviderAdapter {
 
     // OpenRouter-specific headers
     if (this.providerName === 'openrouter' || this.providerName === 'anthropic') {
-      const cfgSection = vscode.workspace.getConfiguration('assistaX');
-      const referer = cfgSection.get<string>('openrouterHeaders.referer', 'https://assista-x.vscode')!;
-      const xTitle = cfgSection.get<string>('openrouterHeaders.title', 'Assista X Extension')!;
+      const cfgSection = vscode.workspace.getConfiguration('assistaCoder');
+      const referer = cfgSection.get<string>('openrouterHeaders.referer', 'https://assista-coder.vscode')!;
+      const xTitle = cfgSection.get<string>('openrouterHeaders.title', 'Assista Coder Extension')!;
       headers['HTTP-Referer'] = referer;
       headers['X-Title'] = xTitle;
     }

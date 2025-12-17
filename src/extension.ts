@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AssistaXProvider } from './core/webview/AssistaXProvider.js';
+import { AssistaCoderProvider } from './core/webview/AssistaCoderProvider.js';
 import { registerAllCommands } from './core/commands/index.js';
 import { OdooEnvironmentService } from './core/utils/odooDetection.js';
 import { restoreDecorations } from './core/utils/decorationUtils.js';
@@ -7,14 +7,14 @@ import { restoreDecorations } from './core/utils/decorationUtils.js';
 export function activate(context: vscode.ExtensionContext) {
     const odooEnvService = new OdooEnvironmentService();
 
-    const provider = new AssistaXProvider(
+    const provider = new AssistaCoderProvider(
         context.extensionUri,
         context,
         odooEnvService
     );
 
     const registration = vscode.window.registerWebviewViewProvider(
-        AssistaXProvider.viewType,
+        AssistaCoderProvider.viewType,
         provider,
         { webviewOptions: { retainContextWhenHidden: true } }
     );

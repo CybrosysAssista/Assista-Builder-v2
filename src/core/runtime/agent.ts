@@ -179,7 +179,7 @@ export async function runAgent(
   // Get provider configuration
   const { provider: providerName, config: providerConfig } =
     await getActiveProviderConfig(context);
-  const configSection = vscode.workspace.getConfiguration("assistaX");
+  const configSection = vscode.workspace.getConfiguration("assistaCoder");
   const customInstructions = configSection.get<string>(
     "systemPrompt.customInstructions",
     ""
@@ -212,11 +212,11 @@ export async function runAgent(
       
       if (ragResult.context && ragResult.context.trim().length > 0) {
         ragContext = ragResult.context;
-        console.log(`[Assista X] RAG context retrieved: ${ragResult.totalChunks} chunks`);
+        console.log(`[Assista Coder] RAG context retrieved: ${ragResult.totalChunks} chunks`);
       }
     } catch (error) {
       // Fail gracefully - log warning but continue without RAG
-      console.warn(`[Assista X] RAG retrieval failed: ${error instanceof Error ? error.message : String(error)}. Continuing without RAG context.`);
+      console.warn(`[Assista Coder] RAG retrieval failed: ${error instanceof Error ? error.message : String(error)}. Continuing without RAG context.`);
     }
   }
   
@@ -243,10 +243,10 @@ export async function runAgent(
   // Persist user message immediately so it exists before tools run
 
   // Log request before calling orchestrator
-  // console.log('[Assista X] Request to orchestrator:',requestPayload);
-  // console.log('[Assista X] context:',context);
-  // console.log('[Assista X] adapter:',adapter);
-  // console.log('[Assista X] Internal history:',internalHistory);
+  // console.log('[Assista Coder] Request to orchestrator:',requestPayload);
+  // console.log('[Assista Coder] context:',context);
+  // console.log('[Assista Coder] adapter:',adapter);
+  // console.log('[Assista Coder] Internal history:',internalHistory);
 
   const response = await runAgentOrchestrator(
     requestPayload,

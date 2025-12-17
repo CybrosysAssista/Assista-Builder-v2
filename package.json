@@ -1,7 +1,7 @@
 {
-  "name": "assista-x",
-  "displayName": "assista-x",
-  "description": "VS Code extension for Assista X (Odoo AI Assistant)",
+  "name": "assista-coder",
+  "displayName": "assista-coder",
+  "description": "VS Code extension for Assista Coder (Odoo AI Assistant)",
   "publisher": "cybrosys-assista-ltd",
   "version": "1.0.0",
   "engines": {
@@ -11,27 +11,27 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:assistaXView",
-    "onCommand:assistaX.open",
-    "onCommand:assistaX.settings",
-    "onCommand:assistaX.openHistory",
-    "onCommand:assistaX.newChat"
+    "onView:assistaCoderView",
+    "onCommand:assistaCoder.open",
+    "onCommand:assistaCoder.settings",
+    "onCommand:assistaCoder.openHistory",
+    "onCommand:assistaCoder.newChat"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "assistaXSidebar",
-          "title": "Assista X",
-          "icon": "media/chat.svg"
+          "id": "assistaCoderSidebar",
+          "title": "Assista Coder",
+          "icon": "media/assista-logo.svg"
         }
       ]
     },
     "views": {
-      "assistaXSidebar": [
+      "assistaCoderSidebar": [
         {
-          "id": "assistaXView",
+          "id": "assistaCoderView",
           "name": "Chat",
           "type": "webview"
         }
@@ -39,21 +39,21 @@
     },
     "commands": [
       {
-        "command": "assistaX.open",
-        "title": "Open Assista X"
+        "command": "assistaCoder.open",
+        "title": "Open Assista Coder"
       },
       {
-        "command": "assistaX.newChat",
+        "command": "assistaCoder.newChat",
         "title": "New Chat",
         "icon": "$(add)"
       },
       {
-        "command": "assistaX.settings",
+        "command": "assistaCoder.settings",
         "title": "Settings",
         "icon": "$(gear)"
       },
       {
-        "command": "assistaX.openHistory",
+        "command": "assistaCoder.openHistory",
         "title": "History",
         "icon": "$(history)"
       }
@@ -61,26 +61,26 @@
     "menus": {
       "view/title": [
         {
-          "command": "assistaX.newChat",
-          "when": "view == assistaXView",
+          "command": "assistaCoder.newChat",
+          "when": "view == assistaCoderView",
           "group": "navigation@1"
         },
         {
-          "command": "assistaX.openHistory",
-          "when": "view == assistaXView",
+          "command": "assistaCoder.openHistory",
+          "when": "view == assistaCoderView",
           "group": "navigation@2"
         },
         {
-          "command": "assistaX.settings",
-          "when": "view == assistaXView",
+          "command": "assistaCoder.settings",
+          "when": "view == assistaCoderView",
           "group": "navigation@3"
         }
       ]
     },
     "configuration": {
-      "title": "Assista X",
+      "title": "Assista Coder",
       "properties": {
-        "assistaX.activeProvider": {
+        "assistaCoder.activeProvider": {
           "type": "string",
           "enum": [
             "google",
@@ -92,7 +92,7 @@
           "default": "google",
           "description": "Active AI provider for generation and chat."
         },
-        "assistaX.providers": {
+        "assistaCoder.providers": {
           "type": "object",
           "description": "Configuration for each AI provider (API keys saved securely).",
           "properties": {
@@ -180,12 +180,12 @@
             }
           }
         },
-        "assistaX.defaultAddonsPath": {
+        "assistaCoder.defaultAddonsPath": {
           "type": "string",
           "default": "",
           "description": "Preferred Odoo custom addons directory for creating new modules. If empty, the extension will ask you to pick a folder when creating modules."
         },
-        "assistaX.customAddonsNames": {
+        "assistaCoder.customAddonsNames": {
           "type": "array",
           "items": {
             "type": "string"
@@ -196,17 +196,17 @@
           ],
           "description": "Folder names to treat as Odoo custom addons directories when scanning the workspace."
         },
-        "assistaX.openrouterHeaders.referer": {
+        "assistaCoder.openrouterHeaders.referer": {
           "type": "string",
-          "default": "https://assista-x.vscode",
+          "default": "https://assista-coder.vscode",
           "description": "Custom HTTP-Referer header to send when using OpenRouter-compatible providers."
         },
-        "assistaX.openrouterHeaders.title": {
+        "assistaCoder.openrouterHeaders.title": {
           "type": "string",
-          "default": "Assista X Extension",
+          "default": "Assista Coder Extension",
           "description": "Custom X-Title header to send when using OpenRouter-compatible providers."
         },
-        "assistaX.editScope": {
+        "assistaCoder.editScope": {
           "type": "string",
           "enum": [
             "openEditors",
@@ -217,17 +217,17 @@
           "default": "openEditors",
           "description": "Scope for quick edit operations (e.g., label changes)."
         },
-        "assistaX.systemPrompt.allowFileOverrides": {
+        "assistaCoder.systemPrompt.allowFileOverrides": {
           "type": "boolean",
           "default": true,
-          "description": "Allow workspace override files in .assista-x/ to replace the system prompt per mode."
+          "description": "Allow workspace override files in .assista-coder/ to replace the system prompt per mode."
         },
-        "assistaX.systemPrompt.customInstructions": {
+        "assistaCoder.systemPrompt.customInstructions": {
           "type": "string",
           "default": "",
           "description": "Custom instructions appended to the system prompt for all modes."
         },
-        "assistaX.rag": {
+        "assistaCoder.rag": {
           "type": "object",
           "description": "RAG (Retrieval-Augmented Generation) configuration for Odoo documentation context.",
           "properties": {

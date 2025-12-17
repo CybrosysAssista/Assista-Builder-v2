@@ -15,7 +15,7 @@ function configureMarked() {
     }
 
     if (typeof marked === 'undefined') {
-        console.warn('[AssistaX] marked library not available');
+        console.warn('[AssistaCoder] marked library not available');
         return false;
     }
 
@@ -33,7 +33,7 @@ function configureMarked() {
                     try {
                         return hljs.highlight(code, { language: lang }).value;
                     } catch (err) {
-                        console.warn('[AssistaX] Highlight.js error:', err);
+                        console.warn('[AssistaCoder] Highlight.js error:', err);
                     }
                 }
 
@@ -49,7 +49,7 @@ function configureMarked() {
         markedConfigured = true;
         return true;
     } catch (error) {
-        console.error('[AssistaX] Error configuring marked:', error);
+        console.error('[AssistaCoder] Error configuring marked:', error);
         return false;
     }
 }
@@ -59,7 +59,7 @@ function configureMarked() {
  */
 function sanitizeHtml(html) {
     if (typeof DOMPurify === 'undefined') {
-        console.warn('[AssistaX] DOMPurify not available, skipping sanitization');
+        console.warn('[AssistaCoder] DOMPurify not available, skipping sanitization');
         return html;
     }
 
@@ -118,7 +118,7 @@ function renderMarkdown(markdown, isStreaming) {
 
         return cleanHtml;
     } catch (error) {
-        console.error('[AssistaX] Markdown rendering error:', error);
+        console.error('[AssistaCoder] Markdown rendering error:', error);
         // Fallback: escape HTML and convert line breaks
         return markdown
             .replace(/&/g, '&amp;')
