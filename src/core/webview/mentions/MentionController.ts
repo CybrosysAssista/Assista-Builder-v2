@@ -191,7 +191,7 @@ export class MentionController {
         this.postMessage('mentionInsert', { text: texts.join(' ') });
       }
     } catch (err) {
-      console.warn('[AssistaX] mentionPickFiles failed:', err);
+      console.warn('[AssistaCoder] mentionPickFiles failed:', err);
     }
   }
 

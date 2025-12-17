@@ -1,6 +1,6 @@
-## Assista X – Architecture & Data Flow
+## Assista Coder – Architecture & Data Flow
 
-This document explains how the current Assista X VS Code extension is structured and how data flows through it, mapped onto the conceptual pipeline you described (UI → Orchestrator → Context/Memory → LLM → Tools → Filesystem → Validation → User).
+This document explains how the current Assista Coder VS Code extension is structured and how data flows through it, mapped onto the conceptual pipeline you described (UI → Orchestrator → Context/Memory → LLM → Tools → Filesystem → Validation → User).
 
 ---
 
@@ -15,8 +15,8 @@ This document explains how the current Assista X VS Code extension is structure
 
 Conceptual mapping:
 
-1. **User Interface (IDE / Chat)** → `webview` (HTML + JS) managed by `AssistaXProvider`.
-2. **Backend Orchestrator** → `AssistaXProvider` + `runAgent`.
+1. **User Interface (IDE / Chat)** → `webview` (HTML + JS) managed by `AssistaCoderProvider`.
+2. **Backend Orchestrator** → `AssistaCoderProvider` + `runAgent`.
 3. **Context Manager / Memory** → `sessionManager` + `agent/sessionStore`.
 4. **Context Retriever** → currently session history only (hooks for future RAG).
 5. **LLM Layer (Gemini / OpenAI / OpenRouter / custom)** → `providerCaller` + `providers/openai` + `providers/google`.
@@ -34,14 +34,14 @@ Conceptual mapping:
 
 ```5:18:src/extension.ts
 import * as vscode from 'vscode';
-import { AssistaXProvider } from './core/webview/AssistaXProvider.js';
+import { AssistaCoderProvider } from './core/webview/AssistaCoderProvider.js';
 import { registerAllCommands } from './core/commands/index.js';
 
 export function activate(context: vscode.ExtensionContext) {
-    const provider = new AssistaXProvider(context.extensionUri, context);
+    const provider = new AssistaCoderProvider(context.extensionUri, context);
 
     const registration = vscode.window.registerWebviewViewProvider(
-        AssistaXProvider.viewType,
+        AssistaCoderProvider.viewType,
         provider,
         { webviewOptions: { retainContextWhenHidden: true } }
     );
@@ -53,12 +53,12 @@ export function activate(context: vscode.ExtensionContext) {
 }
 ```
 
-- **Commands**: `assistaX.open`, `assistaX.newChat`, `assistaX.settings`, `assistaX.openHistory`.
-- **View**: `assistaXView` webview in the activity bar.
+- **Commands**: `assistaCoder.open`, `assistaCoder.newChat`, `assistaCoder.settings`, `assistaCoder.openHistory`.
+- **View**: `assistaCoderView` webview in the activity bar.
 
 ### 2.2. Webview Provider & Message Handling
 
-- **File**: `src/core/webview/AssistaXProvider.ts`
+- **File**: `src/core/webview/AssistaCoderProvider.ts`
 - Responsibilities:
   - Render the HTML/JS UI via `getHtmlForWebview`.
   - Route messages between the webview and backend controllers / agent.
@@ -66,7 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 Core wiring:
 
-```6:18:src/core/webview/AssistaXProvider.ts
+```6:18:src/core/webview/AssistaCoderProvider.ts
 import * as vscode from 'vscode';
 import { ChatMessage, ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession } from '../ai/sessionManager.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
@@ -77,13 +77,13 @@ import { runAgent } from "../ai/agent/agent.js";
 
 Handling a user chat message:
 
-```227:239:src/core/webview/AssistaXProvider.ts
+```227:239:src/core/webview/AssistaCoderProvider.ts
 private async handleUserMessage(text: string) {
     try {
         const startTime = Date.now();
         const response = await runAgent({ contents: text }, this._context);
         const elapsed = Date.now() - startTime;
-        console.log(`[AssistaX] Total completion time taken in ${elapsed}ms`);
+        console.log(`[AssistaCoder] Total completion time taken in ${elapsed}ms`);
         const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
         await this.sendAssistantMessage(reply);
         void this.syncActiveSession();
@@ -97,7 +97,7 @@ private async handleUserMessage(text: string) {
 **Data flow** (UI tier):
 
 1. Webview JS posts `{ command: 'userMessage', text }` to the extension.
-2. `AssistaXProvider` calls `runAgent({ contents: text }, context)`.
+2. `AssistaCoderProvider` calls `runAgent({ contents: text }, context)`.
 3. Once a response is available, it posts `{ type: 'assistantMessage', text, html }` back to the webview.
 4. It then triggers `syncActiveSession` to hydrate the UI with the up‑to‑date session history.
 
@@ -264,7 +264,7 @@ import type { ChatMessage } from '../sessionManager.js';
 const SYSTEM_PROMPTS: ReadonlyArray<ChatMessage> = Object.freeze([
     {
         role: 'system',
-        content: 'You are Assista X, an AI assistant specialized in Odoo development, functional workflows, module customization, debugging, architecture decisions, ORM usage, API integration, and best practices across Odoo versions. Help developers working on Odoo projects with precise, actionable, minimally verbose guidance.'
+        content: 'You are Assista Coder, an AI assistant specialized in Odoo development, functional workflows, module customization, debugging, architecture decisions, ORM usage, API integration, and best practices across Odoo versions. Help developers working on Odoo projects with precise, actionable, minimally verbose guidance.'
     },
     {
         role: 'system',
@@ -497,14 +497,14 @@ export async function callProvider(
     };
     delete (formattedPayload as any).contents;
 
-    console.log('[Assista X] Provider request payload:', formattedPayload);
+    console.log('[Assista Coder] Provider request payload:', formattedPayload);
     let providerResponse;
     if (provider === 'google') {
         providerResponse = await generateWithGoogle(formattedPayload, providerConfig, context);
     } else {
         providerResponse = await generateWithOpenAICompat(formattedPayload, providerConfig, provider, context);
     }
-    console.log('[Assista X] Provider response:', providerResponse);
+    console.log('[Assista Coder] Provider response:', providerResponse);
     return providerResponse;
 }
 ```
@@ -513,9 +513,9 @@ export async function callProvider(
 
 - **File**: `src/core/services/configService.ts`
 - Reads:
-  - `assistaX.activeProvider`
-  - `assistaX.providers` (per‑provider models and URLs)
-  - Secrets like `assistaX.apiKey.google`, `assistaX.apiKey.openrouter`, etc.
+  - `assistaCoder.activeProvider`
+  - `assistaCoder.providers` (per‑provider models and URLs)
+  - Secrets like `assistaCoder.apiKey.google`, `assistaCoder.apiKey.openrouter`, etc.
 
 Key behavior:
 
@@ -531,7 +531,7 @@ Key behavior:
     }
 ```
 
-For Google, model IDs are normalized for compatibility, and the normalized value is persisted back into the `assistaX.providers` setting if it changed.
+For Google, model IDs are normalized for compatibility, and the normalized value is persisted back into the `assistaCoder.providers` setting if it changed.
 
 ### 5.4. OpenAI‑Compatible Providers
 
@@ -1017,7 +1017,7 @@ To realize your conceptual **Validation Engine**:
 
 1. **User** types:  
    `"Explain how to create an Odoo model."`
-2. **Webview** sends `{ command: 'userMessage', text }` → `AssistaXProvider.handleUserMessage`.
+2. **Webview** sends `{ command: 'userMessage', text }` → `AssistaCoderProvider.handleUserMessage`.
 3. **Agent** (`runAgent`):
    - Loads session history.
    - Builds `ChatMessage[]` with system prompts + history + this user message.
@@ -1063,8 +1063,8 @@ To realize your conceptual **Validation Engine**:
 
 | Layer (Concept)                    | Implemented in Code?                    | Notes                                                                 |
 |-----------------------------------|-----------------------------------------|-----------------------------------------------------------------------|
-| User Interface (IDE / Chat)       | ✅ `AssistaXProvider` + webview UI      | Rich chat UI with settings/history.                                   |
-| Backend Orchestrator              | ✅ `runAgent` + `AssistaXProvider`      | Handles sessions, prompts, provider calls, tool loops.                |
+| User Interface (IDE / Chat)       | ✅ `AssistaCoderProvider` + webview UI      | Rich chat UI with settings/history.                                   |
+| Backend Orchestrator              | ✅ `runAgent` + `AssistaCoderProvider`      | Handles sessions, prompts, provider calls, tool loops.                |
 | Context Manager / Memory          | ✅ Session store & history              | System prompts + last N turns; hook for further context.              |
 | Context Retriever (RAG)           | ⚠️ Not yet                              | Scaffolding comment in `assemblePrompt` for future RAG integration.   |
 | LLM Layer (Gemini / OpenAI, etc.) | ✅ Providers + config + retries         | Google + OpenAI‑compatible with robust error handling.                |
@@ -1083,7 +1083,7 @@ This document is meant to be a living reference. As you add RAG, Odoo‑specific
 
 ```mermaid
 flowchart TD
-    UI[User Interface / Webview Chat<br/>VS Code Webview (chat.js, history.js, settings.js)] -->|userMessage| ORCH[Backend Orchestrator<br/>AssistaXProvider.handleUserMessage → runAgent]
+    UI[User Interface / Webview Chat<br/>VS Code Webview (chat.js, history.js, settings.js)] -->|userMessage| ORCH[Backend Orchestrator<br/>AssistaCoderProvider.handleUserMessage → runAgent]
 
     subgraph SESS[Context & Memory Layer]
         PROMPTS[System Prompts<br/>systemPrompts.ts]

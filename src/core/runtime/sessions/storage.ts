@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import type { ChatSession } from './types.js';
 
-const STORAGE_KEY = 'assistaX.chat.sessions';
-const ACTIVE_SESSION_KEY = 'assistaX.chat.activeSessionId';
+const STORAGE_KEY = 'assistaCoder.chat.sessions';
+const ACTIVE_SESSION_KEY = 'assistaCoder.chat.activeSessionId';
 
 function reviveSession(raw: any): ChatSession | undefined {
     if (!raw || typeof raw !== 'object') {

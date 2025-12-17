@@ -11,8 +11,8 @@ import { OdooEnvironmentService } from '../utils/odooDetection.js';
 import { questionManager } from '../utils/questionManager.js';
 import { reviewManager } from '../utils/reviewManager.js';
 
-export class AssistaXProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'assistaXView';
+export class AssistaCoderProvider implements vscode.WebviewViewProvider {
+    public static readonly viewType = 'assistaCoderView';
 
     private _view?: vscode.WebviewView;
     private _pendingShowSettings = false;
@@ -128,7 +128,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                     try {
                         await vscode.env.openExternal(vscode.Uri.parse(url));
                     } catch (error) {
-                        console.error('[AssistaX] Failed to open external URL:', error);
+                        console.error('[AssistaCoder] Failed to open external URL:', error);
                     }
                 }
                 return;
@@ -149,7 +149,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 return;
             }
             if (message.command === 'deleteSession') {
-                try { console.log('[AssistaX] deleteSession received for', message?.id); } catch { }
+                try { console.log('[AssistaCoder] deleteSession received for', message?.id); } catch { }
                 try { vscode.window.showInformationMessage(`Deleting chat: ${String(message?.id || '')}`); } catch { }
                 await this._history?.handleDeleteSession(message);
                 return;
@@ -163,7 +163,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 const id = typeof message.id === 'string' ? message.id : '';
                 if (id) {
                     const switched = await switchActiveSession(this._context, id);
-                    console.log('[AssistaX] Session opened from history:', switched);
+                    console.log('[AssistaCoder] Session opened from history:', switched);
                     this._view?.show?.(true);
                     await this.queueHydration(switched.id, switched.messages);
                     this.postMessage('historyOpened', { sessionId: switched.id });
@@ -221,7 +221,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                             // Immediately sync UI to show the question as answered
                             void this.syncActiveSession();
                         } catch (error) {
-                            console.error('[AssistaX] Failed to save question/answer to history:', error);
+                            console.error('[AssistaCoder] Failed to save question/answer to history:', error);
                         }
                     }
                 }
@@ -423,7 +423,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
             }
 
             const elapsed = Date.now() - startTime;
-            console.log(`[AssistaX] Total completion time taken in ${elapsed}ms`);
+            console.log(`[AssistaCoder] Total completion time taken in ${elapsed}ms`);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
             await this.sendAssistantMessage(reply);
             void this.syncActiveSession();
@@ -493,7 +493,7 @@ export class AssistaXProvider implements vscode.WebviewViewProvider {
                 await this.queueHydration(session.id, session.messages);
             }
         } catch (error) {
-            console.warn('[AssistaX] Failed to load current chat session:', error);
+            console.warn('[AssistaCoder] Failed to load current chat session:', error);
         }
     }
 

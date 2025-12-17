@@ -190,7 +190,7 @@ continue;
 
 ## Phase 3: Progress Message Handling
 
-### Location: `src/core/webview/AssistaXProvider.ts` (lines 348-384)
+### Location: `src/core/webview/AssistaCoderProvider.ts` (lines 348-384)
 
 **Step 3.1: Receive Progress Message**
 - The `onProgress` callback receives JSON stringified progress messages:
@@ -624,7 +624,7 @@ interface ToolExecution {
 
 ### 3. **Progress Messages → Webview**
    - `onProgress` callback receives JSON messages
-   - `AssistaXProvider.handleProgressMessage` parses messages
+   - `AssistaCoderProvider.handleProgressMessage` parses messages
    - Routes `tool_execution_start` and `tool_execution_complete` to webview
 
 ### 4. **Webview → UI Display**
@@ -656,7 +656,7 @@ interface ToolExecution {
 2. **Tool Definition**: `src/core/tools/writeFile.ts`
    - Example tool implementation
 
-3. **Progress Handler**: `src/core/webview/AssistaXProvider.ts`
+3. **Progress Handler**: `src/core/webview/AssistaCoderProvider.ts`
    - Routes progress messages to webview
 
 4. **Webview Handler**: `src/core/webview/ui/main.js`

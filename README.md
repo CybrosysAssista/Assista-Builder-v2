@@ -1,3 +1,3 @@
-# assista-x README
+# assista-coder README
 
-Assista X odoo coding agent
+Assista Coder odoo coding agent

@@ -333,7 +333,7 @@ export function initChatUI(vscode) {
                     // Enhance markdown content (syntax highlighting, code blocks, etc.)
                     enhanceMarkdownContent(streamingMessageBubble);
                 } catch (error) {
-                    console.error('[AssistaX] Error rendering streaming markdown:', error);
+                    console.error('[AssistaCoder] Error rendering streaming markdown:', error);
                     // Fallback to plain text if rendering fails
                     streamingMessageBubble.textContent = streamingTextBuffer;
                 }
@@ -365,7 +365,7 @@ export function initChatUI(vscode) {
                     streamingMessageBubble.innerHTML = renderedHtml;
                     enhanceMarkdownContent(streamingMessageBubble);
                 } catch (error) {
-                    console.error('[AssistaX] Error in final render:', error);
+                    console.error('[AssistaCoder] Error in final render:', error);
                     streamingMessageBubble.textContent = streamingTextBuffer;
                 }
             }
