@@ -115,16 +115,22 @@ export function initSettingsUI(vscode) {
         if (sectionName === 'general') {
             general.style.display = 'block';
             if (items[0]) items[0].classList.add('active'); // items[0] is now Profile
-            // Hide Save button in Profile section
-            if (settingsSaveBtn) settingsSaveBtn.style.display = 'none';
+            // Hide Save button in Profile section (use visibility to keep layout stable)
+            if (settingsSaveBtn) {
+                settingsSaveBtn.style.visibility = 'hidden';
+                settingsSaveBtn.style.display = '';
+            }
             // Fetch usage data for the active provider (defaulting to openrouter for credits check)
             const provider = document.getElementById('provider')?.value || 'openrouter';
             vscode.postMessage({ command: 'fetchUsage', provider });
         } else {
             providers.style.display = 'block';
             if (items[1]) items[1].classList.add('active'); // items[1] is now Providers
-            // Show Save button in Providers section
-            if (settingsSaveBtn) settingsSaveBtn.style.display = '';
+            // Show Save button in Providers section only if unsaved changes exist
+            if (settingsSaveBtn) {
+                settingsSaveBtn.style.display = '';
+                settingsSaveBtn.style.visibility = settingsSaveBtn.disabled ? 'hidden' : 'visible';
+            }
         }
     }
 
@@ -350,6 +356,7 @@ export function initSettingsUI(vscode) {
             settingsSaveBtn.textContent = 'Save';
             settingsSaveBtn.style.opacity = '1';
             settingsSaveBtn.style.cursor = 'pointer';
+            settingsSaveBtn.style.visibility = 'visible';
         }
     }
 
@@ -359,6 +366,7 @@ export function initSettingsUI(vscode) {
             settingsSaveBtn.textContent = 'Saved';
             settingsSaveBtn.style.opacity = '0.6';
             settingsSaveBtn.style.cursor = 'default';
+            settingsSaveBtn.style.visibility = 'hidden';
         }
     }
 

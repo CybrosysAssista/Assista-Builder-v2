@@ -171,7 +171,7 @@ export async function runAgentOrchestrator(
         }
 
         // Extract filename for UI display (for write_to_file and apply_diff tools)
-        const filename = args?.path || toolCall.name;
+        const filename = args?.path || (toolCall.name === 'read_file' && args?.files?.[0]?.path) || toolCall.name;
 
         // Send tool execution start message
         onProgress?.(JSON.stringify({
