@@ -2,6 +2,8 @@ import { initMentionsUI } from '../mentions/mentions.js';
 import { initReviewUI } from '../review/review.js';
 
 export function initChatUI(vscode) {
+
+
     const messagesEl = document.getElementById('messages');
     const inputEl = document.getElementById('chatInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -908,6 +910,59 @@ export function initChatUI(vscode) {
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    function createMinimalFileItem(filePath, status) {
+        // Create block
+        const block = document.createElement('div');
+        block.className = 'minimal-tool-item';
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'minimal-tool-header';
+
+        // Icon
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'minimal-tool-icon';
+        const isFolder = filePath.endsWith('/') || filePath.endsWith('\\');
+        if (isFolder) {
+            iconSpan.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+        } else {
+            iconSpan.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
+        }
+        header.appendChild(iconSpan);
+
+        // Label
+        const label = document.createElement('span');
+        label.className = 'minimal-tool-label';
+        const fileName = filePath.split(/[/\\]/).pop();
+        label.textContent = `Read ${fileName}`;
+        header.appendChild(label);
+
+        // Status
+        const statusIcon = document.createElement('span');
+        statusIcon.className = 'minimal-status-icon';
+        if (status === 'loading') {
+            statusIcon.classList.add('loading');
+            statusIcon.innerHTML = '...';
+        }
+        header.appendChild(statusIcon);
+
+        // Content
+        const contentArea = document.createElement('div');
+        contentArea.className = 'minimal-tool-content';
+
+        block.appendChild(header);
+        block.appendChild(contentArea);
+
+        // Toggle
+        header.addEventListener('click', () => {
+            if (contentArea.innerHTML.trim() !== "") {
+                contentArea.classList.toggle('visible');
+            }
+        });
+
+        return { block, header, statusIcon, contentArea };
+    }
+
     function showToolExecution({ toolId, toolName, filename, status, args }) {
         if (!messagesEl) return;
         showChatArea();
@@ -916,6 +971,28 @@ export function initChatUI(vscode) {
         const row = document.createElement("div");
         row.className = "message-row";
         row.setAttribute('data-tool-id', toolId);
+
+        // Special handling for read_file
+        if (toolName === 'read_file' && args && args.files && Array.isArray(args.files)) {
+            const container = document.createElement('div');
+            container.className = 'read-file-container minimal';
+
+            const fileBlocks = new Map();
+
+            args.files.forEach(file => {
+                const { block, header, statusIcon, contentArea } = createMinimalFileItem(file.path, status);
+
+                container.appendChild(block);
+                fileBlocks.set(file.path, { header, statusIcon, contentArea });
+            });
+
+            row.appendChild(container);
+            messagesEl.appendChild(row);
+            messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+
+            toolExecutionElements.set(toolId, { row, container, fileBlocks, toolName });
+            return;
+        }
 
         // Main Container
         const container = document.createElement('div');
@@ -1031,7 +1108,42 @@ export function initChatUI(vscode) {
         const toolExec = toolExecutionElements.get(toolId);
         if (!toolExec) return;
 
-        const { statusIcon, contentArea, toolName } = toolExec;
+        const { statusIcon, contentArea, toolName, fileBlocks } = toolExec;
+
+        if (toolName === 'read_file' && fileBlocks) {
+            if (status === 'completed' && result && result.files) {
+                result.files.forEach(fileResult => {
+                    const block = fileBlocks.get(fileResult.path);
+                    if (block) {
+                        const { statusIcon, contentArea } = block;
+
+                        // Update status icon to checkmark or empty
+                        statusIcon.classList.remove('loading');
+                        statusIcon.innerHTML = ''; // Clean look
+
+                        if (fileResult.error) {
+                            const pre = document.createElement('pre');
+                            pre.textContent = `Error: ${fileResult.error}`;
+                            pre.style.color = 'var(--vscode-errorForeground)';
+                            contentArea.appendChild(pre);
+                            statusIcon.innerHTML = '⚠️';
+                        } else {
+                            const pre = document.createElement('pre');
+                            pre.textContent = fileResult.content;
+                            contentArea.appendChild(pre);
+                        }
+                        // Don't auto-expand for minimal look unless error?
+                        // contentArea.classList.add('visible'); 
+                    }
+                });
+            } else if (status === 'error') {
+                fileBlocks.forEach(block => {
+                    block.statusIcon.classList.remove('loading');
+                    block.statusIcon.innerHTML = '❌';
+                });
+            }
+            return;
+        }
 
         // Update status
         if (status === 'completed') {

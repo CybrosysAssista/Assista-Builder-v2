@@ -310,6 +310,73 @@
 }
 
 /* Tool Execution UI Styles (Composer Style) */
+.read-file-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0.85em 0;
+}
+
+.read-file-container.minimal {
+    gap: 2px;
+    margin: 4px 0;
+}
+
+.minimal-tool-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.minimal-tool-header {
+    display: flex;
+    align-items: center;
+    padding: 2px 0;
+    cursor: pointer;
+    color: var(--vscode-descriptionForeground);
+    font-size: 13px;
+    transition: color 0.2s;
+    gap: 8px;
+}
+
+.minimal-tool-header:hover {
+    color: var(--vscode-editor-foreground);
+}
+
+.minimal-tool-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
+}
+
+.minimal-tool-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.minimal-status-icon {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.minimal-tool-content {
+    display: none;
+    padding-left: 12px;
+    margin-top: 4px;
+    border-left: 1px solid var(--vscode-widget-border);
+}
+
+.minimal-tool-content.visible {
+    display: block;
+}
+
+.read-file-container .composer-code-block-container {
+    margin: 0;
+}
+
 .composer-code-block-container {
     margin: 0.85em 0;
     border-radius: 6px;
