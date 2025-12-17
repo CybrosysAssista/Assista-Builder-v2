@@ -40,12 +40,13 @@ export class RAGService {
    * @throws Error if RAG server request fails
    */
   async retrieveContext(question: string, topK: number = 5): Promise<RAGContext> {
+
     try {
       const ragPayload = {
         question: question,
         top_k: topK
       };
-      
+
       const ragRequestConfig = {
         headers: {
           'Content-Type': 'application/json'

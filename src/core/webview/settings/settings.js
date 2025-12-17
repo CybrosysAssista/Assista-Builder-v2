@@ -111,15 +111,20 @@ export function initSettingsUI(vscode) {
         general.style.display = 'none';
         document.querySelectorAll('.sidebar .sidebar-item').forEach((el) => el.classList.remove('active'));
         const items = document.querySelectorAll('.sidebar .sidebar-item');
+
         if (sectionName === 'general') {
             general.style.display = 'block';
             if (items[0]) items[0].classList.add('active'); // items[0] is now Profile
+            // Hide Save button in Profile section
+            if (settingsSaveBtn) settingsSaveBtn.style.display = 'none';
             // Fetch usage data for the active provider (defaulting to openrouter for credits check)
             const provider = document.getElementById('provider')?.value || 'openrouter';
             vscode.postMessage({ command: 'fetchUsage', provider });
         } else {
             providers.style.display = 'block';
             if (items[1]) items[1].classList.add('active'); // items[1] is now Providers
+            // Show Save button in Providers section
+            if (settingsSaveBtn) settingsSaveBtn.style.display = '';
         }
     }
 
@@ -361,7 +366,9 @@ export function initSettingsUI(vscode) {
         const provider = String(providerSelect?.value || 'google');
         const model = String(modelInput?.value || '');
         const key = String(apiKeyInput?.value || '');
-        const payload = { command: 'saveSettings', activeProvider: provider };
+        const ragEnabled = document.getElementById('ragEnabled')?.checked ?? true;
+
+        const payload = { command: 'saveSettings', activeProvider: provider, ragEnabled };
         if (provider === 'google') {
             payload['googleModel'] = model;
             if (key) payload['googleKey'] = key;
@@ -479,6 +486,11 @@ export function initSettingsUI(vscode) {
         enableSaveBtn();
     });
 
+    // RAG toggle
+    document.getElementById('ragEnabled')?.addEventListener('change', () => {
+        enableSaveBtn();
+    });
+
     // Model input: filter on typing
     modelInput?.addEventListener('input', () => {
         enableSaveBtn(); // Enable save on change
@@ -561,6 +573,13 @@ export function initSettingsUI(vscode) {
                     modelInput.value = model;
                 }
             }
+
+            // Load RAG state
+            const ragCheckbox = document.getElementById('ragEnabled');
+            if (ragCheckbox) {
+                ragCheckbox.checked = data.ragEnabled !== undefined ? data.ragEnabled : true;
+            }
+
             debounceRequestModelList(50);
             try { wireSettingsSidebar(); } catch (_) { }
             try { startSidebarObserver(); } catch (_) { }

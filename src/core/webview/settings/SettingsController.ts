@@ -24,6 +24,10 @@ export class SettingsController {
     const hasOpenaiKey = !!openaiKey;
     const hasAnthropicKey = !!anthropicKey;
 
+    // Load RAG config
+    const ragConfig = config.get<any>('rag', {});
+    const ragEnabled = ragConfig.enabled !== undefined ? ragConfig.enabled : true;
+
     this.postMessage('settingsData', {
       activeProvider,
       googleModel,
@@ -38,6 +42,7 @@ export class SettingsController {
       hasOpenrouterKey,
       hasOpenaiKey,
       hasAnthropicKey,
+      ragEnabled,
     });
   }
 
@@ -82,6 +87,12 @@ export class SettingsController {
         await config.update('activeProvider', activeProvider, vscode.ConfigurationTarget.Global);
       } else {
         console.warn(`[AssistaX] Invalid activeProvider: ${activeProvider}`);
+      }
+
+      // Save RAG config
+      if (typeof message.ragEnabled === 'boolean') {
+        const ragConfig = config.get<any>('rag', {});
+        await config.update('rag', { ...ragConfig, enabled: message.ragEnabled }, vscode.ConfigurationTarget.Global);
       }
 
 

@@ -526,6 +526,15 @@ export function getSettingsModalHtml(): string {
               <div class="error-message" id="errorMessage" style="display: none;">✕ The model ID you provided is not available. Please choose a different model.</div>
               
             </div>
+
+            <div class="section">
+              <div class="section-title">RAG Service (Odoo Documentation)</div>
+              <div class="checkbox-group">
+                <input type="checkbox" id="ragEnabled" />
+                <label for="ragEnabled">Enable RAG to retrieve relevant Odoo documentation context</label>
+              </div>
+              <div class="info-text">When enabled, the AI will retrieve relevant Odoo documentation from the RAG server before generating responses, improving accuracy for Odoo-specific queries.</div>
+            </div>
           </div>
           </div>
         </div>
