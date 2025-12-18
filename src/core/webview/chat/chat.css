@@ -1,3 +1,4 @@
+@import 'diff.css';
 /* Chat Interface Styles */
 
 /* Force VS Code UI font in chat area (but not messages) */
@@ -152,7 +153,7 @@
 }
 
 .message.markdown pre {
-    background: var(--vscode-textCodeBlock-background, rgba(255, 255, 255, 0.05));
+    background: var(--vscode-editor-background);
     color: var(--vscode-editor-foreground, #E1E4E8);
     padding: 0;
     overflow-x: auto;
@@ -392,7 +393,7 @@
     padding: 6px 12px;
     background: var(--vscode-editor-background);
     border-bottom: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
-    cursor: pointer;
+    cursor: default;
 }
 
 .composer-code-block-file-info {
@@ -417,6 +418,11 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.composer-code-block-filename:hover {
+    color: var(--vscode-textLink-foreground);
 }
 
 .composer-code-block-status {
@@ -447,6 +453,27 @@
     color: var(--vscode-errorForeground, #f87171);
 }
 
+.composer-chevron-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    color: var(--vscode-descriptionForeground);
+    transition: transform 0.2s ease;
+    border-radius: 4px;
+}
+
+.composer-chevron-icon:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1));
+    color: var(--vscode-foreground);
+}
+
+.composer-chevron-icon.collapsed {
+    transform: rotate(-90deg);
+}
+
 .composer-status-icon.loading {
     color: var(--vscode-descriptionForeground, #9ca3af);
     animation: spin 1s linear infinite;
@@ -471,6 +498,7 @@
     overflow-x: auto;
     color: var(--vscode-editor-foreground);
     line-height: 1.5;
+    background: var(--vscode-editor-background);
 }
 
 /* Diff Block mock-up */
