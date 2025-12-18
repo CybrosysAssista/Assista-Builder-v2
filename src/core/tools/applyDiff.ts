@@ -21,19 +21,69 @@ interface SearchReplaceBlock {
 }
 
 /**
- * Find the line index where searchText appears in content
+ * Find the line index where searchContent appears in lines array
+ * Returns the starting line index, or -1 if not found
  */
-function findMatchLineIndex(content: string, searchText: string): number {
-  const pos = content.indexOf(searchText);
-  if (pos === -1) return 0;
-  return content.substring(0, pos).split(/\r?\n/).length - 1;
+function findContentInLines(lines: string[], searchLines: string[], hintLine: number, searchRadius: number = 50): number {
+  const hintIdx = hintLine - 1; // Convert to 0-based
+  
+  // First, try exact match at hint location
+  if (hintIdx >= 0 && hintIdx < lines.length) {
+    let matches = true;
+    for (let i = 0; i < searchLines.length; i++) {
+      const lineIdx = hintIdx + i;
+      if (lineIdx >= lines.length || lines[lineIdx] !== searchLines[i]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) {
+      return hintIdx;
+    }
+  }
+  
+  // Search near the hint location (within searchRadius lines)
+  const searchStart = Math.max(0, hintIdx - searchRadius);
+  const maxValidStart = lines.length - searchLines.length;
+  const searchEnd = Math.min(maxValidStart, hintIdx + searchRadius);
+  
+  // Only search if we have valid range
+  if (searchEnd >= searchStart) {
+    for (let startIdx = searchStart; startIdx <= searchEnd; startIdx++) {
+      let matches = true;
+      for (let i = 0; i < searchLines.length; i++) {
+        if (lines[startIdx + i] !== searchLines[i]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) {
+        return startIdx;
+      }
+    }
+  }
+  
+  // If not found near hint, search entire file
+  for (let startIdx = 0; startIdx <= lines.length - searchLines.length; startIdx++) {
+    let matches = true;
+    for (let i = 0; i < searchLines.length; i++) {
+      if (lines[startIdx + i] !== searchLines[i]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) {
+      return startIdx;
+    }
+  }
+  
+  return -1; // Not found
 }
 
 /**
  * Extract context around a match position in the file
  */
-function extractContext(original: string, matchLineIndex: number, radius: number = 5): string {
-  const lines = original.split(/\r?\n/);
+function extractContext(lines: string[], matchLineIndex: number, radius: number = 5): string {
   const start = Math.max(0, matchLineIndex - radius);
   const end = Math.min(lines.length, matchLineIndex + radius);
   return lines.slice(start, end).join('\n');
@@ -68,7 +118,7 @@ function parseSearchReplaceBlocks(diff: string): SearchReplaceBlock[] {
  */
 export const applyDiffTool: ToolDefinition = {
   name: 'apply_diff',
-  description: `Apply precise, targeted modifications to an existing file using one or more search/replace blocks. This tool is for surgical edits only; the 'SEARCH' block must exactly match the existing content, including whitespace and indentation. To make multiple targeted changes, provide multiple SEARCH/REPLACE blocks in the 'diff' parameter. Use the 'read_file' tool first if you are not confident in the exact content to search for.`,
+  description: `Apply precise, targeted modifications to an existing file using one or more search/replace blocks. The 'SEARCH' block must exactly match the existing content (including whitespace and indentation). The ':start_line:' is a hint - the tool will search for the content near that line and apply the change. If the content is found at a different line, it will still be applied. To make multiple targeted changes, provide multiple SEARCH/REPLACE blocks. Use 'read_file' first to get the exact content if needed.`,
   jsonSchema: {
     type: 'object',
     properties: {
@@ -159,57 +209,59 @@ export const applyDiffTool: ToolDefinition = {
       // Sort blocks by start line (apply from bottom to top to preserve line numbers)
       const sortedBlocks = [...blocks].sort((a, b) => b.startLine - a.startLine);
 
-      let modifiedContent = originalContent;
       const lines = originalContent.split(/\r?\n/);
       const errors: string[] = [];
+      const appliedBlocks: Array<{ hintLine: number; actualLine: number }> = [];
 
       // Apply each block
       for (const block of sortedBlocks) {
-        const startIdx = block.startLine - 1; // Convert to 0-based
-
-        if (startIdx < 0 || startIdx >= lines.length) {
-          errors.push(`Block at line ${block.startLine}: Start line out of bounds`);
-          continue;
-        }
-
         // Find the search content in the file
         const searchLines = block.searchContent.split(/\r?\n/);
         const searchLength = searchLines.length;
 
-        // Check if search content matches at startLine
-        let found = true;
-        for (let i = 0; i < searchLength; i++) {
-          const lineIdx = startIdx + i;
-          if (lineIdx >= lines.length || lines[lineIdx] !== searchLines[i]) {
-            found = false;
-            break;
-          }
+        if (searchLength === 0) {
+          errors.push(`Block at line ${block.startLine}: Search content is empty`);
+          continue;
         }
 
-        if (!found) {
-          // Try to find a fuzzy match nearby
-          const contextStart = Math.max(0, startIdx - 5);
-          const contextEnd = Math.min(lines.length, startIdx + searchLength + 5);
-          const context = lines.slice(contextStart, contextEnd).join('\n');
+        // Find where the content actually is (use hint line as starting point)
+        const actualStartIdx = findContentInLines(lines, searchLines, block.startLine, 50);
+
+        if (actualStartIdx === -1) {
+          // Content not found - provide helpful error message
+          const hintIdx = block.startLine - 1;
+          const contextStart = Math.max(0, hintIdx - 10);
+          const contextEnd = Math.min(lines.length, hintIdx + searchLength + 10);
+          const context = extractContext(lines, hintIdx, 10);
 
           errors.push(
-            `Block at line ${block.startLine}: Search content does not match exactly. ` +
-            `Expected to find at line ${block.startLine}:\n${block.searchContent}\n` +
-            `Found in context:\n${context}`
+            `Block at line ${block.startLine}: Search content not found in file.\n` +
+            `Searched content:\n${block.searchContent}\n\n` +
+            `Context around line ${block.startLine}:\n${context}`
           );
           continue;
         }
 
-        // Replace the content
+        // Warn if found far from hint (but still apply)
+        const lineDiff = Math.abs(actualStartIdx + 1 - block.startLine);
+        if (lineDiff > 5) {
+          // Still apply, but note the difference
+          appliedBlocks.push({
+            hintLine: block.startLine,
+            actualLine: actualStartIdx + 1,
+          });
+        }
+
+        // Replace the content at the found location
         const replaceLines = block.replaceContent.split(/\r?\n/);
-        lines.splice(startIdx, searchLength, ...replaceLines);
+        lines.splice(actualStartIdx, searchLength, ...replaceLines);
       }
 
       if (errors.length > 0) {
         return {
           status: 'error',
           error: {
-            message: `Failed to apply some blocks:\n${errors.join('\n\n')}`,
+            message: `Failed to apply ${errors.length} of ${blocks.length} blocks:\n${errors.join('\n\n')}`,
             code: 'APPLY_ERROR',
           },
         };
@@ -222,12 +274,21 @@ export const applyDiffTool: ToolDefinition = {
       // We pass originalContent because we already have it from the diff calculation
       await applyVisualDiff(fullPath, newText, 'Agent modified', originalContent);
 
+      const result: any = {
+        path: args.path,
+        blocks_applied: blocks.length,
+      };
+
+      // Add warnings if any blocks were found at different lines than specified
+      if (appliedBlocks.length > 0) {
+        result.warnings = appliedBlocks.map(b => 
+          `Block specified at line ${b.hintLine} was found and applied at line ${b.actualLine}`
+        );
+      }
+
       return {
         status: 'success',
-        result: {
-          path: args.path,
-          blocks_applied: blocks.length,
-        },
+        result,
       };
     } catch (error) {
       return {
