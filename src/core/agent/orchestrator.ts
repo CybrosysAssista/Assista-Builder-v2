@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { ProviderAdapter } from '../providers/base.js';
 import type { InternalMessage } from './types.js';
-import { ALL_TOOLS, executeToolByName, findToolByName, readFileTool } from '../tools/registry.js';
+import { ALL_TOOLS, executeToolByName, findToolByName, readFileTool, initializeTools } from '../tools/registry.js';
 import { safeParseJson } from '../tools/toolUtils.js';
 import { convertInternalToSession } from '../runtime/agent.js';
 import { writeSessionMessages } from '../runtime/sessionManager.js';
@@ -23,6 +23,9 @@ export async function runAgentOrchestrator(
   abortSignal?: AbortSignal,
   onProgress?: (msg: string) => void
 ): Promise<string> {
+  // Initialize tools with context
+  initializeTools(context);
+  
   const systemInstruction = params.config?.systemInstruction || '';
   let internalMessages: InternalMessage[] = [...sessionHistory];
 

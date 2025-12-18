@@ -6,6 +6,9 @@ import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
 interface FileEntry {
   path: string;
   line_ranges?: string[]; // Format: "start-end"
+  should_read_entire_file?: boolean; // Explicitly read entire file
+  offset?: number; // Start reading from this line (1-indexed)
+  limit?: number; // Number of lines to read
 }
 
 interface ReadFileArgs {
@@ -56,11 +59,28 @@ async function readLineRanges(filePath: string, ranges: string[]): Promise<strin
 }
 
 /**
+ * Check if file is binary or image
+ */
+function isBinaryFile(filePath: string): boolean {
+  const ext = path.extname(filePath).toLowerCase();
+  const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.bmp'];
+  const binaryExts = ['.pdf', '.zip', '.tar', '.gz', '.exe', '.dll', '.so', '.dylib'];
+  return imageExts.includes(ext) || binaryExts.includes(ext);
+}
+
+/**
+ * Check if file is a Jupyter notebook
+ */
+function isNotebookFile(filePath: string): boolean {
+  return path.extname(filePath).toLowerCase() === '.ipynb';
+}
+
+/**
  * Read file tool - supports multiple files and line ranges
  */
 export const readFileTool: ToolDefinition = {
   name: 'read_file',
-  description: 'Read one or more files and return their contents with line numbers for diffing or discussion. Structure: { files: [{ path: "relative/path.ts", line_ranges: ["1-50", "100-150"] }] }. The "path" is required and relative to workspace. The "line_ranges" is optional for reading specific sections (format: "start-end", 1-based inclusive). Example single file: { files: [{ path: "src/app.ts" }] }. Example with line ranges: { files: [{ path: "src/app.ts", line_ranges: ["1-50", "100-150"] }] }. Example multiple files: { files: [{ path: "file1.ts", line_ranges: ["1-50"] }, { path: "file2.ts" }] }',
+  description: 'Read one or more files and return their contents with line numbers. Supports reading entire files, specific line ranges, or chunks. For large files (>2000 lines), consider using line_ranges or offset/limit. Images, PDFs, and binary files are not supported - use appropriate tools for those. Line numbers are formatted as LINE_NUMBER|LINE_CONTENT. You can optionally specify offset and limit for chunked reading, or line_ranges for non-contiguous sections.',
   jsonSchema: {
     type: 'object',
     properties: {
@@ -81,6 +101,19 @@ export const readFileTool: ToolDefinition = {
                 type: 'string',
                 pattern: '^[0-9]+-[0-9]+$',
               },
+            },
+            should_read_entire_file: {
+              type: 'boolean',
+              description: 'Whether to read the entire file. Defaults to true if no line_ranges, offset, or limit are specified. For large files, consider using line_ranges or offset/limit instead.',
+              default: true,
+            },
+            offset: {
+              type: 'number',
+              description: 'The line number to start reading from (1-indexed, inclusive). Only provide if the file is too large to read at once.',
+            },
+            limit: {
+              type: 'number',
+              description: 'The number of lines to read. Only provide if the file is too large to read at once. Defaults to 2000 lines if not specified.',
             },
           },
           required: ['path'],
@@ -104,10 +137,10 @@ export const readFileTool: ToolDefinition = {
         };
       }
 
-      const results: Array<{ path: string; content: string; error?: string }> = [];
+      const results: Array<{ path: string; content: string; error?: string; warning?: string }> = [];
 
       for (const fileEntry of args.files) {
-        const { path: filePath, line_ranges } = fileEntry;
+        const { path: filePath, line_ranges, should_read_entire_file, offset, limit } = fileEntry;
 
         if (!filePath) {
           results.push({
@@ -143,29 +176,78 @@ export const readFileTool: ToolDefinition = {
             continue;
           }
 
+          // Check for binary/image files
+          if (isBinaryFile(fullPath)) {
+            results.push({
+              path: filePath,
+              content: '',
+              error: `Binary or image file cannot be read as text: ${filePath}. Use appropriate tools for images/PDFs.`,
+            });
+            continue;
+          }
+
+          // Check for notebook files (could add support later)
+          if (isNotebookFile(fullPath)) {
+            results.push({
+              path: filePath,
+              content: '',
+              error: `Jupyter notebook files (.ipynb) are not yet supported: ${filePath}`,
+            });
+            continue;
+          }
+
           let content: string;
+          const fileContent = await fs.readFile(fullPath, 'utf-8');
+          const lines = fileContent.split(/\r?\n/);
+          const totalLines = lines.length;
+
+          // Warn about large files
+          if (totalLines > 2000 && should_read_entire_file !== false && !line_ranges && !offset) {
+            // Still read, but note it's large
+          }
 
           if (line_ranges && line_ranges.length > 0) {
             // Read specific line ranges
             content = await readLineRanges(fullPath, line_ranges);
+          } else if (offset !== undefined) {
+            // Read chunk using offset and limit
+            const startIdx = Math.max(0, offset - 1); // Convert to 0-based
+            const endIdx = limit !== undefined 
+              ? Math.min(lines.length, startIdx + limit)
+              : Math.min(lines.length, startIdx + 2000); // Default 2000 lines
+            
+            const selectedLines = lines.slice(startIdx, endIdx);
+            content = selectedLines.map((line, idx) => `${startIdx + idx + 1}|${line}`).join('\n');
           } else {
-            // Read entire file
-            const fileContent = await fs.readFile(fullPath, 'utf-8');
-            const lines = fileContent.split(/\r?\n/);
-            // Add line numbers
-            content = lines.map((line, idx) => `${idx + 1}|${line}`).join('\n');
+            // Read entire file (or up to limit if specified)
+            const linesToRead = limit !== undefined ? lines.slice(0, limit) : lines;
+            content = linesToRead.map((line, idx) => `${idx + 1}|${line}`).join('\n');
+            
+            if (limit !== undefined && lines.length > limit) {
+              content += `\n... (file has ${totalLines} total lines, showing first ${limit})`;
+            }
           }
 
           results.push({
             path: filePath,
             content,
+            ...(totalLines > 2000 ? { warning: `Large file: ${totalLines} lines. Consider using line_ranges or offset/limit for better performance.` } : {}),
           });
         } catch (error) {
-          results.push({
-            path: filePath,
-            content: '',
-            error: error instanceof Error ? error.message : String(error),
-          });
+          // Check if it's an encoding error (likely binary file)
+          if (error instanceof Error && error.message.includes('encoding')) {
+            results.push({
+              path: filePath,
+              content: '',
+              error: `File appears to be binary or not UTF-8 encoded: ${filePath}`,
+            });
+          } else {
+            results.push({
+              path: filePath,
+              content: '',
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
         }
       }
 
