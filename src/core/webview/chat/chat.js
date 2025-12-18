@@ -1,5 +1,6 @@
 import { initMentionsUI } from '../mentions/mentions.js';
 import { initReviewUI } from '../review/review.js';
+import { applySyntaxHighlighting, applyDiffHighlighting } from '../utils/syntaxHighlighter.js';
 
 export function initChatUI(vscode) {
 
@@ -84,6 +85,8 @@ export function initChatUI(vscode) {
         }
     }
 
+
+
     function enhanceMarkdownContent(container) {
         if (!container) {
             return;
@@ -130,44 +133,7 @@ export function initChatUI(vscode) {
             if (block.children.length > 0) return;
 
             let text = block.textContent;
-
-            // Escape HTML
-            text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-            const tokens = [];
-            const save = (cls, match) => {
-                tokens.push({ cls, val: match });
-                return `@@@TOKEN${tokens.length - 1}@@@`; // Use chars not matched by \w
-            };
-
-            // 1. Strings (Double and Single quotes)
-            text = text.replace(/([\"'])(?:(?=(\\?))\2.)*?\1/g, m => save('hljs-string', m));
-
-            // 2. Comments (Python # and JS //)
-            text = text.replace(/(\/\/.*$|#.*$)/gm, m => save('hljs-comment', m));
-
-            // 3. Keywords
-            const kws = "import|from|class|def|return|if|else|elif|for|while|try|except|with|as|pass|print|const|let|var|function|async|await|new|this|export|default|public|private|protected|interface|type|module|true|false|null";
-            text = text.replace(new RegExp(`\\b(${kws})\\b`, 'g'), m => save('hljs-keyword', m));
-
-            // 4. Functions (word followed by paren)
-            text = text.replace(/(\w+)(?=\()/g, m => save('hljs-function', m));
-
-            // 5. Numbers (including decimals like 19.0, 3.14, etc.)
-            text = text.replace(/\b(\d+\.\d+|\d+)\b/g, m => save('hljs-number', m));
-
-            // 6. Attributes/Properties (match .word but only when . is followed by a letter, not a digit)
-            // This avoids matching version numbers like 19.0 (which is already captured as a number above)
-            text = text.replace(/(\.)[a-zA-Z_]\w*/g, m => save('hljs-attr', m));
-
-            // Restore tokens
-            tokens.forEach((token, i) => {
-                const placeholder = `@@@TOKEN${i}@@@`;
-                // Replace all occurrences of the placeholder
-                text = text.split(placeholder).join(`<span class="${token.cls}">${token.val}</span>`);
-            });
-
-            block.innerHTML = text;
+            block.innerHTML = applySyntaxHighlighting(text);
             block.classList.add("hljs");
         });
 
@@ -1015,7 +981,11 @@ export function initChatUI(vscode) {
         // Filename
         const nameSpan = document.createElement('span');
         nameSpan.className = 'composer-code-block-filename';
-        nameSpan.textContent = filename || toolName || 'Command';
+        const displayName = filename ? filename.split(/[/\\]/).pop() : (toolName || 'Command');
+        nameSpan.textContent = displayName;
+        if (filename) {
+            nameSpan.title = filename;
+        }
 
         // Status Text (Diff stats position)
         const statusTextSpan = document.createElement('span');
@@ -1029,6 +999,7 @@ export function initChatUI(vscode) {
         const rightControls = document.createElement('div');
         rightControls.style.display = 'flex';
         rightControls.style.alignItems = 'center';
+        rightControls.style.gap = '8px';
 
         const statusIcon = document.createElement('div');
         statusIcon.className = 'composer-status-icon';
@@ -1040,7 +1011,12 @@ export function initChatUI(vscode) {
             statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
         }
 
+        const chevron = document.createElement('div');
+        chevron.className = 'composer-chevron-icon';
+        chevron.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+
         rightControls.appendChild(statusIcon);
+        rightControls.appendChild(chevron);
 
         header.appendChild(fileInfo);
         header.appendChild(rightControls);
@@ -1052,23 +1028,37 @@ export function initChatUI(vscode) {
         // Populate content from args if available
         if (args) {
             let contentToShow = '';
+            let isDiff = false;
+
             // Check for various potential property names based on tool definitions
             if (args.content) {
                 contentToShow = args.content; // write_to_file
             } else if (args.diff) {
                 contentToShow = args.diff; // apply_diff
+                isDiff = true;
             } else if (args.CodeContent) {
                 contentToShow = args.CodeContent;
             } else if (args.ReplacementContent) {
-                contentToShow = args.ReplacementContent;
+                // For replace_file_content, let's construct a pseudo-diff view
+                if (args.TargetContent) {
+                    contentToShow = `<<<<<<< SEARCH\n${args.TargetContent}\n=======\n${args.ReplacementContent}\n>>>>>>> REPLACE`;
+                    isDiff = true;
+                } else {
+                    contentToShow = args.ReplacementContent;
+                }
+            } else if (args.ReplacementChunks && Array.isArray(args.ReplacementChunks)) {
+                // For multi_replace_file_content
+                contentToShow = args.ReplacementChunks.map(chunk => {
+                    return `<<<<<<< SEARCH\n${chunk.TargetContent}\n=======\n${chunk.ReplacementContent}\n>>>>>>> REPLACE`;
+                }).join('\n\n');
+                isDiff = true;
             } else if (args.CommandLine) {
                 contentToShow = args.CommandLine;
             } else if (args.Query) {
                 contentToShow = args.Query;
             } else if (typeof args === 'object') {
-                // Format JSON nicely, excluding large fields handled above if mixed
+                // Format JSON nicely
                 const safeArgs = { ...args };
-                // Maybe show partial args? 
                 contentToShow = JSON.stringify(safeArgs, null, 2);
             } else {
                 contentToShow = String(args);
@@ -1076,7 +1066,14 @@ export function initChatUI(vscode) {
 
             if (contentToShow) {
                 const pre = document.createElement('pre');
-                pre.textContent = contentToShow;
+
+                if (isDiff) {
+                    pre.innerHTML = applyDiffHighlighting(contentToShow);
+                    pre.classList.add('diff-view');
+                } else {
+                    pre.innerHTML = applySyntaxHighlighting(contentToShow);
+                    pre.classList.add('hljs');
+                }
                 contentArea.appendChild(pre);
                 contentArea.classList.add('visible');
             }
@@ -1089,16 +1086,31 @@ export function initChatUI(vscode) {
         messagesEl.appendChild(row);
         messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
 
-        // Toggle content visibility on header click
-        header.addEventListener('click', () => {
+        // Open file in editor on filename click
+        const filenameEl = fileInfo.querySelector('.composer-code-block-filename');
+        if (filenameEl && filename) {
+            filenameEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                vscode.postMessage({
+                    command: 'openFile',
+                    path: filename
+                });
+            });
+        }
+
+        // Toggle content visibility on chevron click
+        chevron.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent header click if any
             if (contentArea.innerHTML.trim() !== "") {
-                if (contentArea.classList.contains('visible')) {
-                    contentArea.classList.remove('visible');
-                } else {
-                    contentArea.classList.add('visible');
-                }
+                const isVisible = contentArea.classList.toggle('visible');
+                chevron.classList.toggle('collapsed', !isVisible);
             }
         });
+
+        // Initialize chevron state based on visibility
+        if (!contentArea.classList.contains('visible')) {
+            chevron.classList.add('collapsed');
+        }
 
         // Store reference including contentArea and toolName
         toolExecutionElements.set(toolId, { row, container, header, statusIcon, contentArea, toolName });

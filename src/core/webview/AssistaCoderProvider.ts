@@ -140,6 +140,27 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 await this._settings?.handleLoadSettings();
                 return;
             }
+
+            if (message.command === 'openFile') {
+                const filePath = typeof message.path === 'string' ? message.path : '';
+                if (filePath) {
+                    try {
+                        const workspaceFolders = vscode.workspace.workspaceFolders;
+                        if (workspaceFolders) {
+                            const fullPath = path.isAbsolute(filePath)
+                                ? filePath
+                                : path.join(workspaceFolders[0].uri.fsPath, filePath);
+                            const uri = vscode.Uri.file(fullPath);
+                            const doc = await vscode.workspace.openTextDocument(uri);
+                            await vscode.window.showTextDocument(doc, { preview: true });
+                        }
+                    } catch (error) {
+                        console.error('[AssistaCoder] Failed to open file:', error);
+                        vscode.window.showErrorMessage(`Failed to open file: ${filePath}`);
+                    }
+                }
+                return;
+            }
             // Delegate mention-related commands
             if (await this._mentions?.handle(message)) { return; }
 

@@ -18,7 +18,9 @@ function reviveSession(raw: any): ChatSession | undefined {
     const messages = Array.isArray(raw.messages) ? raw.messages.filter(Boolean).map((message: any) => {
         const role = typeof message?.role === 'string' ? message.role : undefined;
         const content = typeof message?.content === 'string' ? message.content : undefined;
-        if (!role || !content) {
+        const hasTools = message.toolExecutions && Array.isArray(message.toolExecutions) && message.toolExecutions.length > 0;
+
+        if (!role || (content === undefined && !hasTools)) {
             return undefined;
         }
         const result: any = {
