@@ -258,6 +258,46 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
+            // Handle file drop from explorer
+            if (message.command === 'fileDropped') {
+                const filePath = typeof message.path === 'string' ? message.path : '';
+                console.log('[AssistaCoder] fileDropped received:', filePath);
+                if (filePath) {
+                    const ws = vscode.workspace.workspaceFolders?.[0];
+                    if (ws) {
+                        const fullPath = path.normalize(filePath);
+                        const wsPath = path.normalize(ws.uri.fsPath);
+                        console.log('[AssistaCoder] Full path:', fullPath, 'WS path:', wsPath);
+
+                        if (fullPath.startsWith(wsPath)) {
+                            let relPath = fullPath.substring(wsPath.length).replace(/^[\\\/]+/, '');
+                            // Normalize to forward slashes for consistency
+                            relPath = relPath.replace(/\\/g, '/');
+                            console.log('[AssistaCoder] Resolved relative path:', relPath);
+
+                            try {
+                                const stat = await vscode.workspace.fs.stat(vscode.Uri.file(fullPath));
+                                const isFolder = stat.type === vscode.FileType.Directory;
+                                this.postMessage('insertMention', { name: relPath, isFolder });
+                            } catch (err) {
+                                console.error('[AssistaCoder] Failed to stat dropped file:', err);
+                            }
+                        } else {
+                            // File is outside workspace, use absolute path
+                            console.log('[AssistaCoder] File outside workspace, using absolute path');
+                            try {
+                                const stat = await vscode.workspace.fs.stat(vscode.Uri.file(fullPath));
+                                const isFolder = stat.type === vscode.FileType.Directory;
+                                this.postMessage('insertMention', { name: fullPath, isFolder });
+                            } catch (err) {
+                                console.error('[AssistaCoder] Failed to stat dropped external file:', err);
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+
             // Handle review response
             if (message.command === 'reviewResponse') {
                 const answer = message.answer === 'accept' ? 'accept' : 'reject';

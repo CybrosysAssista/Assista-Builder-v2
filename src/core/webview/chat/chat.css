@@ -947,6 +947,20 @@
 
 /* Responsive Design for Chat Interface */
 @media (max-width: 400px) {
+    .question-container {
+        min-width: 100%;
+        padding: 12px;
+    }
+}
+
+/* Drag and drop visual feedback */
+#chatInput.drag-over {
+    border: 2px dashed var(--vscode-focusBorder) !important;
+    background: var(--vscode-input-background) !important;
+    opacity: 0.8;
+}
+
+@media (max-width: 400px) {
     .input-bar {
         padding: 8px;
     }

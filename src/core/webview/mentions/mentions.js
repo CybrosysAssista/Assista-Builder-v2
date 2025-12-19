@@ -488,6 +488,7 @@ export function initMentionsUI(vscode, opts) {
 
 
   return {
+    insertMention,
     open: openMenu,
     close: closeMenu,
     setRecentNames,

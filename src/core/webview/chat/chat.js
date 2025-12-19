@@ -754,6 +754,68 @@ export function initChatUI(vscode) {
                 // ignore sizing issues
             }
         });
+
+        // Drag and drop support
+        inputEl.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            inputEl.classList.add('drag-over');
+            console.log('[AssistaCoder] Drag over input');
+        });
+
+        inputEl.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            inputEl.classList.remove('drag-over');
+            console.log('[AssistaCoder] Drag leave input');
+        });
+
+        inputEl.addEventListener('drop', (e) => {
+            console.log('[AssistaCoder] Drop event detected');
+            e.preventDefault();
+            e.stopPropagation();
+            inputEl.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            console.log('[AssistaCoder] Drop files count:', files ? files.length : 0);
+
+            if (files && files.length > 0) {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    console.log('[AssistaCoder] Dropped file:', file.name, 'Path:', file.path);
+                    if (file.path) {
+                        vscode.postMessage({
+                            command: 'fileDropped',
+                            path: file.path
+                        });
+                    }
+                }
+            } else {
+                // Fallback for some drag sources
+                const uriList = e.dataTransfer.getData('text/uri-list');
+                if (uriList) {
+                    console.log('[AssistaCoder] URI list dropped:', uriList);
+                    const uris = uriList.split('\n').filter(u => u.trim() && !u.startsWith('#'));
+                    uris.forEach(uri => {
+                        try {
+                            const url = new URL(uri);
+                            if (url.protocol === 'file:') {
+                                const decodedPath = decodeURIComponent(url.pathname);
+                                // Handle Windows paths (remove leading slash if needed)
+                                const finalPath = decodedPath.match(/^\/[a-zA-Z]:/) ? decodedPath.substring(1) : decodedPath;
+                                vscode.postMessage({
+                                    command: 'fileDropped',
+                                    path: finalPath
+                                });
+                            }
+                        } catch (err) {
+                            console.error('[AssistaCoder] Failed to parse dropped URI:', uri, err);
+                        }
+                    });
+                }
+            }
+        });
+
         // Initialize disabled state
         try { if (sendBtn) sendBtn.disabled = !inputEl.innerText.trim(); } catch (_) { }
     }
@@ -1214,6 +1276,20 @@ export function initChatUI(vscode) {
             messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
         }
     }
+
+    // Handle messages from extension
+    window.addEventListener('message', event => {
+        const message = event.data;
+        console.log('[AssistaCoder] Message received in chat.js:', message.type);
+        switch (message.type) {
+            case 'insertMention':
+                if (message.payload && message.payload.name) {
+                    console.log('[AssistaCoder] Inserting mention:', message.payload.name);
+                    mentions.insertMention(message.payload.name, !!message.payload.isFolder);
+                }
+                break;
+        }
+    });
 
     return {
         appendMessage,
