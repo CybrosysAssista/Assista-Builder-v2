@@ -1,6 +1,7 @@
 import { initMentionsUI } from '../mentions/mentions.js';
 import { initReviewUI } from '../review/review.js';
 import { applySyntaxHighlighting, applyDiffHighlighting } from '../utils/syntaxHighlighter.js';
+import { initToolsUI } from './tools.js';
 
 export function initChatUI(vscode) {
 
@@ -24,11 +25,16 @@ export function initChatUI(vscode) {
     const micBtn = document.getElementById('micBtn');
     const settingsBtn = document.getElementById('settingsBtn');
 
-    // Initialize Review UI
-    const { showReviewBanner, hideReviewBanner } = initReviewUI(vscode);
-
     let isBusy = false;
     let activeSessionId;
+
+    // Initialize Tools UI
+    const { showToolExecution, updateToolExecution } = initToolsUI(vscode, {
+        messagesEl,
+        showChatArea,
+        applySyntaxHighlighting,
+        applyDiffHighlighting
+    });
     // Local UI state (vanilla JS equivalent of React state)
     let selectedMode = 'agent';
     let selectedModel = 'gpt5-low';
@@ -218,8 +224,8 @@ export function initChatUI(vscode) {
     let streamingTextBuffer = '';
     let streamingRenderTimeout = null;
     let streamingRow = null;
-    // Track tool execution UI elements by toolId
-    const toolExecutionElements = new Map();
+    // Initialize Review UI
+    const { showReviewBanner, hideReviewBanner } = initReviewUI(vscode);
 
     function appendMessage(text, sender, html, markdown) {
         if (!messagesEl || (!text && !html && !markdown)) {
@@ -876,344 +882,7 @@ export function initChatUI(vscode) {
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    function createMinimalFileItem(filePath, status) {
-        // Create block
-        const block = document.createElement('div');
-        block.className = 'minimal-tool-item';
 
-        // Header
-        const header = document.createElement('div');
-        header.className = 'minimal-tool-header';
-
-        // Icon
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'minimal-tool-icon';
-        const isFolder = filePath.endsWith('/') || filePath.endsWith('\\');
-        if (isFolder) {
-            iconSpan.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
-        } else {
-            iconSpan.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
-        }
-        header.appendChild(iconSpan);
-
-        // Label
-        const label = document.createElement('span');
-        label.className = 'minimal-tool-label';
-        const fileName = filePath.split(/[/\\]/).pop();
-        label.textContent = `Read ${fileName}`;
-        header.appendChild(label);
-
-        // Status
-        const statusIcon = document.createElement('span');
-        statusIcon.className = 'minimal-status-icon';
-        if (status === 'loading') {
-            statusIcon.classList.add('loading');
-            statusIcon.innerHTML = '...';
-        }
-        header.appendChild(statusIcon);
-
-        // Content
-        const contentArea = document.createElement('div');
-        contentArea.className = 'minimal-tool-content';
-
-        block.appendChild(header);
-        block.appendChild(contentArea);
-
-        // Toggle
-        header.addEventListener('click', () => {
-            if (contentArea.innerHTML.trim() !== "") {
-                contentArea.classList.toggle('visible');
-            }
-        });
-
-        return { block, header, statusIcon, contentArea };
-    }
-
-    function showToolExecution({ toolId, toolName, filename, status, args }) {
-        if (!messagesEl) return;
-        showChatArea();
-
-        // Create message row
-        const row = document.createElement("div");
-        row.className = "message-row";
-        row.setAttribute('data-tool-id', toolId);
-
-        // Special handling for read_file
-        if (toolName === 'read_file' && args && args.files && Array.isArray(args.files)) {
-            const container = document.createElement('div');
-            container.className = 'read-file-container minimal';
-
-            const fileBlocks = new Map();
-
-            args.files.forEach(file => {
-                const { block, header, statusIcon, contentArea } = createMinimalFileItem(file.path, status);
-
-                container.appendChild(block);
-                fileBlocks.set(file.path, { header, statusIcon, contentArea });
-            });
-
-            row.appendChild(container);
-            messagesEl.appendChild(row);
-            messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
-
-            toolExecutionElements.set(toolId, { row, container, fileBlocks, toolName });
-            return;
-        }
-
-        // Main Container
-        const container = document.createElement('div');
-        container.className = 'composer-code-block-container composer-message-codeblock';
-
-        // Header
-        const header = document.createElement('div');
-        header.className = 'composer-code-block-header';
-
-        // File Info
-        const fileInfo = document.createElement('div');
-        fileInfo.className = 'composer-code-block-file-info';
-
-        // Icon
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'composer-primary-toolcall-icon';
-        // Simple file icon SVG
-        iconSpan.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>`;
-
-        // Filename
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'composer-code-block-filename';
-        const displayName = filename ? filename.split(/[/\\]/).pop() : (toolName || 'Command');
-        nameSpan.textContent = displayName;
-        if (filename) {
-            nameSpan.title = filename;
-        }
-
-        // Status Text (Diff stats position)
-        const statusTextSpan = document.createElement('span');
-        statusTextSpan.className = 'composer-code-block-status';
-
-        fileInfo.appendChild(iconSpan);
-        fileInfo.appendChild(nameSpan);
-        fileInfo.appendChild(statusTextSpan);
-
-        // Right-side controls (spinner/checkmark)
-        const rightControls = document.createElement('div');
-        rightControls.style.display = 'flex';
-        rightControls.style.alignItems = 'center';
-        rightControls.style.gap = '8px';
-
-        const statusIcon = document.createElement('div');
-        statusIcon.className = 'composer-status-icon';
-        if (status === 'loading') {
-            statusIcon.classList.add('loading');
-            statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"/></svg>`;
-        } else {
-            statusIcon.classList.add('completed');
-            statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
-        }
-
-        const chevron = document.createElement('div');
-        chevron.className = 'composer-chevron-icon';
-        chevron.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
-
-        rightControls.appendChild(statusIcon);
-        rightControls.appendChild(chevron);
-
-        header.appendChild(fileInfo);
-        header.appendChild(rightControls);
-
-        // Content Area
-        const contentArea = document.createElement('div');
-        contentArea.className = 'composer-code-block-content';
-
-        // Populate content from args if available
-        if (args) {
-            let contentToShow = '';
-            let isDiff = false;
-
-            // Check for various potential property names based on tool definitions
-            if (args.content) {
-                contentToShow = args.content; // write_to_file
-            } else if (args.diff) {
-                contentToShow = args.diff; // apply_diff
-                isDiff = true;
-            } else if (args.CodeContent) {
-                contentToShow = args.CodeContent;
-            } else if (args.ReplacementContent) {
-                // For replace_file_content, let's construct a pseudo-diff view
-                if (args.TargetContent) {
-                    contentToShow = `<<<<<<< SEARCH\n${args.TargetContent}\n=======\n${args.ReplacementContent}\n>>>>>>> REPLACE`;
-                    isDiff = true;
-                } else {
-                    contentToShow = args.ReplacementContent;
-                }
-            } else if (args.ReplacementChunks && Array.isArray(args.ReplacementChunks)) {
-                // For multi_replace_file_content
-                contentToShow = args.ReplacementChunks.map(chunk => {
-                    return `<<<<<<< SEARCH\n${chunk.TargetContent}\n=======\n${chunk.ReplacementContent}\n>>>>>>> REPLACE`;
-                }).join('\n\n');
-                isDiff = true;
-            } else if (args.CommandLine) {
-                contentToShow = args.CommandLine;
-            } else if (args.Query) {
-                contentToShow = args.Query;
-            } else if (typeof args === 'object') {
-                // Format JSON nicely
-                const safeArgs = { ...args };
-                contentToShow = JSON.stringify(safeArgs, null, 2);
-            } else {
-                contentToShow = String(args);
-            }
-
-            if (contentToShow) {
-                const pre = document.createElement('pre');
-
-                if (isDiff) {
-                    pre.innerHTML = applyDiffHighlighting(contentToShow);
-                    pre.classList.add('diff-view');
-                } else {
-                    pre.innerHTML = applySyntaxHighlighting(contentToShow);
-                    pre.classList.add('hljs');
-                }
-                contentArea.appendChild(pre);
-                contentArea.classList.add('visible');
-            }
-        }
-
-        container.appendChild(header);
-        container.appendChild(contentArea);
-
-        row.appendChild(container);
-        messagesEl.appendChild(row);
-        messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
-
-        // Open file in editor on filename click
-        const filenameEl = fileInfo.querySelector('.composer-code-block-filename');
-        if (filenameEl && filename) {
-            filenameEl.addEventListener('click', (e) => {
-                e.stopPropagation();
-                vscode.postMessage({
-                    command: 'openFile',
-                    path: filename
-                });
-            });
-        }
-
-        // Toggle content visibility on chevron click
-        chevron.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent header click if any
-            if (contentArea.innerHTML.trim() !== "") {
-                const isVisible = contentArea.classList.toggle('visible');
-                chevron.classList.toggle('collapsed', !isVisible);
-            }
-        });
-
-        // Initialize chevron state based on visibility
-        if (!contentArea.classList.contains('visible')) {
-            chevron.classList.add('collapsed');
-        }
-
-        // Store reference including contentArea and toolName
-        toolExecutionElements.set(toolId, { row, container, header, statusIcon, contentArea, toolName });
-    }
-
-    function updateToolExecution({ toolId, status, result }) {
-        const toolExec = toolExecutionElements.get(toolId);
-        if (!toolExec) return;
-
-        const { statusIcon, contentArea, toolName, fileBlocks } = toolExec;
-
-        if (toolName === 'read_file' && fileBlocks) {
-            if (status === 'completed' && result && result.files) {
-                result.files.forEach(fileResult => {
-                    const block = fileBlocks.get(fileResult.path);
-                    if (block) {
-                        const { statusIcon, contentArea } = block;
-
-                        // Update status icon to checkmark or empty
-                        statusIcon.classList.remove('loading');
-                        statusIcon.innerHTML = ''; // Clean look
-
-                        if (fileResult.error) {
-                            const pre = document.createElement('pre');
-                            pre.textContent = `Error: ${fileResult.error}`;
-                            pre.style.color = 'var(--vscode-errorForeground)';
-                            contentArea.appendChild(pre);
-                            statusIcon.innerHTML = '⚠️';
-                        } else {
-                            const pre = document.createElement('pre');
-                            pre.textContent = fileResult.content;
-                            contentArea.appendChild(pre);
-                        }
-                        // Don't auto-expand for minimal look unless error?
-                        // contentArea.classList.add('visible'); 
-                    }
-                });
-            } else if (status === 'error') {
-                fileBlocks.forEach(block => {
-                    block.statusIcon.classList.remove('loading');
-                    block.statusIcon.innerHTML = '❌';
-                });
-            }
-            return;
-        }
-
-        // Update status
-        if (status === 'completed') {
-            statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
-            statusIcon.classList.remove('loading');
-            statusIcon.classList.add('completed');
-        } else if (status === 'error') {
-            statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
-            statusIcon.classList.remove('loading');
-            statusIcon.classList.add('error');
-        }
-
-        // Logic for content update:
-        // 1. If result is error, always append/show error.
-        // 2. If tool is a "write" type (write_to_file, replace, etc.), we usually prefer the Args content (Code).
-        //    Only show result if it's an error.
-        // 3. If tool is "read/search" type (view_file, search), the result IS the content. Show it.
-
-        const isWriteTool = ['write_to_file', 'replace_file_content', 'multi_replace_file_content', 'apply_diff'].includes(toolName);
-
-        if (result && status === 'error') {
-            const pre = document.createElement('pre');
-            pre.textContent = '\nError:\n' + JSON.stringify(result, null, 2);
-            // Append error to existing content (e.g. args)
-            contentArea.appendChild(pre);
-            contentArea.classList.add('visible');
-            // Auto open on error
-            if (!contentArea.classList.contains('visible')) contentArea.classList.add('visible');
-        } else if (result && !isWriteTool) {
-            // For non-write tools, show the result.
-            // If we already have args displayed, maybe append? OR replace?
-            // Usually result is more important for read tools.
-            const pre = document.createElement('pre');
-
-            // If result is object, format it. If string, just text.
-            let text = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-
-            // If we have preliminary content (args), render a divider or just replace.
-            // Replacing is cleaner for "view_file".
-            // Appending might be better for "find_by_name" (pattern -> result).
-
-            if (contentArea.innerHTML.trim() !== '') {
-                // Append with divider
-                const hr = document.createElement('hr');
-                hr.style.cssText = 'border: 0; border-top: 1px solid var(--vscode-widget-border); margin: 8px 0;';
-                contentArea.appendChild(hr);
-            }
-
-            pre.textContent = text;
-            contentArea.appendChild(pre);
-            contentArea.classList.add('visible');
-        }
-
-        // Scroll to updated element
-        if (messagesEl) {
-            messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
-        }
-    }
 
     return {
         appendMessage,
