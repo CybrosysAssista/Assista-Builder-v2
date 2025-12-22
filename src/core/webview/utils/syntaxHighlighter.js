@@ -83,6 +83,14 @@ export function applyDiffHighlighting(text) {
             return ''; // Hide marker
         }
 
+        // Hide apply_diff specific metadata
+        if (line.trim().startsWith(':start_line:')) {
+            return '';
+        }
+        if (line.trim() === '-------') {
+            return '';
+        }
+
         // Handle content based on state (for replace_file_content)
         if (insideSearch) {
             return `<span class="diff-remove">${applySyntaxHighlighting(line)}</span>`;

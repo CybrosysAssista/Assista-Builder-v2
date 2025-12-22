@@ -1,0 +1,234 @@
+/* Tool Execution UI Styles (Minimal/Composer Style) */
+.read-file-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0.85em 0;
+}
+
+.read-file-container.minimal {
+    gap: 2px;
+    margin: 4px 0;
+}
+
+.minimal-tool-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.minimal-tool-header {
+    display: flex;
+    align-items: center;
+    padding: 2px 0;
+    cursor: pointer;
+    color: var(--vscode-descriptionForeground);
+    font-size: 13px;
+    transition: color 0.2s;
+    gap: 8px;
+}
+
+.minimal-tool-header:hover {
+    color: var(--vscode-editor-foreground);
+}
+
+.minimal-tool-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
+}
+
+.minimal-tool-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.minimal-tool-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    transition: transform 0.2s ease;
+    opacity: 0.7;
+}
+
+.minimal-tool-chevron.expanded {
+    transform: rotate(90deg);
+}
+
+.minimal-tool-label.clickable-file {
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.minimal-tool-label.clickable-file:hover {
+    color: var(--vscode-textLink-foreground);
+}
+
+.minimal-status-icon {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.minimal-tool-content {
+    display: none;
+    padding-left: 12px;
+    margin-top: 4px;
+    border-left: 1px solid var(--vscode-widget-border);
+}
+
+.minimal-tool-content.visible {
+    display: block;
+}
+
+.read-file-container .composer-code-block-container {
+    margin: 0;
+}
+
+.composer-code-block-container {
+    margin: 0.85em 0;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+    background: var(--vscode-editor-background);
+}
+
+.composer-code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--vscode-editor-background);
+    border-bottom: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+    cursor: default;
+}
+
+.composer-code-block-file-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.composer-primary-toolcall-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+}
+
+.composer-code-block-filename {
+    font-family: var(--vscode-font-family, Sans-Serif);
+    font-size: 13px;
+    color: var(--vscode-editor-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.composer-code-block-filename:hover {
+    color: var(--vscode-textLink-foreground);
+}
+
+.composer-code-block-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.composer-code-block-status .diff-stat-added {
+    color: var(--vscode-gitDecoration-addedResourceForeground, #4ade80);
+}
+
+.composer-code-block-status .diff-stat-deleted {
+    color: var(--vscode-gitDecoration-deletedResourceForeground, #f87171);
+}
+
+.composer-status-icon {
+    display: flex;
+    align-items: center;
+}
+
+.composer-status-icon.completed {
+    color: var(--vscode-testing-iconPassed, #4ade80);
+}
+
+.composer-status-icon.error {
+    color: var(--vscode-errorForeground, #f87171);
+}
+
+.composer-chevron-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    color: var(--vscode-descriptionForeground);
+    transition: transform 0.2s ease;
+    border-radius: 4px;
+}
+
+.composer-chevron-icon:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1));
+    color: var(--vscode-foreground);
+}
+
+.composer-chevron-icon.collapsed {
+    transform: rotate(-90deg);
+}
+
+.composer-status-icon.loading {
+    color: var(--vscode-descriptionForeground, #9ca3af);
+    animation: spin 1s linear infinite;
+}
+
+.composer-code-block-content {
+    background: var(--vscode-editor-background);
+    padding: 0;
+    display: none;
+}
+
+.composer-code-block-content.visible {
+    display: block;
+}
+
+.composer-code-block-content pre {
+    margin: 0;
+    padding: 12px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: var(--vscode-editor-font-size, 13px);
+    overflow-x: auto;
+    color: var(--vscode-editor-foreground);
+    line-height: 1.5;
+    background: var(--vscode-editor-background);
+}
+
+.grep-query-info {
+    padding: 8px 12px 0 12px;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.grep-query-info code {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

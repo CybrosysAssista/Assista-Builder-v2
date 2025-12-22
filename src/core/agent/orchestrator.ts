@@ -25,7 +25,7 @@ export async function runAgentOrchestrator(
 ): Promise<string> {
   // Initialize tools with context
   initializeTools(context);
-  
+
   const systemInstruction = params.config?.systemInstruction || '';
   let internalMessages: InternalMessage[] = [...sessionHistory];
 
