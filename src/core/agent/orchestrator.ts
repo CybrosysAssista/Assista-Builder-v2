@@ -221,9 +221,6 @@ export async function runAgentOrchestrator(
         }
       }
 
-      // Reset for next iteration
-      finalResponse = '';
-
       // Continue loop to send tool results back to model
       continue;
     }

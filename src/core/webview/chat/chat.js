@@ -358,6 +358,13 @@ export function initChatUI(vscode) {
 
         // Check if we have a streaming row to replace
         if (streamingRow && streamingRow.parentNode === messagesEl) {
+            // If the final text is empty/whitespace but we have content in the bubble, DON'T wipe it
+            const hasNewContent = (text && text.trim()) || (html && html.trim()) || (markdown && markdown.trim());
+            if (!hasNewContent) {
+                streamingRow = null;
+                return;
+            }
+
             // Find the bubble in the streaming row
             const bubble = streamingRow.querySelector('.message.ai');
             if (bubble) {
@@ -429,6 +436,12 @@ export function initChatUI(vscode) {
     function renderSession(sessionId, messages) {
         if (!messagesEl) {
             return;
+        }
+
+        // CRITICAL FIX: If we have an active streaming message, finalize it first
+        // This prevents the streaming content from being lost when we clear messagesEl
+        if (streamingRow && streamingRow.parentNode === messagesEl && streamingTextBuffer) {
+            finalizeStreamingMessage();
         }
 
         messagesEl.innerHTML = "";
