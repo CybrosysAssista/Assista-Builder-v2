@@ -455,6 +455,7 @@ export function initMentionsUI(vscode, opts) {
   return {
     open: openMenu,
     close: closeMenu,
+    insertMention,
     setRecentNames,
     setPickerItems: renderPickerItems,
   };

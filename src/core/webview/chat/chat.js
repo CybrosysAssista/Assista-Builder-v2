@@ -628,6 +628,40 @@ export function initChatUI(vscode) {
         insertAtCursor,
     });
 
+    // --- Drag and Drop File Mentions ---
+    if (inputBar) {
+        inputBar.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            inputBar.classList.add('drag-over');
+        });
+
+        inputBar.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            inputBar.classList.remove('drag-over');
+        });
+
+        inputBar.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            inputBar.classList.remove('drag-over');
+
+            // VS Code explorer provides the file path as plain text
+            const data = e.dataTransfer.getData('text/plain');
+            if (data) {
+                // Handle possible multiple files separated by newlines
+                const paths = data.split(/\r?\n/).filter(p => p.trim());
+                paths.forEach(p => {
+                    // Extract only the basename or relative path if possible
+                    // In VS Code webview, we usually get the full path or URI string
+                    // mentions.insertMention handles the formatting
+                    mentions.insertMention(p);
+                });
+            }
+        });
+    }
+
     function applyMode(mode) {
         selectedMode = mode;
         if (modeLabel) modeLabel.textContent = mode === 'agent' ? 'Agent' : 'Chat';
