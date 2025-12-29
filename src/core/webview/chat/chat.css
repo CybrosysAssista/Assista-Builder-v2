@@ -359,6 +359,12 @@
     background: transparent;
     display: flex;
     flex-direction: column;
+    transition: all 0.2s ease;
+}
+
+.input-bar.drag-over .chatbox {
+    border-color: var(--vscode-focusBorder);
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder), 0 8px 20px rgba(0, 0, 0, 0.35);
 }
 
 /* When banner is visible, remove top radius of chatbox to make them look connected */
