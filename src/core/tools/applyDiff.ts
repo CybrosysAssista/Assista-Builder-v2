@@ -1,7 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { applyVisualDiff } from '../utils/decorationUtils.js';
 
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
 import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
@@ -270,9 +269,8 @@ export const applyDiffTool: ToolDefinition = {
       // Calculate final new content (in memory)
       const newText = lines.join('\n');
 
-      // Apply visual diff and trigger review (Centralized)
-      // We pass originalContent because we already have it from the diff calculation
-      await applyVisualDiff(fullPath, newText, 'Agent modified', originalContent);
+      // Apply changes directly without review
+      await fs.writeFile(fullPath, newText, 'utf-8');
 
       const result: any = {
         path: args.path,

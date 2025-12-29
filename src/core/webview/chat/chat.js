@@ -1,5 +1,4 @@
 import { initMentionsUI } from '../mentions/mentions.js';
-import { initReviewUI } from '../review/review.js';
 import { applySyntaxHighlighting, applyDiffHighlighting } from '../utils/syntaxHighlighter.js';
 import { initToolsUI } from './tools.js';
 
@@ -225,7 +224,6 @@ export function initChatUI(vscode) {
     let streamingRenderTimeout = null;
     let streamingRow = null;
     // Initialize Review UI
-    const { showReviewBanner, hideReviewBanner } = initReviewUI(vscode);
 
     function appendMessage(text, sender, html, markdown) {
         if (!messagesEl || (!text && !html && !markdown)) {
@@ -540,7 +538,6 @@ export function initChatUI(vscode) {
         if (Array.isArray(messages)) {
             messages.forEach((message) => {
                 if (message.command === 'requestReview') {
-                    showReviewBanner(message.text || 'Changes pending review');
                     return;
                 }
 
