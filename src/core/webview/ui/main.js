@@ -2,7 +2,6 @@ import { initChatUI } from '../chat/chat.js';
 import { initSettingsUI } from '../settings/settings.js';
 import { initHistoryUI } from '../history/history.js';
 import { initWelcomeUI } from '../welcome/welcome.js';
-import { initReviewUI } from '../review/review.js';
 
 const vscode = acquireVsCodeApi();
 
@@ -10,7 +9,6 @@ const chat = initChatUI(vscode);
 const settings = initSettingsUI(vscode);
 const history = initHistoryUI(vscode);
 const welcome = initWelcomeUI(vscode, { insertAtCursor: chat.insertAtCursor, chat });
-const review = initReviewUI(vscode);
 
 const bootState = typeof vscode.getState === 'function' ? vscode.getState() : undefined;
 if (bootState) {
@@ -221,7 +219,6 @@ window.addEventListener('message', (event) => {
         case 'requestReview': {
             const payload = message.payload || {};
             if (payload.text) {
-                review.showReviewBanner(payload.text);
             }
             break;
         }

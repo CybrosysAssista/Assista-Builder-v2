@@ -9,7 +9,6 @@ import { runAgent } from "../runtime/agent.js";
 import { MentionController } from './mentions/MentionController.js';
 import { OdooEnvironmentService } from '../utils/odooDetection.js';
 import { questionManager } from '../utils/questionManager.js';
-import { reviewManager } from '../utils/reviewManager.js';
 
 export class AssistaCoderProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaCoderView';
@@ -54,12 +53,6 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
             }
         });
 
-        // Register webview provider with review manager
-        reviewManager.registerWebviewProvider({
-            postMessage: (type: string, payload?: any) => {
-                this.postMessage(type, payload);
-            }
-        });
 
         // Instantiate controllers for delegating settings/history logic
         this._settings = new SettingsController(this._context, (type: string, payload?: any) => {
@@ -258,12 +251,6 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
-            // Handle review response
-            if (message.command === 'reviewResponse') {
-                const answer = message.answer === 'accept' ? 'accept' : 'reject';
-                reviewManager.handleReviewResponse(answer);
-                return;
-            }
         });
 
         if (this._pendingShowSettings) {

@@ -1,6 +1,5 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { applyVisualDiff } from '../utils/decorationUtils.js';
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
 import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
 
@@ -159,8 +158,8 @@ export const multiEditTool: ToolDefinition = {
       // All edits succeeded - write the file
       await fs.writeFile(fullPath, currentContent, 'utf-8');
 
-      // Apply visual diff for review
-      await applyVisualDiff(fullPath, currentContent, 'Agent made multiple edits to');
+      // Apply changes directly
+      await fs.writeFile(fullPath, currentContent, 'utf-8');
 
       return {
         status: 'success',
