@@ -154,7 +154,16 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
             container.className = 'read-file-container minimal';
 
             const dirPath = args.DirectoryPath || args.path || 'directory';
-            const { block, header, statusIcon, contentArea } = createMinimalToolItem(`Listed`, status, 'folder');
+
+            // Handle trailing slashes for folder name extraction
+            let cleanPath = dirPath;
+            if ((cleanPath.endsWith('/') || cleanPath.endsWith('\\')) && cleanPath.length > 1) {
+                cleanPath = cleanPath.slice(0, -1);
+            }
+            const folderName = cleanPath.split(/[/\\]/).pop() || dirPath;
+
+            // Pass false for showChevron to hide the arrow
+            const { block, header, statusIcon, contentArea } = createMinimalToolItem(`List ${folderName}`, status, 'folder', dirPath, false);
 
             // Show what was listed immediately in content area
             const dirInfo = document.createElement('div');
@@ -273,7 +282,7 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
             if (contentToShow) {
                 const pre = document.createElement('pre');
                 pre.style.margin = '0';
-                pre.style.padding = '8px';
+                pre.style.padding = '8px 4px';
                 pre.style.fontSize = '12px';
                 pre.style.background = 'var(--vscode-editor-background)';
 
@@ -361,10 +370,17 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
             statusIcon.classList.remove('loading');
             statusIcon.innerHTML = '';
 
-            if (status === 'completed' && result) {
-                const pre = document.createElement('pre');
-                pre.textContent = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-                contentArea.appendChild(pre);
+            if (status === 'completed') {
+                // Show success checkmark
+                statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+                statusIcon.classList.add('completed');
+
+                // Append content if available
+                if (result) {
+                    const pre = document.createElement('pre');
+                    pre.textContent = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+                    contentArea.appendChild(pre);
+                }
             } else if (status === 'error') {
                 statusIcon.innerHTML = '❌';
                 if (result) {
@@ -397,9 +413,21 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
                 contentArea.appendChild(pre);
                 contentArea.classList.add('visible');
             }
-        } else if (result && !isWriteTool && contentArea) {
-            const pre = document.createElement('pre');
-            let text = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+        } else if (result && contentArea) {
+            let text = '';
+            if (isWriteTool) {
+                if (result.edits_applied !== undefined) {
+                    text = `Applied ${result.edits_applied} of ${result.total_edits} edits.`;
+                } else if (result.blocks_applied !== undefined) {
+                    text = `Applied ${result.blocks_applied} blocks.`;
+                } else if (result.success) {
+                    text = `Successfully updated ${result.path || 'file'}.`;
+                } else {
+                    text = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+                }
+            } else {
+                text = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+            }
 
             if (contentArea.innerHTML.trim() !== '') {
                 const hr = document.createElement('hr');
@@ -407,6 +435,7 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
                 contentArea.appendChild(hr);
             }
 
+            const pre = document.createElement('pre');
             pre.textContent = text;
             contentArea.appendChild(pre);
             contentArea.classList.add('visible');

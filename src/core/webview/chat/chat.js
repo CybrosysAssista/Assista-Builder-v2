@@ -549,6 +549,12 @@ export function initChatUI(vscode) {
 
     function persistState() {
         try {
+            // Don't persist empty sessions (Welcome Screen) to avoid flickering on reload
+            // This causes the webview to restore the previous valid chat state instead
+            if (!currentMessages || currentMessages.length === 0) {
+                return;
+            }
+
             vscode.setState?.({
                 activeSessionId,
                 messages: currentMessages,

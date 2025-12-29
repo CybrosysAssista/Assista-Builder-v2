@@ -75,10 +75,7 @@ export function initMentionsUI(vscode, opts) {
     const foldersBase = (window.__ASSISTA_ICON_FOLDERS_BASE__ || '').toString();
     const img = (base, n) => (base && n) ? `<img class="file-icon" alt="" src="${base}/${n}"/>` : null;
     const badge = (label, bg, fg = '#111') =>
-      `<svg style="width:16px;height:16px;flex:0 0 16px;" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-         <rect x="1.5" y="1.5" rx="3.5" ry="3.5" width="17" height="17" fill="${bg}" />
-         <text x="10" y="13" text-anchor="middle" font-size="8" font-family="Segoe UI, Arial" fill="${fg}">${label}</text>
-       </svg>`;
+      `<svg style="width:16px;height:16px;flex:0 0 16px;" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="1.5" rx="3.5" ry="3.5" width="17" height="17" fill="${bg}" /><text x="10" y="13" text-anchor="middle" font-size="8" font-family="Segoe UI, Arial" fill="${fg}">${label}</text></svg>`;
     if (isFolder) {
       return img(foldersBase, 'folder.svg')
         || `<svg style="width:16px;height:16px;flex:0 0 16px;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#9aa4b2" d="M10 4l2 2h7a3 3 0 0 1 3 3v7a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V7a3 3 0 0 1 3-3h5z"/></svg>`;
@@ -159,34 +156,7 @@ export function initMentionsUI(vscode, opts) {
     const base = (String(name).split(/[\\\/]/).pop()) || String(name);
     const iconHtml = fileIconFor(name, isFolder);
 
-    const isInput = inputEl && (inputEl.tagName === 'INPUT' || inputEl.tagName === 'TEXTAREA');
-
-    if (isInput) {
-      inputEl.focus();
-      const val = inputEl.value;
-      const pos = inputEl.selectionStart;
-      // Find the @ before cursor to replace
-      let start = -1;
-      for (let i = pos - 1; i >= 0; i--) {
-        if (val[i] === '@') {
-          start = i;
-          break;
-        }
-        if (/\s/.test(val[i])) break;
-      }
-
-      if (start >= 0) {
-        const before = val.slice(0, start);
-        const after = val.slice(pos);
-        // For plain input, we can't show icons, so just text
-        const newText = `@${base} `;
-        inputEl.value = before + newText + after;
-        const newPos = start + newText.length;
-        inputEl.selectionStart = inputEl.selectionEnd = newPos;
-        inputEl.dispatchEvent(new Event('input'));
-        return;
-      }
-    } else if (inputEl) {
+    if (inputEl) {
       inputEl.focus();
       const sel = window.getSelection();
       if (lastRange) {
@@ -223,26 +193,40 @@ export function initMentionsUI(vscode, opts) {
           }
         }
 
-        // Ensure the range is selected so execCommand replaces it
+        // Ensure the range is selected
         sel.removeAllRanges();
         sel.addRange(range);
 
-        // Create chip HTML
-        const chipHtml = `<span class="mention-chip" contenteditable="false" data-mention="${base}">${iconHtml}<span style="margin-left:4px">@${base}</span></span>&nbsp;`;
+        // Create chip element manually to avoid browser-injected wrappers
+        const chip = document.createElement('span');
+        chip.className = 'mention-chip';
+        chip.contentEditable = 'false';
+        chip.dataset.mention = base;
+        chip.innerHTML = `${iconHtml}<span style="margin-left:4px">@${base}</span>`;
 
-        // Use insertHTML to preserve undo stack
-        document.execCommand('insertHTML', false, chipHtml);
+        // Delete the '@' and insert the chip
+        range.deleteContents();
+        range.insertNode(chip);
+
+        // Insert a space after the chip so the user can keep typing on the same line
+        const space = document.createTextNode('\u00A0'); // Non-breaking space
+        const afterRange = document.createRange();
+        afterRange.setStartAfter(chip);
+        afterRange.collapse(true);
+        afterRange.insertNode(space);
+
+        // Move the cursor to after the space
+        sel.removeAllRanges();
+        const finalRange = document.createRange();
+        finalRange.setStartAfter(space);
+        finalRange.collapse(true);
+        sel.addRange(finalRange);
 
         isInserting = true;
         inputEl.dispatchEvent(new Event('input'));
         isInserting = false;
         return;
       }
-    }
-
-    // Fallback
-    if (typeof insertAtCursor === 'function') {
-      insertAtCursor(`@${base} `);
     }
   }
 
