@@ -134,7 +134,7 @@ export function getHtmlForWebview(
     <div class="input-bar">
       ${getReviewBannerHtml()}
       <div class="chatbox">
-        <div id="chatInput" contenteditable="true" role="textbox" aria-multiline="true" placeholder="Ask anything (Ctrl+L)"></div>
+        <div id="chatInput" contenteditable="plaintext-only" role="textbox" aria-multiline="true" placeholder="Ask anything (Ctrl+L)"></div>
         <div class="chatbox-toolbar">
           <div class="left">
             <div class="menu" id="modeMenu">

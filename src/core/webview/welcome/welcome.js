@@ -71,11 +71,12 @@ export function initWelcomeUI(vscode, opts = {}) {
     }, 300); // Match CSS transition duration
   }
 
-  // Fallback insert-at-cursor for the welcome input, used only if chat's helper isn't passed in
-  function fallbackInsertAtCursor(text) {
+  // Robust insert-at-cursor
+  function insertAtCursor(text) {
     const el = input();
     if (!el) return;
     el.focus();
+
     try {
       const sel = window.getSelection();
       if (sel.rangeCount > 0) {
@@ -100,7 +101,7 @@ export function initWelcomeUI(vscode, opts = {}) {
     inputEl: input(),
     mentionBtn: null, // no dedicated @ button on welcome; inline typing opens it
     menuEl: document.getElementById('welcomeMentionMenu'),
-    insertAtCursor: fallbackInsertAtCursor,
+    insertAtCursor: insertAtCursor,
   });
 
   function routeSend(text) {
@@ -141,21 +142,19 @@ export function initWelcomeUI(vscode, opts = {}) {
   });
 
   input()?.addEventListener('keydown', (e) => {
+    const el = input();
+    if (!el) return;
+
+    // Enter to send
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const val = String(input()?.innerText || '').trim();
+      const val = String(el.innerText || '').trim();
       if (!val) return;
       routeSend(val);
-      try { input().innerText = ''; } catch (_) { }
+      try { el.innerText = ''; } catch (_) { }
       hideWelcome();
+      return;
     }
-  });
-
-  // Handle paste event to strip HTML formatting and paste only plain text
-  input()?.addEventListener('paste', (event) => {
-    event.preventDefault();
-    const text = (event.clipboardData || window.clipboardData).getData('text/plain');
-    document.execCommand('insertText', false, text);
   });
 
   // Fix: Ensure placeholder shows when cleared without breaking undo stack

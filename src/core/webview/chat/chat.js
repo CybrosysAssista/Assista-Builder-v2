@@ -409,64 +409,9 @@ export function initChatUI(vscode) {
         if (sendBtn) sendBtn.disabled = true;
     }
 
-    // --- Custom Undo/Redo Manager ---
-    class UndoManager {
-        constructor(limit = 50) {
-            this.history = [];
-            this.redoStack = [];
-            this.limit = limit;
-            this.isUndoing = false;
-        }
-
-        record(html) {
-            if (this.isUndoing) return;
-            // Don't record if identical to last state
-            if (this.history.length > 0 && this.history[this.history.length - 1] === html) {
-                return;
-            }
-            this.history.push(html);
-            if (this.history.length > this.limit) this.history.shift();
-            this.redoStack = []; // Clear redo on new action
-        }
-
-        undo(currentHtml) {
-            if (this.history.length === 0) return null;
-
-            // If current state is different from last history (e.g. unsaved typing), save it to redo
-            // But usually we record on input, so history has the "current" state at the end.
-            // Actually, standard undo: pop current, push to redo, return previous.
-
-            // If the current state hasn't been recorded yet (rare race condition), record it to redo
-            // But simpler: pop the last state (current), push to redo. Return the one before that.
-
-            const current = this.history.pop();
-            this.redoStack.push(current);
-
-            if (this.history.length === 0) {
-                // We undid everything, return empty or initial state? 
-                // Better to keep at least one state if possible, or return empty string
-                return "";
-            }
-
-            return this.history[this.history.length - 1];
-        }
-
-        redo() {
-            if (this.redoStack.length === 0) return null;
-            const next = this.redoStack.pop();
-            this.history.push(next);
-            return next;
-        }
-    }
-
-    const undoManager = new UndoManager();
-
     function insertAtCursor(text) {
         if (!inputEl) return;
         inputEl.focus();
-
-        // Record state BEFORE insertion
-        undoManager.record(inputEl.innerHTML);
 
         // Handle textarea/input just in case
         if (typeof inputEl.selectionStart === 'number') {
@@ -502,9 +447,6 @@ export function initChatUI(vscode) {
             }
         }
         inputEl.dispatchEvent(new Event('input'));
-
-        // Record state AFTER insertion
-        undoManager.record(inputEl.innerHTML);
     }
 
 
@@ -804,73 +746,7 @@ export function initChatUI(vscode) {
 
 
 
-        // Handle paste event to strip HTML formatting and paste only plain text
-        inputEl.addEventListener('paste', (event) => {
-            event.preventDefault(); // Always prevent default to control the insertion fully
-
-            const clipboardData = event.clipboardData || window.clipboardData;
-            const text = clipboardData.getData('text/plain');
-
-            if (!text) return;
-
-            // Use our custom insertAtCursor which now handles Undo recording
-            insertAtCursor(text);
-        });
-
-        // Custom Undo/Redo Keyboard Handlers
-        inputEl.addEventListener('keydown', (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                if (e.key === 'z' || e.key === 'Z') {
-                    if (e.shiftKey) {
-                        // Redo (Ctrl+Shift+Z)
-                        e.preventDefault();
-                        const nextState = undoManager.redo();
-                        if (nextState !== null) {
-                            inputEl.innerHTML = nextState;
-                            // Restore cursor to end (simple)
-                            const range = document.createRange();
-                            range.selectNodeContents(inputEl);
-                            range.collapse(false);
-                            const sel = window.getSelection();
-                            sel.removeAllRanges();
-                            sel.addRange(range);
-                        }
-                    } else {
-                        // Undo (Ctrl+Z)
-                        e.preventDefault();
-                        const prevState = undoManager.undo(inputEl.innerHTML);
-                        if (prevState !== null) {
-                            inputEl.innerHTML = prevState;
-                            // Restore cursor to end
-                            const range = document.createRange();
-                            range.selectNodeContents(inputEl);
-                            range.collapse(false);
-                            const sel = window.getSelection();
-                            sel.removeAllRanges();
-                            sel.addRange(range);
-                        }
-                    }
-                } else if (e.key === 'y' || e.key === 'Y') {
-                    // Redo (Ctrl+Y)
-                    e.preventDefault();
-                    const nextState = undoManager.redo();
-                    if (nextState !== null) {
-                        inputEl.innerHTML = nextState;
-                        const range = document.createRange();
-                        range.selectNodeContents(inputEl);
-                        range.collapse(false);
-                        const sel = window.getSelection();
-                        sel.removeAllRanges();
-                        sel.addRange(range);
-                    }
-                }
-            }
-        });
-
         inputEl.addEventListener('input', () => {
-            // Record history on every input
-            undoManager.record(inputEl.innerHTML);
-
             try {
                 // Toggle placeholder visibility based on text content
                 // We avoid setting innerHTML = '' to preserve the browser's undo stack
