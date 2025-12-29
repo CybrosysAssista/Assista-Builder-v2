@@ -409,23 +409,102 @@ export function initChatUI(vscode) {
         if (sendBtn) sendBtn.disabled = true;
     }
 
+    // --- Custom Undo/Redo Manager ---
+    class UndoManager {
+        constructor(limit = 50) {
+            this.history = [];
+            this.redoStack = [];
+            this.limit = limit;
+            this.isUndoing = false;
+        }
+
+        record(html) {
+            if (this.isUndoing) return;
+            // Don't record if identical to last state
+            if (this.history.length > 0 && this.history[this.history.length - 1] === html) {
+                return;
+            }
+            this.history.push(html);
+            if (this.history.length > this.limit) this.history.shift();
+            this.redoStack = []; // Clear redo on new action
+        }
+
+        undo(currentHtml) {
+            if (this.history.length === 0) return null;
+
+            // If current state is different from last history (e.g. unsaved typing), save it to redo
+            // But usually we record on input, so history has the "current" state at the end.
+            // Actually, standard undo: pop current, push to redo, return previous.
+
+            // If the current state hasn't been recorded yet (rare race condition), record it to redo
+            // But simpler: pop the last state (current), push to redo. Return the one before that.
+
+            const current = this.history.pop();
+            this.redoStack.push(current);
+
+            if (this.history.length === 0) {
+                // We undid everything, return empty or initial state? 
+                // Better to keep at least one state if possible, or return empty string
+                return "";
+            }
+
+            return this.history[this.history.length - 1];
+        }
+
+        redo() {
+            if (this.redoStack.length === 0) return null;
+            const next = this.redoStack.pop();
+            this.history.push(next);
+            return next;
+        }
+    }
+
+    const undoManager = new UndoManager();
+
     function insertAtCursor(text) {
         if (!inputEl) return;
         inputEl.focus();
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount > 0) {
-            const range = sel.getRangeAt(0);
-            range.deleteContents();
-            const textNode = document.createTextNode(text);
-            range.insertNode(textNode);
-            range.setStartAfter(textNode);
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
+
+        // Record state BEFORE insertion
+        undoManager.record(inputEl.innerHTML);
+
+        // Handle textarea/input just in case
+        if (typeof inputEl.selectionStart === 'number') {
+            const start = inputEl.selectionStart;
+            const end = inputEl.selectionEnd;
+            const val = inputEl.value;
+            inputEl.value = val.substring(0, start) + text + val.substring(end);
+            inputEl.selectionStart = inputEl.selectionEnd = start + text.length;
         } else {
-            inputEl.textContent += text;
+            // Contenteditable
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                range.deleteContents();
+                const textNode = document.createTextNode(text);
+                range.insertNode(textNode);
+                range.setStartAfter(textNode);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } else {
+                // Fallback: append to end
+                inputEl.textContent += text;
+
+                // Move cursor to end
+                if (sel) {
+                    const range = document.createRange();
+                    range.selectNodeContents(inputEl);
+                    range.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            }
         }
         inputEl.dispatchEvent(new Event('input'));
+
+        // Record state AFTER insertion
+        undoManager.record(inputEl.innerHTML);
     }
 
 
@@ -727,45 +806,84 @@ export function initChatUI(vscode) {
 
         // Handle paste event to strip HTML formatting and paste only plain text
         inputEl.addEventListener('paste', (event) => {
-            event.preventDefault();
+            event.preventDefault(); // Always prevent default to control the insertion fully
 
-            // Get plain text from clipboard
-            const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+            const clipboardData = event.clipboardData || window.clipboardData;
+            const text = clipboardData.getData('text/plain');
 
-            // Insert plain text at cursor position
-            const selection = window.getSelection();
-            if (!selection.rangeCount) return;
+            if (!text) return;
 
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
+            // Use our custom insertAtCursor which now handles Undo recording
+            insertAtCursor(text);
+        });
 
-            // Insert text as text node (not HTML)
-            const textNode = document.createTextNode(text);
-            range.insertNode(textNode);
-
-            // Move cursor to end of inserted text
-            range.setStartAfter(textNode);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-
-            // Trigger input event to update UI
-            inputEl.dispatchEvent(new Event('input'));
+        // Custom Undo/Redo Keyboard Handlers
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'z' || e.key === 'Z') {
+                    if (e.shiftKey) {
+                        // Redo (Ctrl+Shift+Z)
+                        e.preventDefault();
+                        const nextState = undoManager.redo();
+                        if (nextState !== null) {
+                            inputEl.innerHTML = nextState;
+                            // Restore cursor to end (simple)
+                            const range = document.createRange();
+                            range.selectNodeContents(inputEl);
+                            range.collapse(false);
+                            const sel = window.getSelection();
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                        }
+                    } else {
+                        // Undo (Ctrl+Z)
+                        e.preventDefault();
+                        const prevState = undoManager.undo(inputEl.innerHTML);
+                        if (prevState !== null) {
+                            inputEl.innerHTML = prevState;
+                            // Restore cursor to end
+                            const range = document.createRange();
+                            range.selectNodeContents(inputEl);
+                            range.collapse(false);
+                            const sel = window.getSelection();
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                        }
+                    }
+                } else if (e.key === 'y' || e.key === 'Y') {
+                    // Redo (Ctrl+Y)
+                    e.preventDefault();
+                    const nextState = undoManager.redo();
+                    if (nextState !== null) {
+                        inputEl.innerHTML = nextState;
+                        const range = document.createRange();
+                        range.selectNodeContents(inputEl);
+                        range.collapse(false);
+                        const sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    }
+                }
+            }
         });
 
         inputEl.addEventListener('input', () => {
+            // Record history on every input
+            undoManager.record(inputEl.innerHTML);
+
             try {
-                // Fix: contenteditable often leaves a <br> when cleared, preventing :empty from working
-                if (inputEl.innerHTML === '<br>' || inputEl.textContent.trim() === '') {
-                    inputEl.innerHTML = '';
+                // Toggle placeholder visibility based on text content
+                // We avoid setting innerHTML = '' to preserve the browser's undo stack
+                const hasText = inputEl.textContent.trim().length > 0 || inputEl.querySelector('.mention-chip');
+                if (hasText) {
+                    inputEl.removeAttribute('data-placeholder-visible');
+                } else {
+                    inputEl.setAttribute('data-placeholder-visible', 'true');
                 }
 
                 // Auto-resize
                 inputEl.style.height = 'auto';
                 inputEl.style.height = `${Math.min(Math.max(inputEl.scrollHeight, 28), 160)}px`;
-
-                // Mention logic
-                // ... (existing mention logic is handled by mentions.js via initMentionsUI)
 
                 // Enable/disable send button
                 if (sendBtn) sendBtn.disabled = !inputEl.innerText.trim();

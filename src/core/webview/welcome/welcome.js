@@ -154,36 +154,21 @@ export function initWelcomeUI(vscode, opts = {}) {
   // Handle paste event to strip HTML formatting and paste only plain text
   input()?.addEventListener('paste', (event) => {
     event.preventDefault();
-
-    // Get plain text from clipboard
     const text = (event.clipboardData || window.clipboardData).getData('text/plain');
-
-    // Insert plain text at cursor position
-    const selection = window.getSelection();
-    if (!selection.rangeCount) return;
-
-    const range = selection.getRangeAt(0);
-    range.deleteContents();
-
-    // Insert text as text node (not HTML)
-    const textNode = document.createTextNode(text);
-    range.insertNode(textNode);
-
-    // Move cursor to end of inserted text
-    range.setStartAfter(textNode);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-
-    // Trigger input event to update UI
-    input()?.dispatchEvent(new Event('input'));
+    document.execCommand('insertText', false, text);
   });
 
-  // Fix: Ensure placeholder shows when cleared
+  // Fix: Ensure placeholder shows when cleared without breaking undo stack
   input()?.addEventListener('input', () => {
     const el = input();
-    if (el && (el.innerHTML === '<br>' || el.textContent.trim() === '')) {
-      el.innerHTML = '';
+    if (!el) return;
+
+    // Toggle placeholder visibility based on text content
+    const hasText = el.textContent.trim().length > 0 || el.querySelector('.mention-chip');
+    if (hasText) {
+      el.removeAttribute('data-placeholder-visible');
+    } else {
+      el.setAttribute('data-placeholder-visible', 'true');
     }
   });
 

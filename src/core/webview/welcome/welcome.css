@@ -90,13 +90,18 @@
     text-align: left;
     max-height: 160px;
     overflow-y: auto;
+    position: relative;
 }
 
-#welcomeScreen #welcomeInput:empty:before {
+#welcomeScreen #welcomeInput:empty:before,
+#welcomeScreen #welcomeInput[data-placeholder-visible="true"]:before {
     content: attr(placeholder);
     color: var(--vscode-input-placeholderForeground);
     pointer-events: none;
-    display: block;
+    display: inline;
+    position: absolute;
+    left: 6px;
+    top: 6px;
 }
 
 #welcomeScreen .welcome-icon-btn {
