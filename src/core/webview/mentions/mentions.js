@@ -211,46 +211,27 @@ export function initMentionsUI(vscode, opts) {
           if (lastAt >= 0) {
             range.setStart(node, lastAt);
             range.setEnd(node, (lastAt === offset) ? lastAt + 1 : offset);
-            range.deleteContents();
           } else {
             const prev = node.previousSibling;
-            let handled = false;
             if (prev?.nodeType === 3) {
               const prevAt = prev.textContent.lastIndexOf('@');
               if (prevAt >= 0) {
-                range.setStart(prev, prevAt); range.setEnd(node, offset); range.deleteContents(); handled = true;
-              }
-            }
-            if (!handled) {
-              const next = node.nextSibling;
-              if (next?.nodeType === 3 && next.textContent.startsWith('@')) {
-                range.setStart(next, 0); range.setEnd(next, 1); range.deleteContents();
+                range.setStart(prev, prevAt);
+                range.setEnd(node, offset);
               }
             }
           }
         }
 
-        // Create chip element
-        const chip = document.createElement('span');
-        chip.className = 'mention-chip';
-        // Insert icon and text
-        chip.innerHTML = `${iconHtml}<span style="margin-left:4px">@${base}</span>`;
-        chip.contentEditable = "false";
-        chip.setAttribute('data-mention', base);
-
-        // Insert chip and space
-        range.insertNode(chip);
-        range.setStartAfter(chip);
-        range.collapse(true);
-
-        const space = document.createTextNode('\u00A0');
-        range.insertNode(space);
-        range.setStart(space, 1);
-        range.setEnd(space, 1);
-        range.collapse(true);
-
+        // Ensure the range is selected so execCommand replaces it
         sel.removeAllRanges();
         sel.addRange(range);
+
+        // Create chip HTML
+        const chipHtml = `<span class="mention-chip" contenteditable="false" data-mention="${base}">${iconHtml}<span style="margin-left:4px">@${base}</span></span>&nbsp;`;
+
+        // Use insertHTML to preserve undo stack
+        document.execCommand('insertHTML', false, chipHtml);
 
         isInserting = true;
         inputEl.dispatchEvent(new Event('input'));

@@ -194,22 +194,22 @@ export async function runAgent(
   // Get environment and system instruction with mode
   const mode = params.mode || "agent";
   const environment = await odooEnvService.getEnvironment();
-  
+
   // Extract user content for RAG and orchestrator
   const userContent =
     typeof params.contents === "string"
       ? params.contents
       : String(params.contents || "");
-  
+
   // Retrieve RAG context if enabled
   let ragContext: string | undefined;
   const ragConfig = getRAGConfig();
-  
+
   if (ragConfig.enabled) {
     try {
       const ragService = new RAGService(ragConfig.serverUrl);
       const ragResult = await ragService.retrieveContext(userContent, ragConfig.topK);
-      
+
       if (ragResult.context && ragResult.context.trim().length > 0) {
         ragContext = ragResult.context;
         console.log(`[Assista Coder] RAG context:\n${ragContext}`);
@@ -220,7 +220,7 @@ export async function runAgent(
       console.warn(`[Assista Coder] RAG retrieval failed: ${error instanceof Error ? error.message : String(error)}. Continuing without RAG context.`);
     }
   }
-  
+
   const systemInstruction = getSystemInstruction(
     customInstructions,
     mode,

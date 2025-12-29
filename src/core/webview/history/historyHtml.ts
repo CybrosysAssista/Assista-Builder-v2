@@ -41,7 +41,6 @@ export function getHistoryHtml(): string {
 
         /* Title */
         .hx-title { 
-            font-family: Ubuntu, sans-serif;
             font-size: 20px;
             font-style: normal;
             font-weight: 700;

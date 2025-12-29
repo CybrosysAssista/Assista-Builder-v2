@@ -3,10 +3,9 @@ export function getSettingsModalHtml(): string {
   return `
     <div id="settingsPage" style="display:none">
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap');
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Ubuntu', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         /* Ensure no outer padding/margins so sidebar is flush to the panel edge */
-        html, body, #settingsPage { margin: 0 !important; padding: 0 !important; font-family: 'Ubuntu', sans-serif; }
+        html, body, #settingsPage { margin: 0 !important; padding: 0 !important; }
         .sidebar { width: 48px; border-right: 0.5px solid var(--vscode-panel-border); display: flex; flex-direction: column; overflow-y: auto; transition: width 0.3s ease; background-color: transparent; box-shadow: none; align-items: center; padding-top: 10px; }
         .sidebar.collapsed { width: 50px; }
         .sidebar-item { 
@@ -72,10 +71,10 @@ export function getSettingsModalHtml(): string {
         /* Ensure content aligns with subheader padding */
         .content-body { display: flex; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; min-height: calc(100vh - 120px); }
         .settings-container { margin: 0; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; }
-        .section-title { font-family: 'Ubuntu', sans-serif; font-size: 13px; color: var(--vscode-editor-foreground); margin-bottom: 8px; font-weight: 400; font-style: normal; line-height: normal; flex: 1 0 0; }
-        .section-description { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: var(--vscode-editor-foreground); margin-bottom: 15px; font-weight: 400; font-style: normal; line-height: normal; }
+        .section-title { font-size: 13px; color: var(--vscode-editor-foreground); margin-bottom: 8px; font-weight: 400; font-style: normal; line-height: normal; flex: 1 0 0; }
+        .section-description { font-size: 12px; color: var(--vscode-editor-foreground); margin-bottom: 15px; font-weight: 400; font-style: normal; line-height: normal; }
         /* Make content section headings bold with gradient (e.g., General Settings h2) */
-        .settings-container h2, .content-body h2 { font-family: 'Ubuntu', sans-serif; font-size: 20px; font-style: normal; font-weight: 700; line-height: normal; background: linear-gradient(91deg, #E3B2B3 0%, #BC8487 99.58%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .settings-container h2, .content-body h2 { font-size: 20px; font-style: normal; font-weight: 700; line-height: normal; background: linear-gradient(91deg, #E3B2B3 0%, #BC8487 99.58%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .profile-row { display: flex; align-items: center; margin-bottom: 15px; }
         .profile-row select { flex: 1; }
         .inline-buttons { display: flex; gap: 5px; margin-left: 10px; }
@@ -83,8 +82,8 @@ export function getSettingsModalHtml(): string {
         .checkbox-group { display: flex; align-items: center; margin-bottom: 12px; }
         .checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; cursor: pointer; }
         .checkbox-group label { font-size: 13px; }
-        .info-text { font-family: 'Ubuntu', sans-serif; font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
-        .info-box { background-color: var(--vscode-editorWidget-background); padding: 15px; border-radius: 4px; margin-top: 15px; font-family: 'Ubuntu', sans-serif; font-size: 12px; line-height: 1.6; color: var(--vscode-editor-foreground); font-weight: 400; }
+        .info-text { font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
+        .info-box { background-color: var(--vscode-editorWidget-background); padding: 15px; border-radius: 4px; margin-top: 15px; font-size: 12px; line-height: 1.6; color: var(--vscode-editor-foreground); font-weight: 400; }
         
         /* Neutral focus for Settings fields: no colored outline/border */
         select:focus, select:focus-visible,
@@ -148,7 +147,6 @@ export function getSettingsModalHtml(): string {
           display: flex; 
           justify-content: space-between; 
           align-items: center;
-          font-family: 'Ubuntu', sans-serif;
           font-weight: 400;
         }
         .stx-dd-btn:hover { background: var(--vscode-list-hoverBackground); }
@@ -182,7 +180,7 @@ export function getSettingsModalHtml(): string {
           font-size: 13px; 
           cursor: pointer; 
           border-radius: 4px;
-          font-family: 'Ubuntu', sans-serif;
+
         }
         .stx-dd-item:hover { background: var(--vscode-list-hoverBackground); }
         .stx-dd-item.active { 
@@ -202,7 +200,6 @@ export function getSettingsModalHtml(): string {
           border: 0.5px solid var(--vscode-input-border);
           color: var(--vscode-input-foreground);
           border-radius: 8px;
-          font-family: 'Ubuntu', sans-serif;
           font-size: 13px;
           font-weight: 400;
           box-sizing: border-box;
@@ -316,7 +313,6 @@ export function getSettingsModalHtml(): string {
         /* Settings title section */
         .settings-title-section { padding: 0 24px; margin-bottom: 16px; }
         .settings-title-section h1 { 
-          font-family: 'Ubuntu', sans-serif; 
           font-size: 20px; 
           font-style: normal; 
           font-weight: 700; 
@@ -327,7 +323,7 @@ export function getSettingsModalHtml(): string {
           -webkit-text-fill-color: transparent;
           margin: 0 0 4px 0; 
         }
-        .settings-subtitle { font-family: 'Ubuntu', sans-serif; font-size: 13px; color: var(--vscode-descriptionForeground); margin: 0; font-weight: 400; font-style: normal; line-height: normal; }
+        .settings-subtitle { font-size: 13px; color: var(--vscode-descriptionForeground); margin: 0; font-weight: 400; font-style: normal; line-height: normal; }
         
         /* Profile & Usage Styles */
         .profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 0 4px; max-width: 800px; }

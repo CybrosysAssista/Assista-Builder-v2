@@ -416,13 +416,18 @@
     display: block;
     padding: 6px 8px;
     box-sizing: border-box;
+    position: relative;
 }
 
-#chatInput:empty:before {
+#chatInput:empty:before,
+#chatInput[data-placeholder-visible="true"]:before {
     content: attr(placeholder);
     color: var(--vscode-input-placeholderForeground);
     pointer-events: none;
-    display: block;
+    display: inline;
+    position: absolute;
+    left: 8px;
+    top: 6px;
 }
 
 /* Mention Chip */

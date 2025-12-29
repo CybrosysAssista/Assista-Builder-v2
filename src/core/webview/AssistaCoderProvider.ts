@@ -430,6 +430,15 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
         const abortController = this._abortController;
 
         try {
+            // Persist user message immediately so it's saved even if cancelled early
+            const currentMessages = await readSessionMessages(this._context);
+            currentMessages.push({
+                role: 'user',
+                content: text,
+                timestamp: Date.now()
+            });
+            await writeSessionMessages(this._context, currentMessages);
+
             const startTime = Date.now();
             const response = await runAgent({
                 contents: text,

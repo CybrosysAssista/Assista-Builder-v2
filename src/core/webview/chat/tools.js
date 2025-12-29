@@ -15,8 +15,7 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
         const chevronSpan = document.createElement('span');
         chevronSpan.className = 'minimal-tool-chevron';
         if (!showChevron) {
-            chevronSpan.style.visibility = 'hidden';
-            chevronSpan.style.width = '12px'; // Keep spacing
+            chevronSpan.style.display = 'none';
         }
         chevronSpan.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
         header.appendChild(chevronSpan);
@@ -132,7 +131,7 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
 
             const query = args.Query || args.query || 'search';
             // FIX: Use 'search' icon instead of null
-            const { block, header, statusIcon, contentArea } = createMinimalToolItem(`Grepped`, status, 'search');
+            const { block, header, statusIcon, contentArea } = createMinimalToolItem(`Grepped`, status, null);
 
             // Show what was searched immediately in content area
             const queryInfo = document.createElement('div');
@@ -181,7 +180,8 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
             const filePath = args.path || args.file_path || args.TargetFile || filename || '';
             const fileName = filePath.split(/[/\\]/).pop() || toolName;
 
-            const { block, header, statusIcon, contentArea } = createMinimalToolItem(`Edited ${fileName}`, status, 'file', filePath);
+            const labelPrefix = toolName === 'write_to_file' ? 'Created' : 'Edited';
+            const { block, header, statusIcon, contentArea } = createMinimalToolItem(`${labelPrefix} ${fileName}`, status, 'file', filePath);
 
             // Add diff stats to header
             let addedLines = 0;
@@ -297,7 +297,7 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
         }
 
         // Store reference including contentArea and toolName
-        toolExecutionElements.set(toolId, { row, container: null, header: null, statusIcon, contentArea: null, toolName });
+        toolExecutionElements.set(toolId, { row, container: null, header: null, statusIcon: null, contentArea: null, toolName });
     }
 
     function updateToolExecution({ toolId, status, result }) {
