@@ -71,24 +71,24 @@ export function applyDiffHighlighting(text) {
         // Handle markers for replace_file_content blocks
         if (line.startsWith('<<<<<<< SEARCH')) {
             insideSearch = true;
-            return ''; // Hide marker
+            return null; // Hide marker
         }
         if (line.startsWith('=======')) {
             insideSearch = false;
             insideReplace = true;
-            return ''; // Hide marker
+            return null; // Hide marker
         }
         if (line.startsWith('>>>>>>> REPLACE')) {
             insideReplace = false;
-            return ''; // Hide marker
+            return null; // Hide marker
         }
 
         // Hide apply_diff specific metadata
         if (line.trim().startsWith(':start_line:')) {
-            return '';
+            return null;
         }
         if (line.trim() === '-------') {
-            return '';
+            return null;
         }
 
         // Handle content based on state (for replace_file_content)
@@ -111,5 +111,5 @@ export function applyDiffHighlighting(text) {
 
         // Context lines
         return applySyntaxHighlighting(line);
-    }).join('');
+    }).filter(line => line !== null).join('\n');
 }

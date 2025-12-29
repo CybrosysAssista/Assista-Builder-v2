@@ -77,7 +77,7 @@
 
 .minimal-tool-content {
     display: none;
-    padding-left: 12px;
+    padding-left: 6px;
     margin-top: 4px;
     border-left: 1px solid var(--vscode-widget-border);
 }
@@ -206,10 +206,41 @@
     padding: 12px;
     font-family: var(--vscode-editor-font-family, monospace);
     font-size: var(--vscode-editor-font-size, 13px);
-    overflow-x: auto;
+    overflow: auto;
+    max-height: 400px;
     color: var(--vscode-editor-foreground);
     line-height: 1.5;
     background: var(--vscode-editor-background);
+}
+
+/* Custom Scrollbar for Code Blocks */
+.composer-code-block-content pre::-webkit-scrollbar,
+.minimal-tool-content pre::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.composer-code-block-content pre::-webkit-scrollbar-track,
+.minimal-tool-content pre::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.composer-code-block-content pre::-webkit-scrollbar-thumb,
+.minimal-tool-content pre::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, 0.4));
+    border-radius: 10px;
+    border: 2px solid var(--vscode-editor-background);
+}
+
+.composer-code-block-content pre::-webkit-scrollbar-thumb:hover,
+.minimal-tool-content pre::-webkit-scrollbar-thumb:hover {
+    background: var(--vscode-scrollbarSlider-hoverBackground, rgba(100, 100, 100, 0.7));
+}
+
+.minimal-tool-content pre {
+    margin: 0;
+    max-height: 400px;
+    overflow: auto;
 }
 
 .grep-query-info {
