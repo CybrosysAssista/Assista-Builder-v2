@@ -507,8 +507,7 @@ export function getSettingsModalHtml(): string {
             <div class="section"><div class="checkbox-group"><input type="checkbox" id="customUrl" /><label for="customUrl">Use custom base URL</label></div></div>
             <div class="section" id="customUrlField" style="display:none;">
               <div class="section-title">Custom Base URL</div>
-              <input type="text" id="baseUrl" placeholder="https://api.example.com/v1" />
-              <div class="info-text">Custom base URL</div>
+              <input type="text" id="baseUrl" class="settings-input" placeholder="https://api.example.com/v1" />
             </div>
 
             <div class="section">

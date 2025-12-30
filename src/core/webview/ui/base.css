@@ -20,7 +20,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.1));
+  border-bottom: 1px solid var(--vscode-panel-border, rgba(255, 255, 255, 0.1));
   background: var(--vscode-sideBar-background);
 }
 
@@ -30,7 +30,7 @@ body {
 }
 
 .top-bar button {
-  border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+  border: 1px solid var(--vscode-input-border, rgba(128, 128, 128, 0.4));
   background: var(--vscode-button-secondaryBackground, transparent);
   color: var(--vscode-button-secondaryForeground, inherit);
   border-radius: 6px;
@@ -40,7 +40,7 @@ body {
 }
 
 .top-bar button:hover {
-  background: var(--vscode-button-secondaryHoverBackground, rgba(255,255,255,0.08));
+  background: var(--vscode-button-secondaryHoverBackground, rgba(255, 255, 255, 0.08));
 }
 
 button {
@@ -54,7 +54,7 @@ button {
 textarea {
   flex: 1;
   resize: none;
-  border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+  border: 1px solid var(--vscode-input-border, rgba(128, 128, 128, 0.4));
   border-radius: 8px;
   padding: 10px 12px;
   font-family: inherit;
@@ -67,6 +67,6 @@ textarea {
 textarea:focus,
 textarea:focus-visible {
   outline: none;
-  border-color: var(--vscode-input-border, rgba(128,128,128,0.4));
+  border-color: var(--vscode-input-border, rgba(128, 128, 128, 0.4));
   box-shadow: none;
 }
