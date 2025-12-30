@@ -411,23 +411,10 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
                 const pre = document.createElement('pre');
                 pre.textContent = '\nError:\n' + JSON.stringify(result, null, 2);
                 contentArea.appendChild(pre);
-                contentArea.classList.add('visible');
             }
-        } else if (result && contentArea) {
-            let text = '';
-            if (isWriteTool) {
-                if (result.edits_applied !== undefined) {
-                    text = `Applied ${result.edits_applied} of ${result.total_edits} edits.`;
-                } else if (result.blocks_applied !== undefined) {
-                    text = `Applied ${result.blocks_applied} blocks.`;
-                } else if (result.success) {
-                    text = `Successfully updated ${result.path || 'file'}.`;
-                } else {
-                    text = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-                }
-            } else {
-                text = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-            }
+        } else if (result && contentArea && !isWriteTool) {
+            // For non-write tools, append the result text/JSON
+            const text = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
 
             if (contentArea.innerHTML.trim() !== '') {
                 const hr = document.createElement('hr');
@@ -438,7 +425,6 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
             const pre = document.createElement('pre');
             pre.textContent = text;
             contentArea.appendChild(pre);
-            contentArea.classList.add('visible');
         }
 
         if (messagesEl) {
