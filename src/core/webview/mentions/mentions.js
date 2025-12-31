@@ -204,16 +204,18 @@ export function initMentionsUI(vscode, opts) {
         chip.dataset.mention = base;
         chip.innerHTML = `${iconHtml}<span style="margin-left:4px">@${base}</span>`;
 
-        // Delete the '@' and insert the chip
+        // Delete the '@' and insert [ZWSP][CHIP][SPACE]
         range.deleteContents();
-        range.insertNode(chip);
 
-        // Insert a space after the chip so the user can keep typing on the same line
-        const space = document.createTextNode('\u00A0'); // Non-breaking space
-        const afterRange = document.createRange();
-        afterRange.setStartAfter(chip);
-        afterRange.collapse(true);
-        afterRange.insertNode(space);
+        const zwsp = document.createTextNode('\u200B');
+        const space = document.createTextNode(' ');
+
+        const frag = document.createDocumentFragment();
+        frag.appendChild(zwsp);
+        frag.appendChild(chip);
+        frag.appendChild(space);
+
+        range.insertNode(frag);
 
         // Move the cursor to after the space
         sel.removeAllRanges();
@@ -374,9 +376,10 @@ export function initMentionsUI(vscode, opts) {
           val = node.textContent || '';
           selPos = sel.anchorOffset;
         } else if (node === inputEl) {
-          // Empty or at start
+          // Empty or at start/end of container
           val = inputEl.textContent || '';
-          selPos = 0;
+          // If offset is 0, we are at the start. If > 0, we are likely at the end of some content.
+          selPos = sel.anchorOffset === 0 ? 0 : val.length;
         } else {
           return;
         }

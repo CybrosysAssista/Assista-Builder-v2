@@ -53,6 +53,7 @@ function convertSessionToInternal(
             ? content[0].text
             : content,
         timestamp: msg.timestamp,
+        isError: msg.isError,
       });
 
       // Add tool results as separate messages
@@ -145,6 +146,7 @@ export function convertInternalToSession(
         content,
         timestamp: msg.timestamp,
         toolExecutions: toolExecutions.length > 0 ? toolExecutions : undefined,
+        isError: msg.isError,
       });
     }
   }

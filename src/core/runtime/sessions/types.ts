@@ -17,6 +17,7 @@ export interface ChatMessage {
     suggestions?: Array<{ text: string; mode?: string | null }>;
     selection?: string;
     toolExecutions?: ToolExecution[];
+    isError?: boolean;
 }
 
 export interface ChatSession {

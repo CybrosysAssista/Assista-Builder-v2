@@ -421,28 +421,28 @@ export function initChatUI(vscode) {
         } else {
             // Contenteditable
             const sel = window.getSelection();
-            if (sel && sel.rangeCount > 0) {
-                const range = sel.getRangeAt(0);
-                range.deleteContents();
-                const textNode = document.createTextNode(text);
-                range.insertNode(textNode);
-                range.setStartAfter(textNode);
-                range.collapse(true);
+            if (!sel) return;
+
+            // Ensure we have a valid range within the inputEl
+            if (sel.rangeCount === 0 || !inputEl.contains(sel.anchorNode)) {
+                const range = document.createRange();
+                range.selectNodeContents(inputEl);
+                range.collapse(false); // Move to end
                 sel.removeAllRanges();
                 sel.addRange(range);
-            } else {
-                // Fallback: append to end
-                inputEl.textContent += text;
-
-                // Move cursor to end
-                if (sel) {
-                    const range = document.createRange();
-                    range.selectNodeContents(inputEl);
-                    range.collapse(false);
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                }
             }
+
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+
+            const textNode = document.createTextNode(text);
+            range.insertNode(textNode);
+
+            // Move cursor to after the inserted text
+            range.setStart(textNode, text.length);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
         }
         inputEl.dispatchEvent(new Event('input'));
     }
@@ -499,8 +499,10 @@ export function initChatUI(vscode) {
                     // as they are already displayed in the question UI
                     return;
                 } else {
-                    const role =
-                        (message.role === "assistant" || message.role === "tool")
+                    // Check if this is a saved error message
+                    const role = message.isError
+                        ? "error"
+                        : (message.role === "assistant" || message.role === "tool")
                             ? "ai"
                             : message.role === "system"
                                 ? "system"

@@ -138,7 +138,10 @@ export function initWelcomeUI(vscode, opts = {}) {
 
   plusBtn()?.addEventListener('click', (e) => {
     e.preventDefault();
-    // Placeholder: could open file picker / quick actions in future
+    try {
+      input()?.focus();
+      insertAtCursor('@');
+    } catch (_) { }
   });
 
   input()?.addEventListener('keydown', (e) => {
