@@ -45,7 +45,8 @@ function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
             timestamp: typeof message.timestamp === 'number' ? message.timestamp : Date.now(),
             suggestions: message.suggestions,
             selection: message.selection,
-            toolExecutions: message.toolExecutions
+            toolExecutions: message.toolExecutions,
+            isError: message.isError
         }));
 }
 

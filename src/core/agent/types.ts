@@ -16,6 +16,7 @@ export interface InternalMessage {
   role: InternalRole;
   content: InternalBlock[] | string;
   timestamp?: number;
+  isError?: boolean;
 }
 
 /**

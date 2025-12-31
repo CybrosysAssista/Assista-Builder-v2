@@ -2,7 +2,7 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
     // Track tool execution UI elements by toolId
     const toolExecutionElements = new Map();
 
-    function createMinimalToolItem(label, status, iconType = 'file', filePath = null, showChevron = true) {
+    function createMinimalToolItem(label, status, iconType = 'file', filePath = null, showChevron = true, isClickable = true) {
         // Create block
         const block = document.createElement('div');
         block.className = 'minimal-tool-item';
@@ -10,11 +10,14 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
         // Header
         const header = document.createElement('div');
         header.className = 'minimal-tool-header';
+        if (!isClickable) {
+            header.style.cursor = 'default';
+        }
 
         // Chevron
         const chevronSpan = document.createElement('span');
         chevronSpan.className = 'minimal-tool-chevron';
-        if (!showChevron) {
+        if (!showChevron || !isClickable) {
             chevronSpan.style.display = 'none';
         }
         chevronSpan.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
@@ -39,7 +42,7 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
         const labelContainer = document.createElement('span');
         labelContainer.className = 'minimal-tool-label';
 
-        if (filePath) {
+        if (filePath && isClickable) {
             // Split label into prefix and filename if possible
             const parts = label.split(' ');
             const prefix = parts[0];
@@ -74,19 +77,27 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
         header.appendChild(statusIcon);
 
         // Content
-        const contentArea = document.createElement('div');
-        contentArea.className = 'minimal-tool-content';
+        let contentArea = null;
+        if (isClickable) {
+            contentArea = document.createElement('div');
+            contentArea.className = 'minimal-tool-content';
+            block.appendChild(contentArea);
+        }
 
         block.appendChild(header);
-        block.appendChild(contentArea);
+        if (contentArea) {
+            block.appendChild(contentArea);
+        }
 
         // Toggle
-        header.addEventListener('click', () => {
-            if (contentArea.innerHTML.trim() !== "") {
-                contentArea.classList.toggle('visible');
-                chevronSpan.classList.toggle('expanded');
-            }
-        });
+        if (isClickable) {
+            header.addEventListener('click', () => {
+                if (contentArea.innerHTML.trim() !== "") {
+                    contentArea.classList.toggle('visible');
+                    chevronSpan.classList.toggle('expanded');
+                }
+            });
+        }
 
         return { block, header, statusIcon, contentArea, chevronSpan };
     }
@@ -110,10 +121,15 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
             args.files.forEach(file => {
                 const fileName = file.path.split(/[/\\]/).pop();
                 const isFolder = file.path.endsWith('/') || file.path.endsWith('\\');
-                const { block, header, statusIcon, contentArea } = createMinimalToolItem(`Read ${fileName}`, status, isFolder ? 'folder' : 'file', file.path, false);
+                const { block, header, statusIcon, contentArea } = createMinimalToolItem(`Read ${fileName}`, status, isFolder ? 'folder' : 'file', file.path, false, false);
+                header.style.cursor = 'pointer';
+                header.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    vscode.postMessage({ command: 'openFile', path: file.path });
+                });
 
                 container.appendChild(block);
-                fileBlocks.set(file.path, { header, statusIcon, contentArea });
+                fileBlocks.set(file.path, { header, statusIcon, contentArea: null });
             });
 
             row.appendChild(container);
@@ -162,21 +178,22 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
             }
             const folderName = cleanPath.split(/[/\\]/).pop() || dirPath;
 
-            // Pass false for showChevron to hide the arrow
-            const { block, header, statusIcon, contentArea } = createMinimalToolItem(`List ${folderName}`, status, 'folder', dirPath, false);
+            // Make it non-expandable (isClickable = false), but keep pointer cursor for Reveal in Explorer
+            const { block, header, statusIcon, contentArea } = createMinimalToolItem(`List ${folderName}`, status, 'folder', null, false, false);
+            header.style.cursor = 'pointer';
 
-            // Show what was listed immediately in content area
-            const dirInfo = document.createElement('div');
-            dirInfo.className = 'grep-query-info'; // Reuse styling
-            dirInfo.innerHTML = `Listed directory: <code>${dirPath}</code>`;
-            contentArea.appendChild(dirInfo);
+            // Add custom click listener to reveal in explorer
+            header.addEventListener('click', (e) => {
+                e.stopPropagation();
+                vscode.postMessage({ command: 'revealInExplorer', path: dirPath });
+            });
 
             container.appendChild(block);
             row.appendChild(container);
             messagesEl.appendChild(row);
             messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
 
-            toolExecutionElements.set(toolId, { row, container, statusIcon, contentArea, toolName, dirPath });
+            toolExecutionElements.set(toolId, { row, container, statusIcon, contentArea: null, toolName, dirPath });
             return;
         }
 
@@ -325,15 +342,7 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
                         statusIcon.innerHTML = '';
 
                         if (fileResult.error) {
-                            const pre = document.createElement('pre');
-                            pre.textContent = `Error: ${fileResult.error}`;
-                            pre.style.color = 'var(--vscode-errorForeground)';
-                            contentArea.appendChild(pre);
                             statusIcon.innerHTML = '⚠️';
-                        } else {
-                            const pre = document.createElement('pre');
-                            pre.textContent = fileResult.content;
-                            contentArea.appendChild(pre);
                         }
                     }
                 });
@@ -350,10 +359,9 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
             statusIcon.classList.remove('loading');
             statusIcon.innerHTML = '';
 
-            if (status === 'completed' && result) {
-                const pre = document.createElement('pre');
-                pre.textContent = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-                contentArea.appendChild(pre);
+            if (status === 'completed') {
+                statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
+                statusIcon.classList.add('completed');
             } else if (status === 'error') {
                 statusIcon.innerHTML = '❌';
                 if (result) {
@@ -374,21 +382,8 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
                 // Show success checkmark
                 statusIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`;
                 statusIcon.classList.add('completed');
-
-                // Append content if available
-                if (result) {
-                    const pre = document.createElement('pre');
-                    pre.textContent = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-                    contentArea.appendChild(pre);
-                }
             } else if (status === 'error') {
                 statusIcon.innerHTML = '❌';
-                if (result) {
-                    const pre = document.createElement('pre');
-                    pre.textContent = `Error: ${JSON.stringify(result, null, 2)}`;
-                    pre.style.color = 'var(--vscode-errorForeground)';
-                    contentArea.appendChild(pre);
-                }
             }
             return;
         }
@@ -412,7 +407,7 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
                 pre.textContent = '\nError:\n' + JSON.stringify(result, null, 2);
                 contentArea.appendChild(pre);
             }
-        } else if (result && contentArea && !isWriteTool) {
+        } else if (result && contentArea && !isWriteTool && toolName !== 'read_file' && toolName !== 'list_dir') {
             // For non-write tools, append the result text/JSON
             const text = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
 

@@ -154,7 +154,24 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 }
                 return;
             }
-            // Delegate mention-related commands
+            if (message.command === 'revealInExplorer') {
+                const folderPath = typeof message.path === 'string' ? message.path : '';
+                if (folderPath) {
+                    try {
+                        const workspaceFolders = vscode.workspace.workspaceFolders;
+                        if (workspaceFolders) {
+                            const fullPath = path.isAbsolute(folderPath)
+                                ? folderPath
+                                : path.join(workspaceFolders[0].uri.fsPath, folderPath);
+                            const uri = vscode.Uri.file(fullPath);
+                            await vscode.commands.executeCommand('revealInExplorer', uri);
+                        }
+                    } catch (error) {
+                        console.error('[AssistaCoder] Failed to reveal in explorer:', error);
+                    }
+                }
+                return;
+            }
             if (await this._mentions?.handle(message)) { return; }
 
             // History page commands
@@ -450,6 +467,21 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 return;
             }
             const message = error?.message || String(error) || 'Unexpected error';
+
+            // Save error message to session history so it persists
+            try {
+                const currentMessages = await readSessionMessages(this._context);
+                currentMessages.push({
+                    role: 'assistant',
+                    content: message,
+                    timestamp: Date.now(),
+                    isError: true
+                });
+                await writeSessionMessages(this._context, currentMessages);
+            } catch (saveError) {
+                console.error('[AssistaCoder] Failed to save error message to history:', saveError);
+            }
+
             await this.sendAssistantMessage(message, 'error');
         } finally {
             // Clear abort controller if this was the current request
@@ -461,14 +493,15 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
 
     private async mapMessageForWebview(
         message: ChatMessage
-    ): Promise<{ role: string; content: string; markdown?: string; timestamp?: number; suggestions?: any; selection?: string; toolExecutions?: any[] }> {
+    ): Promise<{ role: string; content: string; markdown?: string; timestamp?: number; suggestions?: any; selection?: string; toolExecutions?: any[]; isError?: boolean }> {
         const base = {
             role: message.role,
             content: message.content,
             timestamp: message.timestamp,
             suggestions: message.suggestions,
             selection: message.selection,
-            toolExecutions: message.toolExecutions
+            toolExecutions: message.toolExecutions,
+            isError: message.isError
         };
         if ((message.role as any) === 'assistant' || (message.role as any) === 'tool') {
             // Send markdown for client-side rendering
