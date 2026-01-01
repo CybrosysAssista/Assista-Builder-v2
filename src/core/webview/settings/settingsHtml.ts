@@ -8,7 +8,7 @@ export function getSettingsModalHtml(): string {
         html, body, #settingsPage { margin: 0 !important; padding: 0 !important; }
         .sidebar { width: 48px; border-right: 0.5px solid var(--vscode-panel-border); display: flex; flex-direction: column; overflow-y: auto; transition: width 0.3s ease; background-color: transparent; box-shadow: none; align-items: center; padding-top: 10px; }
         .sidebar.collapsed { width: 50px; }
-        .sidebar-item { 
+        .sidebar-item {
           display: flex;
           width: 30px;
           height: 30px;
@@ -25,7 +25,7 @@ export function getSettingsModalHtml(): string {
           margin-bottom: 8px;
         }
         .sidebar-item:hover { background-color: var(--vscode-list-hoverBackground); }
-        .sidebar-item.active { 
+        .sidebar-item.active {
           border-radius: 7px;
           border: 0.5px solid rgba(188, 132, 135, 0.50);
           background: rgba(188, 132, 135, 0.05);
@@ -46,7 +46,7 @@ export function getSettingsModalHtml(): string {
         .btn { padding: 8px 16px; border: none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; }
         .btn.btn-save { background-color: var(--vscode-button-background); color: var(--vscode-button-foreground); }
         .btn.btn-done { background-color: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
-        .btn.btn-get-api { 
+        .btn.btn-get-api {
           display: inline-flex;
           min-width: fit-content;
           width: auto;
@@ -84,7 +84,7 @@ export function getSettingsModalHtml(): string {
         .checkbox-group label { font-size: 13px; }
         .info-text { font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
         .info-box { background-color: var(--vscode-editorWidget-background); padding: 15px; border-radius: 4px; margin-top: 15px; font-size: 12px; line-height: 1.6; color: var(--vscode-editor-foreground); font-weight: 400; }
-        
+
         /* Neutral focus for Settings fields: no colored outline/border */
         select:focus, select:focus-visible,
         input[type="text"]:focus, input[type="text"]:focus-visible,
@@ -133,59 +133,59 @@ export function getSettingsModalHtml(): string {
 
         /* Custom Provider Dropdown Styles (matching History page) */
         .stx-dd-wrap { position: relative; width: 100%; }
-        .stx-dd-btn { 
-          width: 100%; 
-          padding: 0 10px; 
+        .stx-dd-btn {
+          width: 100%;
+          padding: 0 10px;
           height: 28px;
-          background: var(--vscode-input-background); 
-          color: var(--vscode-input-foreground); 
-          border: 0.5px solid var(--vscode-input-border); 
-          border-radius: 8px; 
-          font-size: 13px; 
-          text-align: left; 
-          cursor: pointer; 
-          display: flex; 
-          justify-content: space-between; 
+          background: var(--vscode-input-background);
+          color: var(--vscode-input-foreground);
+          border: 0.5px solid var(--vscode-input-border);
+          border-radius: 8px;
+          font-size: 13px;
+          text-align: left;
+          cursor: pointer;
+          display: flex;
+          justify-content: space-between;
           align-items: center;
           font-weight: 400;
         }
         .stx-dd-btn:hover { background: var(--vscode-list-hoverBackground); }
         .stx-dd-btn:focus { outline: none; }
-        .stx-dd-chevron { 
-          opacity: 0.7; 
+        .stx-dd-chevron {
+          opacity: 0.7;
           transition: transform 0.2s;
           flex-shrink: 0;
         }
         .stx-dd-wrap.open .stx-dd-chevron {
           transform: rotate(180deg);
         }
-        
-        .stx-dd-menu { 
-          position: absolute; 
-          top: calc(100% + 4px); 
-          left: 0; 
-          width: 100%; 
-          background: var(--vscode-dropdown-background); 
-          border: 1px solid var(--vscode-dropdown-border); 
+
+        .stx-dd-menu {
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          width: 100%;
+          background: var(--vscode-dropdown-background);
+          border: 1px solid var(--vscode-dropdown-border);
           color: var(--vscode-dropdown-foreground);
-          border-radius: 8px; 
-          box-shadow: 0 4px 12px rgba(0,0,0,0.25); 
-          display: none; 
-          z-index: 1000; 
-          padding: 4px; 
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+          display: none;
+          z-index: 1000;
+          padding: 4px;
         }
         .stx-dd-menu.show { display: block; }
-        .stx-dd-item { 
-          padding: 8px 12px; 
-          font-size: 13px; 
-          cursor: pointer; 
+        .stx-dd-item {
+          padding: 8px 12px;
+          font-size: 13px;
+          cursor: pointer;
           border-radius: 4px;
 
         }
         .stx-dd-item:hover { background: var(--vscode-list-hoverBackground); }
-        .stx-dd-item.active { 
-          background: var(--vscode-list-activeSelectionBackground); 
-          color: var(--vscode-list-activeSelectionForeground); 
+        .stx-dd-item.active {
+          background: var(--vscode-list-activeSelectionBackground);
+          color: var(--vscode-list-activeSelectionForeground);
         }
 
         /* Reusable input field style matching Provider dropdown */
@@ -251,7 +251,7 @@ export function getSettingsModalHtml(): string {
           .logout-btn {
             width: 100%;
           }
-          
+
           /* Usage Card Fixes for Narrow Widths */
           .usage-card {
             padding: 12px;
@@ -290,7 +290,7 @@ export function getSettingsModalHtml(): string {
         .stx-btn { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--vscode-button-border); background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); cursor: pointer; }
         .stx-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
         .stx-btn.primary { background: var(--vscode-button-background); border-color: var(--vscode-button-border); color: var(--vscode-button-foreground); }
-        
+
         /* Back button styling */
         /* Back button styling matching history page */
         .back-btn {
@@ -309,25 +309,25 @@ export function getSettingsModalHtml(): string {
         }
         .back-btn:hover { opacity: 0.8; }
         .back-btn svg { fill: var(--vscode-editor-foreground); }
-        
+
         /* Settings title section */
         .settings-title-section { padding: 0 24px; margin-bottom: 16px; }
-        .settings-title-section h1 { 
-          font-size: 20px; 
-          font-style: normal; 
-          font-weight: 700; 
+        .settings-title-section h1 {
+          font-size: 20px;
+          font-style: normal;
+          font-weight: 700;
           line-height: normal;
           background: linear-gradient(91deg, #E3B2B3 0%, #BC8487 99.58%);
           background-clip: text;
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-          margin: 0 0 4px 0; 
+          margin: 0 0 4px 0;
         }
         .settings-subtitle { font-size: 13px; color: var(--vscode-descriptionForeground); margin: 0; font-weight: 400; font-style: normal; line-height: normal; }
-        
+
         /* Profile & Usage Styles */
         .profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 0 4px; max-width: 800px; }
-        .avatar { 
+        .avatar {
           display: flex;
           width: 50px;
           height: 50px;
@@ -341,7 +341,7 @@ export function getSettingsModalHtml(): string {
           background: rgba(188, 132, 135, 0.05);
           flex-shrink: 0;
         }
-        .user-info { 
+        .user-info {
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -353,7 +353,7 @@ export function getSettingsModalHtml(): string {
         .user-name { font-size: 15px; font-weight: 500; color: var(--vscode-editor-foreground); margin-bottom: 0; }
         .user-email { font-size: 13px; color: var(--vscode-descriptionForeground); margin-bottom: 0; }
         .user-meta { font-size: 12px; color: var(--vscode-descriptionForeground); display: flex; align-items: center; gap: 4px; }
-        .logout-btn { 
+        .logout-btn {
           display: flex;
           padding: 10px 16px;
           justify-content: center;
@@ -366,13 +366,13 @@ export function getSettingsModalHtml(): string {
           font-size: 12px;
           cursor: pointer;
         }
-        .usage-card { 
-          border: 0.5px solid rgba(188, 132, 135, 0.50); 
-          border-radius: 7px; 
-          padding: 16px; 
-          background: rgba(188, 132, 135, 0.05); 
-          margin-top: 8px; 
-          max-width: 800px; 
+        .usage-card {
+          border: 0.5px solid rgba(188, 132, 135, 0.50);
+          border-radius: 7px;
+          padding: 16px;
+          background: rgba(188, 132, 135, 0.05);
+          margin-top: 8px;
+          max-width: 800px;
         }
         .usage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 14px; color: var(--vscode-editor-foreground); }
         .usage-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--vscode-descriptionForeground); }
@@ -429,7 +429,7 @@ export function getSettingsModalHtml(): string {
           <div id="generalSection">
             <div class="subheader"><span class="subheader-text">Profile</span></div>
             <div class="content-body">
-            
+
             <div class="profile-header">
                 <div class="avatar">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -439,9 +439,8 @@ export function getSettingsModalHtml(): string {
                     </svg>
                 </div>
                 <div class="user-info">
-                    <div class="user-name">John Doe</div>
-                    <div class="user-email">johndoe@gmail.com</div>
-                    <div class="user-meta">Signed in with Google | User ID <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></div>
+                    <div class="user-name" id="userDisplayName">Loading...</div>
+                    <div class="user-email" id="userEmail">Loading...</div>
                 </div>
                 <button class="logout-btn">Logout</button>
             </div>
@@ -519,7 +518,7 @@ export function getSettingsModalHtml(): string {
                 </div>
               </div>
               <div class="error-message" id="errorMessage" style="display: none;">✕ The model ID you provided is not available. Please choose a different model.</div>
-              
+
             </div>
 
             <div class="section">
