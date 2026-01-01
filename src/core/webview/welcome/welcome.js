@@ -252,6 +252,45 @@ export function initWelcomeUI(vscode, opts = {}) {
     }, 550);
   }
 
+  // Message handling for user greeting updates and auth state changes
+  window.addEventListener('message', (event) => {
+    const message = event.data || {};
+    if (message.type === 'userGreetingResponse') {
+      const greetingEl = document.getElementById('userGreeting');
+      if (greetingEl && message.payload?.greeting) {
+        greetingEl.textContent = message.payload.greeting;
+      }
+    } else if (message.type === 'authStateChanged') {
+      // Re-fetch greeting when authentication state changes
+      setTimeout(() => {
+        vscode.postMessage({ command: 'getUserGreeting' });
+      }, 500); // Small delay to ensure auth state is settled
+    }
+  });
+
+  // Load user greeting on initialization
+  vscode.postMessage({ command: 'getUserGreeting' });
+
+  // Periodic check for authentication (handles race condition)
+  // If user authenticates after welcome screen loads, update the greeting
+  let authCheckInterval = setInterval(() => {
+    const greetingEl = document.getElementById('userGreeting');
+    if (greetingEl && greetingEl.textContent === 'Hey, User') {
+      // Still showing default, try to get updated greeting
+      vscode.postMessage({ command: 'getUserGreeting' });
+    } else {
+      // Greeting has been updated, stop checking
+      clearInterval(authCheckInterval);
+    }
+  }, 2000); // Check every 2 seconds
+
+  // Stop checking after 30 seconds to avoid infinite polling
+  setTimeout(() => {
+    if (authCheckInterval) {
+      clearInterval(authCheckInterval);
+    }
+  }, 30000);
+
   // Expose helpers
   window.showWelcome = showWelcome;
   window.hideWelcome = hideWelcome;

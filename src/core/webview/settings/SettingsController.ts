@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { AssistaAuthService } from '../../utils/assistaAuthService.js';
 
 export class SettingsController {
   constructor(
@@ -28,6 +29,11 @@ export class SettingsController {
     const ragConfig = config.get<any>('rag', {});
     const ragEnabled = ragConfig.enabled !== undefined ? ragConfig.enabled : true;
 
+    // Load user data
+    const userData = await AssistaAuthService.getUserData();
+    const userDisplayName = await AssistaAuthService.getUserDisplayName();
+    const userEmail = await AssistaAuthService.getUserEmail();
+
     this.postMessage('settingsData', {
       activeProvider,
       googleModel,
@@ -43,6 +49,9 @@ export class SettingsController {
       hasOpenaiKey,
       hasAnthropicKey,
       ragEnabled,
+      userData,
+      userDisplayName,
+      userEmail,
     });
   }
 

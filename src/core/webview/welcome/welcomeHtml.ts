@@ -12,7 +12,7 @@ export function getWelcomeHtml(assets: {
     <div class="welcome-logo-wrap">
       <img class="welcome-logo" src="${assets.logo}" alt="Assista logo" />
     </div>
-    <div class="welcome-greeting">Hey, John Doe</div>
+    <div class="welcome-greeting" id="userGreeting">Hey, User</div>
     <div class="welcome-tagline">Sketch the logic, get the implementation.</div>
 
     <div class="welcome-input" role="group" aria-label="Compose">
@@ -49,7 +49,7 @@ export function getWelcomeHtml(assets: {
           <button class="item" data-mode="chat"><span>Chat</span><span class="desc" style="opacity:.6;font-size:11px">Chat with Assista</span></button>
         </div>
       </div>
-      
+
       ${assets.modelMenuHtml}
     </div>
 
