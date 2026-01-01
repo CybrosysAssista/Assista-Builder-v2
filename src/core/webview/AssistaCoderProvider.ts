@@ -268,6 +268,14 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
+            if (message.command === 'showError') {
+                const text = typeof message.text === 'string' ? message.text : '';
+                if (text) {
+                    vscode.window.showErrorMessage(text);
+                }
+                return;
+            }
+
         });
 
         if (this._pendingShowSettings) {
