@@ -148,8 +148,19 @@ export async function writeSessionMessages(
     context: vscode.ExtensionContext,
     history: ChatMessage[]
 ): Promise<void> {
-    const state = await ensureLoaded(context);
     const session = await getMutableActiveSession(context);
+    await writeSessionMessagesById(context, session.id, history);
+}
+
+export async function writeSessionMessagesById(
+    context: vscode.ExtensionContext,
+    sessionId: string,
+    history: ChatMessage[]
+): Promise<void> {
+    const state = await ensureLoaded(context);
+    const session = state.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
     const sanitized = (sanitizeMessages(history));
     session.messages = sanitized;
     session.updatedAt = sanitized.length ? Date.now() : session.updatedAt;

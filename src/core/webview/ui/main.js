@@ -31,9 +31,18 @@ if (bootState) {
 
 window.addEventListener('message', (event) => {
     const message = event.data || {};
+    const payload = message.payload || {};
+
+    // Helper to check if a message is intended for the currently active session
+    const isMessageForCurrentSession = () => {
+        // If no sessionId is provided in payload, assume it's a global message (like settings)
+        if (!payload.sessionId) return true;
+        return String(payload.sessionId) === String(chat.getActiveSessionId());
+    };
 
     switch (message.type) {
         case 'assistantMessage':
+            if (!isMessageForCurrentSession()) return;
             // Finalize streaming if active before showing final message
             if (typeof chat.finalizeStreamingMessage === 'function') {
                 chat.finalizeStreamingMessage();
@@ -41,22 +50,22 @@ window.addEventListener('message', (event) => {
             // If we're currently streaming, replace the streaming bubble with final message
             if (typeof chat.replaceStreamingMessage === 'function') {
                 chat.replaceStreamingMessage(
-                    String(message.text || ''),
-                    typeof message.html === 'string' ? message.html : undefined,
-                    typeof message.markdown === 'string' ? message.markdown : undefined
+                    String(payload.text || ''),
+                    typeof payload.html === 'string' ? payload.html : undefined,
+                    typeof payload.markdown === 'string' ? payload.markdown : undefined
                 );
             } else {
                 chat.appendMessage(
-                    String(message.text || ''),
+                    String(payload.text || ''),
                     'ai',
-                    typeof message.html === 'string' ? message.html : undefined,
-                    typeof message.markdown === 'string' ? message.markdown : undefined
+                    typeof payload.html === 'string' ? payload.html : undefined,
+                    typeof payload.markdown === 'string' ? payload.markdown : undefined
                 );
             }
             chat.toggleBusy(false);
             break;
         case 'streamingChunk': {
-            const payload = message.payload || {};
+            if (!isMessageForCurrentSession()) return;
             if (payload.type === 'stream_start') {
                 // Start streaming - create new message
                 if (typeof chat.appendStreamingChunk === 'function') {
@@ -76,7 +85,7 @@ window.addEventListener('message', (event) => {
             break;
         }
         case 'toolExecution': {
-            const payload = message.payload || {};
+            if (!isMessageForCurrentSession()) return;
             if (payload.type === 'tool_execution_start') {
                 // Show tool execution UI with loading state
                 if (typeof chat.showToolExecution === 'function') {
@@ -101,7 +110,8 @@ window.addEventListener('message', (event) => {
             break;
         }
         case 'systemMessage':
-            chat.appendMessage(String(message.text || ''), 'system');
+            if (!isMessageForCurrentSession()) return;
+            chat.appendMessage(String(payload.text || ''), 'system');
             chat.toggleBusy(false);
             break;
         case 'clear':
@@ -110,12 +120,13 @@ window.addEventListener('message', (event) => {
             chat.toggleBusy(false);
             break;
         case 'error':
-            chat.appendMessage(String(message.text || 'Something went wrong.'), 'error');
+            if (!isMessageForCurrentSession()) return;
+            chat.appendMessage(String(payload.text || 'Something went wrong.'), 'error');
             chat.toggleBusy(false);
             break;
         case 'showSettings':
             if (welcome && typeof welcome.hideWelcome === 'function') welcome.hideWelcome();
-            const section = message.payload?.section || 'general';
+            const section = payload.section || 'general';
             settings.openSettings(section);
             break;
         case 'showHistory':
@@ -131,19 +142,24 @@ window.addEventListener('message', (event) => {
                 welcome.showSplashAnimation();
             }
             // Clear session state (persist as empty/welcome)
-            const newSessionId = message.payload?.sessionId || null;
+            const newSessionId = payload.sessionId || null;
             chat.renderSession(newSessionId, []);
             break;
         case 'sessionHydrated': {
-            const payload = message.payload || {};
             chat.renderSession(payload.sessionId, Array.isArray(payload.messages) ? payload.messages : []);
+            if (payload.isBusy) {
+                chat.toggleBusy(true);
+                if (typeof chat.showThinkingIndicator === 'function') {
+                    chat.showThinkingIndicator();
+                }
+            }
             break;
         }
         case 'settingsData':
-            settings.applySettingsData(message.payload || {});
+            settings.applySettingsData(payload || {});
             break;
         case 'historyData':
-            history.applyHistoryData(message.payload || {});
+            history.applyHistoryData(payload || {});
             break;
         case 'historyOpened':
             // After switching session, close the history overlay
@@ -155,7 +171,6 @@ window.addEventListener('message', (event) => {
             // No-op: optimistic UI already removed the item. Could show a toast here.
             break;
         case 'mentionInsert': {
-            const payload = message.payload || {};
             const text = String(payload.text || '');
             if (text && typeof chat.insertAtCursor === 'function') {
                 chat.insertAtCursor(text + ' ');
@@ -163,21 +178,18 @@ window.addEventListener('message', (event) => {
             break;
         }
         case 'mentionRecentFilesData': {
-            const payload = message.payload || {};
             const names = Array.isArray(payload.names) ? payload.names : [];
             if (typeof chat.setMentionRecentNames === 'function') chat.setMentionRecentNames(names);
             if (typeof welcome.setMentionRecentNames === 'function') welcome.setMentionRecentNames(names);
             break;
         }
         case 'mentionActiveFileData': {
-            const payload = message.payload || {};
             const name = String(payload.name || '');
             if (name && typeof chat.setMentionRecentNames === 'function') chat.setMentionRecentNames([name]);
             if (name && typeof welcome.setMentionRecentNames === 'function') welcome.setMentionRecentNames([name]);
             break;
         }
         case 'mentionWorkspaceItems': {
-            const payload = message.payload || {};
             const items = Array.isArray(payload.items) ? payload.items : [];
             // Forward to mentions UI via chat instance wrapper
             try { chat.setPickerItems?.(items); } catch (_) { }
@@ -187,37 +199,34 @@ window.addEventListener('message', (event) => {
         case 'historyDeleteFailed': {
             // Reload authoritative list and notify user
             vscode.postMessage({ command: 'loadHistory' });
-            const payload = message.payload || {};
             if (payload && payload.error) {
                 try { alert('Delete failed: ' + String(payload.error)); } catch (_) { }
             }
             break;
         }
         case 'modelsListed':
-            settings.applyModelList(message.payload || {});
+            settings.applyModelList(payload || {});
             break;
         case 'modelsError':
             settings.handleModelsError();
             break;
         case 'usageData':
-            settings.applyUsageData(message.payload || {});
+            settings.applyUsageData(payload || {});
             break;
         case 'settingsSaved': {
-            const payload = message.payload || {};
+            // const payload = message.payload || {};
             // if (payload.success) {
             //     settings.closeSettings();
             // }
             break;
         }
         case 'showQuestion': {
-            const payload = message.payload || {};
             if (payload.id && payload.question && Array.isArray(payload.suggestions)) {
                 chat.showQuestion?.(payload.id, payload.question, payload.suggestions);
             }
             break;
         }
         case 'requestReview': {
-            const payload = message.payload || {};
             if (payload.text) {
             }
             break;

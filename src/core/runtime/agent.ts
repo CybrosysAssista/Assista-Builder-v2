@@ -157,7 +157,8 @@ export function convertInternalToSession(
 export async function runAgent(
   params: any = {},
   context: vscode.ExtensionContext,
-  odooEnvService: OdooEnvironmentService
+  odooEnvService: OdooEnvironmentService,
+  sessionId: string
 ): Promise<string> {
   const onProgress = params.onProgress as ((msg: string) => void) | undefined;
   const abortSignal = params.abortSignal as AbortSignal | undefined;
@@ -256,6 +257,7 @@ export async function runAgent(
     context,
     adapter,
     internalHistory,
+    sessionId,
     abortSignal,
     onProgress
   );
