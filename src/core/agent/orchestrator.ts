@@ -4,7 +4,7 @@ import type { InternalMessage } from './types.js';
 import { ALL_TOOLS, executeToolByName, findToolByName, readFileTool, initializeTools } from '../tools/registry.js';
 import { safeParseJson } from '../tools/toolUtils.js';
 import { convertInternalToSession } from '../runtime/agent.js';
-import { writeSessionMessages } from '../runtime/sessionManager.js';
+import { writeSessionMessages, writeSessionMessagesById } from '../runtime/sessionManager.js';
 
 // const MAX_TOOL_ITERATIONS = 8;
 
@@ -20,6 +20,7 @@ export async function runAgentOrchestrator(
   context: vscode.ExtensionContext,
   adapter: ProviderAdapter,
   sessionHistory: InternalMessage[],
+  sessionId: string,
   abortSignal?: AbortSignal,
   onProgress?: (msg: string) => void
 ): Promise<string> {
@@ -54,7 +55,7 @@ export async function runAgentOrchestrator(
   let finalResponse = '';
 
   // Helper to save current state
-  const save = () => writeSessionMessages(context, convertInternalToSession(internalMessages));
+  const save = () => writeSessionMessagesById(context, sessionId, convertInternalToSession(internalMessages));
 
   try {
     while (true) {

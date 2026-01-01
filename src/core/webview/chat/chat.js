@@ -665,7 +665,7 @@ export function initChatUI(vscode) {
         toggleBusy(true);
         showThinkingIndicator();
 
-        vscode.postMessage({ command: "userMessage", text, mode: selectedMode, model: selectedModel });
+        vscode.postMessage({ command: "userMessage", text, mode: selectedMode, model: selectedModel, sessionId: activeSessionId });
     }
 
     // --- New UI: toolbar behaviors ---
@@ -868,7 +868,7 @@ export function initChatUI(vscode) {
     if (stopBtn) {
         stopBtn.addEventListener("click", () => {
             toggleBusy(false);
-            vscode.postMessage({ command: "cancel" });
+            vscode.postMessage({ command: "cancel", sessionId: activeSessionId });
         });
     }
 
@@ -1001,6 +1001,7 @@ export function initChatUI(vscode) {
         setPickerItems,
         showQuestion,
         sendMessage,
+        showThinkingIndicator,
         showToolExecution,
         updateToolExecution,
         getSelectedMode: () => selectedMode,

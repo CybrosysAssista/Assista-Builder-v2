@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession, readSessionMessages, writeSessionMessages } from '../runtime/sessionManager.js';
+import { ChatSession, getActiveSession, getAllSessions, startNewSession, switchActiveSession, readSessionMessages, writeSessionMessages, writeSessionMessagesById } from '../runtime/sessionManager.js';
 import { ChatMessage } from '../runtime/sessions/types.js';
 import { getHtmlForWebview } from './utils/webviewUtils.js';
 import { SettingsController } from './settings/SettingsController.js';
@@ -21,7 +21,7 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
     private _history?: HistoryController;
     private _mentions?: MentionController;
     private _pendingHydration?: { sessionId: string; messages: ChatMessage[] };
-    private _abortController?: AbortController;
+    private _abortControllers = new Map<string, AbortController>();
     private _disposables: vscode.Disposable[] = [];
 
     constructor(
@@ -97,11 +97,15 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
             }
 
             if (message.command === 'cancel') {
-                if (this._abortController) {
-                    this._abortController.abort();
-                    this._abortController = undefined;
-                    // Send cancellation message to chat
-                    await this.sendAssistantMessage('Request cancelled by user.', 'systemMessage');
+                const sessionId = message.sessionId;
+                if (sessionId) {
+                    const controller = this._abortControllers.get(sessionId);
+                    if (controller) {
+                        controller.abort();
+                        this._abortControllers.delete(sessionId);
+                        // Send cancellation message to chat
+                        await this.sendAssistantMessage('Request cancelled by user.', sessionId, 'systemMessage');
+                    }
                 }
                 return;
             }
@@ -373,7 +377,7 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
             this._view?.show?.(true);
             // Show splash screen animation - no need to hydrate empty session
             // But pass the session ID so frontend state is synced
-            this.postMessage('showWelcomeSplash', { sessionId: session.id });
+            this.postMessage('showWelcomeSplash', { sessionId: session.id }, session.id);
         } catch (error: any) {
             vscode.window.showErrorMessage(error?.message || 'Failed to start a new chat session.');
         }
@@ -427,12 +431,17 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private postMessage(type: string, payload?: any) {
-        this._view?.webview.postMessage(payload ? { type, payload } : { type });
+    private postMessage(type: string, payload?: any, sessionId?: string) {
+        const messagePayload = payload ? { ...payload } : {};
+        if (sessionId) {
+            messagePayload.sessionId = sessionId;
+        }
+        this._view?.webview.postMessage({ type, payload: messagePayload });
     }
 
     private async sendAssistantMessage(
         text: string,
+        sessionId: string,
         type: 'assistantMessage' | 'error' | 'systemMessage' = 'assistantMessage'
     ) {
         if (!this._view) {
@@ -441,14 +450,14 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
 
         if (type === 'assistantMessage') {
             // Send raw markdown for client-side rendering
-            this._view.webview.postMessage({ type, text, markdown: text });
+            this.postMessage(type, { text, markdown: text }, sessionId);
             return;
         }
 
-        this._view.webview.postMessage({ type, text });
+        this.postMessage(type, { text }, sessionId);
     }
 
-    private async handleProgressMessage(msg: string) {
+    private async handleProgressMessage(msg: string, sessionId: string) {
         if (!this._view) {
             return;
         }
@@ -459,19 +468,13 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
 
             // Handle streaming messages
             if (parsed.type === 'stream_start' || parsed.type === 'stream_append' || parsed.type === 'stream_end') {
-                this._view.webview.postMessage({
-                    type: 'streamingChunk',
-                    payload: parsed
-                });
+                this.postMessage('streamingChunk', parsed, sessionId);
                 return;
             }
 
             // Handle tool execution messages
             if (parsed.type === 'tool_execution_start' || parsed.type === 'tool_execution_complete') {
-                this._view.webview.postMessage({
-                    type: 'toolExecution',
-                    payload: parsed
-                });
+                this.postMessage('toolExecution', parsed, sessionId);
                 return;
             }
         } catch {
@@ -479,22 +482,22 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
         }
 
         // Plain text message - send as markdown for client-side rendering
-        this._view.webview.postMessage({
-            type: 'assistantMessage',
-            text: msg,
-            markdown: msg
-        });
+        this.sendAssistantMessage(msg, sessionId);
     }
 
     private async handleUserMessage(text: string, mode: string = 'agent') {
-        // Cancel any existing request
-        if (this._abortController) {
-            this._abortController.abort();
+        const activeSession = await getActiveSession(this._context);
+        const sessionId = activeSession.id;
+
+        // Cancel any existing request for THIS session only
+        const existingController = this._abortControllers.get(sessionId);
+        if (existingController) {
+            existingController.abort();
         }
 
         // Create new AbortController for this request
-        this._abortController = new AbortController();
-        const abortController = this._abortController;
+        const abortController = new AbortController();
+        this._abortControllers.set(sessionId, abortController);
 
         try {
             // Persist user message immediately so it's saved even if cancelled early
@@ -504,15 +507,15 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 content: text,
                 timestamp: Date.now()
             });
-            await writeSessionMessages(this._context, currentMessages);
+            await writeSessionMessagesById(this._context, sessionId, currentMessages);
 
             const startTime = Date.now();
             const response = await runAgent({
                 contents: text,
                 mode,
                 abortSignal: abortController.signal,
-                onProgress: (msg: string) => this.handleProgressMessage(msg)
-            }, this._context, this._odooEnvService);
+                onProgress: (msg: string) => this.handleProgressMessage(msg, sessionId)
+            }, this._context, this._odooEnvService, sessionId);
 
             // Check if request was cancelled
             if (abortController.signal.aborted) {
@@ -522,7 +525,7 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
             const elapsed = Date.now() - startTime;
             console.log(`[AssistaCoder] Total completion time taken in ${elapsed}ms`);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
-            await this.sendAssistantMessage(reply);
+            await this.sendAssistantMessage(reply, sessionId);
             void this.syncActiveSession();
         } catch (error: any) {
             // Don't show error if request was cancelled
@@ -540,16 +543,16 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                     timestamp: Date.now(),
                     isError: true
                 });
-                await writeSessionMessages(this._context, currentMessages);
+                await writeSessionMessagesById(this._context, sessionId, currentMessages);
             } catch (saveError) {
                 console.error('[AssistaCoder] Failed to save error message to history:', saveError);
             }
 
-            await this.sendAssistantMessage(message, 'error');
+            await this.sendAssistantMessage(message, sessionId, 'error');
         } finally {
-            // Clear abort controller if this was the current request
-            if (this._abortController === abortController) {
-                this._abortController = undefined;
+            // Clear abort controller if this was the current request for this session
+            if (this._abortControllers.get(sessionId) === abortController) {
+                this._abortControllers.delete(sessionId);
             }
         }
     }
@@ -579,13 +582,12 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
             return;
         }
         const formatted = await Promise.all(messages.map((msg) => this.mapMessageForWebview(msg)));
-        this._view.webview.postMessage({
-            type: 'sessionHydrated',
-            payload: {
-                sessionId,
-                messages: formatted
-            }
-        });
+        const isBusy = this._abortControllers.has(sessionId);
+        this.postMessage('sessionHydrated', {
+            sessionId,
+            messages: formatted,
+            isBusy
+        }, sessionId);
     }
 
     private async flushPendingHydration(): Promise<void> {
