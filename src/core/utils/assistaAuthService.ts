@@ -31,7 +31,7 @@ export class AssistaAuthService {
 		try {
 			// Check if authentication is available
 			if (!vscode.authentication) {
-				console.warn('[Assista Auth Service] Authentication API not available');
+				// console.warn('[Assista Auth Service] Authentication API not available');
 				return null;
 			}
 
@@ -44,7 +44,7 @@ export class AssistaAuthService {
 
 			// Validate session has required data
 			if (!session.account || !session.account.id) {
-				console.warn('[Assista Auth Service] Invalid session data - missing account information');
+				// console.warn('[Assista Auth Service] Invalid session data - missing account information');
 				return null;
 			}
 
@@ -60,7 +60,7 @@ export class AssistaAuthService {
 
 			return userData;
 		} catch (error) {
-			console.error('[Assista Auth Service] Error retrieving user data:', error);
+			// console.error('[Assista Auth Service] Error retrieving user data:', error);
 			return null;
 		}
 	}
@@ -74,7 +74,7 @@ export class AssistaAuthService {
 			const session = await vscode.authentication.getSession('assista', [], { createIfNone: false });
 			return !!session;
 		} catch (error) {
-			console.error('[Assista Auth Service] Error checking authentication:', error);
+			// console.error('[Assista Auth Service] Error checking authentication:', error);
 			return false;
 		}
 	}

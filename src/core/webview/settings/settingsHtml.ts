@@ -481,17 +481,17 @@ export function getSettingsModalHtml(): string {
                 </button>
                 <div class="stx-dd-menu">
                   <div class="stx-dd-item active" data-value="openrouter">OpenRouter</div>
-                  <div class="stx-dd-item" data-value="anthropic">Anthropic</div>
-                  <div class="stx-dd-item" data-value="openai">OpenAI</div>
-                  <div class="stx-dd-item" data-value="google">Google (Gemini)</div>
+                  <!-- <div class="stx-dd-item" data-value="anthropic">Anthropic</div> -->
+                  <!-- <div class="stx-dd-item" data-value="openai">OpenAI</div> -->
+                  <!-- <div class="stx-dd-item" data-value="google">Google (Gemini)</div> -->
                 </div>
               </div>
               <!-- Hidden select for compatibility -->
               <select id="provider" style="display:none;">
                 <option value="openrouter">OpenRouter</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="openai">OpenAI</option>
-                <option value="google">Google (Gemini)</option>
+                <!-- <option value="anthropic">Anthropic</option> -->
+                <!-- <option value="openai">OpenAI</option> -->
+                <!-- <option value="google">Google (Gemini)</option> -->
               </select>
             </div>
 

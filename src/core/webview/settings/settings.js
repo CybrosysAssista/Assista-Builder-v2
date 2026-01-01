@@ -38,11 +38,11 @@ export function initSettingsUI(vscode) {
     let sidebarResizeObserver;
     // Track the model that should be selected (from saved settings or user's choice)
     let desiredModelId = '';
-    const DEFAULT_MODELS = { google: 'gemini-2.5-flash' };
+    // const DEFAULT_MODELS = { google: 'gemini-2.5-flash' };
     // Keep saved keys in memory (from settingsData) to rehydrate input when switching providers
-    const SAVED_KEYS = { google: '', openrouter: '', openai: '', anthropic: '' };
+    // const SAVED_KEYS = { google: '', openrouter: '', openai: '', anthropic: '' };
     // Keep saved models in memory to rehydrate input when switching providers
-    const SAVED_MODELS = { google: '', openrouter: '', openai: '', anthropic: '' };
+    // const SAVED_MODELS = { google: '', openrouter: '', openai: '', anthropic: '' };
     // Store all available models for filtering
     let allModels = [];
     // Track prior scroll state and lock scrolling while Settings is open
@@ -51,13 +51,13 @@ export function initSettingsUI(vscode) {
     function updateProviderUiLabels(provider) {
         if (!apiKeyLabel) return;
         const map = {
-            google: {
-                label: 'Gemini API Key',
-                doc: 'https://ai.google.dev/docs',
-                text: 'Google AI documentation',
-                apiUrl: 'https://aistudio.google.com/app/apikey',
-                btnText: 'Get Gemini API'
-            },
+            // google: {
+            //     label: 'Gemini API Key',
+            //     doc: 'https://ai.google.dev/docs',
+            //     text: 'Google AI documentation',
+            //     apiUrl: 'https://aistudio.google.com/app/apikey',
+            //     btnText: 'Get Gemini API'
+            // },
             openrouter: {
                 label: 'OpenRouter API Key',
                 doc: 'https://openrouter.ai/docs',
@@ -65,20 +65,20 @@ export function initSettingsUI(vscode) {
                 apiUrl: 'https://openrouter.ai/keys',
                 btnText: 'Get OpenRouter API'
             },
-            openai: {
-                label: 'OpenAI API Key',
-                doc: 'https://platform.openai.com/docs',
-                text: 'OpenAI documentation',
-                apiUrl: 'https://platform.openai.com/api-keys',
-                btnText: 'Get OpenAI API'
-            },
-            anthropic: {
-                label: 'Anthropic API Key',
-                doc: 'https://docs.anthropic.com',
-                text: 'Anthropic documentation',
-                apiUrl: 'https://console.anthropic.com/settings/keys',
-                btnText: 'Get Anthropic API'
-            },
+            // openai: {
+            //     label: 'OpenAI API Key',
+            //     doc: 'https://platform.openai.com/docs',
+            //     text: 'OpenAI documentation',
+            //     apiUrl: 'https://platform.openai.com/api-keys',
+            //     btnText: 'Get OpenAI API'
+            // },
+            // anthropic: {
+            //     label: 'Anthropic API Key',
+            //     doc: 'https://docs.anthropic.com',
+            //     text: 'Anthropic documentation',
+            //     apiUrl: 'https://console.anthropic.com/settings/keys',
+            //     btnText: 'Get Anthropic API'
+            // },
         };
         const cfg = map[provider] || map.openrouter;
         apiKeyLabel.textContent = cfg.label;
