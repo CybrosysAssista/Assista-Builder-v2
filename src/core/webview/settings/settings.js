@@ -23,6 +23,17 @@ export function initSettingsUI(vscode) {
     const cancelDiscardBtn = document.getElementById('cancelDiscardBtn');
     const confirmDiscardBtn = document.getElementById('confirmDiscardBtn');
 
+    // Listen for authentication state changes
+    window.addEventListener('message', (event) => {
+        const message = event.data || {};
+        if (message.type === 'authStateChanged') {
+            // Refresh settings to update user data when auth state changes
+            setTimeout(() => {
+                vscode.postMessage({ command: 'loadSettings' });
+            }, 500); // Small delay to ensure auth state is settled
+        }
+    });
+
     let requestModelsTimer;
     let sidebarResizeObserver;
     // Track the model that should be selected (from saved settings or user's choice)
@@ -586,6 +597,16 @@ export function initSettingsUI(vscode) {
             const ragCheckbox = document.getElementById('ragEnabled');
             if (ragCheckbox) {
                 ragCheckbox.checked = data.ragEnabled !== undefined ? data.ragEnabled : true;
+            }
+
+            // Load user data
+            const userDisplayNameEl = document.getElementById('userDisplayName');
+            const userEmailEl = document.getElementById('userEmail');
+            if (userDisplayNameEl) {
+                userDisplayNameEl.textContent = data.userDisplayName || 'User';
+            }
+            if (userEmailEl) {
+                userEmailEl.textContent = data.userEmail || 'Not available';
             }
 
             debounceRequestModelList(50);

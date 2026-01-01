@@ -9,6 +9,7 @@ import { runAgent } from "../runtime/agent.js";
 import { MentionController } from './mentions/MentionController.js';
 import { OdooEnvironmentService } from '../utils/odooDetection.js';
 import { questionManager } from '../utils/questionManager.js';
+import { AssistaAuthService } from '../utils/assistaAuthService.js';
 
 export class AssistaCoderProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaCoderView';
@@ -21,6 +22,7 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
     private _mentions?: MentionController;
     private _pendingHydration?: { sessionId: string; messages: ChatMessage[] };
     private _abortControllers = new Map<string, AbortController>();
+    private _disposables: vscode.Disposable[] = [];
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -65,6 +67,15 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
             this.postMessage(type, payload);
         });
 
+        // Listen for authentication state changes and notify webview
+        const authListener = vscode.authentication.onDidChangeSessions(async (e) => {
+            if (e.provider.id === 'assista') {
+                // Notify webview of authentication changes
+                this.postMessage('authStateChanged', { provider: 'assista' });
+            }
+        });
+        this._disposables.push(authListener);
+
         webviewView.webview.onDidReceiveMessage(async (message) => {
             if (!message) {
                 return;
@@ -101,6 +112,50 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
 
             if (message.command === 'loadSettings') {
                 await this._settings?.handleLoadSettings();
+                return;
+            }
+
+            if (message.command === 'getUserData') {
+                try {
+                    const userData = await AssistaAuthService.getUserData();
+                    this.postMessage('userDataResponse', userData);
+                } catch (error) {
+                    console.error('[AssistaCoder] Failed to get user data:', error);
+                    this.postMessage('userDataResponse', null);
+                }
+                return;
+            }
+
+            if (message.command === 'getUserGreeting') {
+                try {
+                    const greeting = await AssistaAuthService.getUserGreeting();
+                    this.postMessage('userGreetingResponse', { greeting });
+                } catch (error) {
+                    console.error('[AssistaCoder] Failed to get user greeting:', error);
+                    this.postMessage('userGreetingResponse', { greeting: 'Hey, User' });
+                }
+                return;
+            }
+
+            if (message.command === 'getUserDisplayName') {
+                try {
+                    const displayName = await AssistaAuthService.getUserDisplayName();
+                    this.postMessage('userDisplayNameResponse', { displayName });
+                } catch (error) {
+                    console.error('[AssistaCoder] Failed to get user display name:', error);
+                    this.postMessage('userDisplayNameResponse', { displayName: 'User' });
+                }
+                return;
+            }
+
+            if (message.command === 'getUserEmail') {
+                try {
+                    const email = await AssistaAuthService.getUserEmail();
+                    this.postMessage('userEmailResponse', { email });
+                } catch (error) {
+                    console.error('[AssistaCoder] Failed to get user email:', error);
+                    this.postMessage('userEmailResponse', { email: null });
+                }
                 return;
             }
 
@@ -583,5 +638,11 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
             return singleLine;
         }
         return `${singleLine.slice(0, 80)}…`;
+    }
+
+    dispose(): void {
+        // Clean up all disposables
+        this._disposables.forEach(disposable => disposable.dispose());
+        this._disposables = [];
     }
 }
