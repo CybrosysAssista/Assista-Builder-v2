@@ -24,16 +24,54 @@ export function initChatUI(vscode) {
     const micBtn = document.getElementById('micBtn');
     const settingsBtn = document.getElementById('settingsBtn');
 
+    let thinkingIndicator = null;
     let isBusy = false;
     let activeSessionId;
 
+    function showThinkingIndicator() {
+        if (thinkingIndicator || !messagesEl) return;
+
+        thinkingIndicator = document.createElement('div');
+        thinkingIndicator.className = 'thinking-indicator';
+        thinkingIndicator.innerHTML = `
+            <span>Analyzing</span>
+            <div class="thinking-dots">
+                <div class="thinking-dot"></div>
+                <div class="thinking-dot"></div>
+                <div class="thinking-dot"></div>
+            </div>
+        `;
+        messagesEl.appendChild(thinkingIndicator);
+        messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+    }
+
+    function removeThinkingIndicator() {
+        if (thinkingIndicator) {
+            thinkingIndicator.remove();
+            thinkingIndicator = null;
+        }
+    }
+
     // Initialize Tools UI
-    const { showToolExecution, updateToolExecution } = initToolsUI(vscode, {
+    const toolsUI = initToolsUI(vscode, {
         messagesEl,
         showChatArea,
         applySyntaxHighlighting,
         applyDiffHighlighting
     });
+
+    const showToolExecution = (data) => {
+        removeThinkingIndicator();
+        toolsUI.showToolExecution(data);
+    };
+
+    const updateToolExecution = (data) => {
+        toolsUI.updateToolExecution(data);
+        // If a tool finishes and we are still busy, show thinking indicator again
+        if ((data.status === 'completed' || data.status === 'error') && isBusy) {
+            showThinkingIndicator();
+        }
+    };
     // Local UI state (vanilla JS equivalent of React state)
     let selectedMode = 'agent';
     let selectedModel = 'gpt5-low';
@@ -74,11 +112,20 @@ export function initChatUI(vscode) {
         }
     }
 
+    function updateSendButtonState() {
+        if (!sendBtn || !inputEl) return;
+        const hasText = inputEl.innerText.trim().length > 0 || inputEl.querySelector('.mention-chip');
+        sendBtn.disabled = isBusy || !hasText;
+    }
+
     function toggleBusy(state) {
         isBusy = !!state;
+        if (!isBusy) {
+            removeThinkingIndicator();
+        }
         try {
             if (sendBtn) {
-                sendBtn.disabled = isBusy;
+                updateSendButtonState();
                 sendBtn.classList.toggle("hidden", isBusy);
             }
             if (stopBtn) {
@@ -270,6 +317,7 @@ export function initChatUI(vscode) {
         if (!messagesEl) {
             return;
         }
+        removeThinkingIndicator();
         showChatArea();
 
         // Check if we need to create a new streaming message
@@ -587,14 +635,14 @@ export function initChatUI(vscode) {
         if (!inputEl) {
             return;
         }
-        const text = inputEl.innerText.trim();
-        if (!text) {
+
+        if (isBusy) {
+            vscode.postMessage({ command: "showError", text: "Please stop the current message or wait for it to finish before sending a new one." });
             return;
         }
 
-        // Validate model selection
-        if (selectedModel !== 'custom-api') {
-            appendMessage("You don't have the subscription. You need to have the subscription to access this model.", 'system');
+        const text = inputEl.innerText.trim();
+        if (!text) {
             return;
         }
 
@@ -606,9 +654,16 @@ export function initChatUI(vscode) {
         if (messagesEl) messagesEl.style.display = '';
         if (inputBar) inputBar.style.display = '';
 
+        // Validate model selection
+        if (selectedModel !== 'custom-api') {
+            appendMessage("You don't have the subscription. You need to have the subscription to access this model.", 'system');
+            return;
+        }
+
         appendMessage(text, "user");
         clearInput();
         toggleBusy(true);
+        showThinkingIndicator();
 
         vscode.postMessage({ command: "userMessage", text, mode: selectedMode, model: selectedModel });
     }
@@ -801,13 +856,13 @@ export function initChatUI(vscode) {
                 inputEl.style.height = `${Math.min(Math.max(inputEl.scrollHeight, 28), 160)}px`;
 
                 // Enable/disable send button
-                if (sendBtn) sendBtn.disabled = !inputEl.innerText.trim();
+                updateSendButtonState();
             } catch (_) {
                 // ignore sizing issues
             }
         });
         // Initialize disabled state
-        try { if (sendBtn) sendBtn.disabled = !inputEl.innerText.trim(); } catch (_) { }
+        updateSendButtonState();
     }
 
     if (stopBtn) {
