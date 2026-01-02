@@ -44,7 +44,7 @@ export function getSettingsModalHtml(): string {
         .profile-row select { flex: 1; }
         .inline-buttons { display: flex; gap: 5px; margin-left: 10px; }
         .icon-btn { background: none; border: none; color: var(--vscode-editor-foreground); cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; }
-        .checkbox-group { display: flex; align-items: center; margin-bottom: 0px; }
+        .checkbox-group { display: flex; align-items: center;}
         .checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; cursor: pointer; }
         .checkbox-group label { font-size: 13px; }
         .info-text { font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
@@ -346,6 +346,83 @@ export function getSettingsModalHtml(): string {
         .progress-fill { height: 100%; background: linear-gradient(90deg, #E3B2B3 0%, #BC8487 100%); border-radius: 4px; }
         .upgrade-btn { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--vscode-button-border); color: var(--vscode-button-foreground); border-radius: 8px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
         .upgrade-btn:hover { background: rgba(188, 132, 135, 0.1); }
+
+        /* Collapsible Section Styles (Simple minimal look) */
+        .collapsible-section {
+          margin-bottom: 16px;
+        }
+        .collapsible-trigger {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          user-select: none;
+          padding: 8px 0;
+          color: var(--vscode-descriptionForeground);
+          transition: color 0.1s;
+        }
+        .collapsible-trigger:hover {
+          color: var(--vscode-editor-foreground);
+        }
+        .collapsible-title {
+          font-size: 13px;
+          font-weight: 500;
+        }
+        .collapsible-chevron {
+          transition: transform 0.1s;
+          flex-shrink: 0;
+          opacity: 0.8;
+        }
+        .collapsible-section.open .collapsible-chevron {
+          transform: rotate(90deg);
+        }
+        .collapsible-content {
+          padding: 8px 0 16px 20px;
+          display: none;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .collapsible-section.open .collapsible-content {
+          display: flex;
+        }
+
+        /* PREMIUM TOGGLE SWITCH */
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 38px;
+          height: 20px;
+          flex-shrink: 0;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: var(--vscode-settings-checkboxBackground);
+          border: 1px solid var(--vscode-settings-checkboxBorder);
+          transition: .3s;
+          border-radius: 20px;
+        }
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 14px;
+          width: 14px;
+          left: 2px;
+          bottom: 2px;
+          background-color: var(--vscode-settings-checkboxForeground);
+          transition: .3s;
+          border-radius: 50%;
+        }
+        input:checked + .slider {
+          background-color: #BC8487;
+          border-color: #BC8487;
+        }
+        input:checked + .slider:before {
+          transform: translateX(18px);
+          background-color: white;
+        }
       </style>
       <div class="header">
         <button class="back-btn" id="settingsBackBtn">
@@ -377,47 +454,65 @@ export function getSettingsModalHtml(): string {
                     <div class="user-email" id="userEmail">Loading...</div>
                 </div>
             </div>
-
-
             <div class="section">
-              <div class="section-title">API Provider </div>
-              <div class="stx-dd-wrap" id="ddProvider">
-                <button class="stx-dd-btn" id="btnProvider" type="button">
-                  <span class="label">OpenRouter</span>
-                  <svg class="stx-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 1L5 5L9 1" stroke="#CDCDCD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </button>
-                <div class="stx-dd-menu">
-                  <div class="stx-dd-item active" data-value="openrouter">OpenRouter</div>
-                  <!-- <div class="stx-dd-item" data-value="anthropic">Anthropic</div> -->
-                  <!-- <div class="stx-dd-item" data-value="openai">OpenAI</div> -->
-                  <!-- <div class="stx-dd-item" data-value="google">Google (Gemini)</div> -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div class="section-title" style="font-weight: 700; margin-bottom: 0;">Odoo Knowledge Base (RAG)</div>
+                <label class="switch">
+                  <input type="checkbox" id="ragEnabled">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="info-text" style="margin-top: 0;">
+                Uses an Odoo-specific knowledge base to provide more accurate and relevant responses. Highly recommended for Odoo development.
+              </div>
+            </div>
+            <div class="collapsible-section" id="apiKeyCollapsible">
+              <div class="collapsible-trigger" id="apiKeyTrigger">
+                <svg class="collapsible-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="collapsible-title">Use Your Own Api Key</span>
+              </div>
+              <div class="collapsible-content">
+                <div class="section" style="margin-bottom: 0;">
+                  <div class="section-title">API Provider </div>
+                  <div class="stx-dd-wrap" id="ddProvider">
+                    <button class="stx-dd-btn" id="btnProvider" type="button">
+                      <span class="label">OpenRouter</span>
+                      <svg class="stx-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 1L5 5L9 1" stroke="#CDCDCD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                    <div class="stx-dd-menu">
+                      <div class="stx-dd-item active" data-value="openrouter">OpenRouter</div>
+                      <!-- <div class="stx-dd-item" data-value="anthropic">Anthropic</div> -->
+                      <!-- <div class="stx-dd-item" data-value="openai">OpenAI</div> -->
+                      <!-- <div class="stx-dd-item" data-value="google">Google (Gemini)</div> -->
+                    </div>
+                  </div>
+                  <!-- Hidden select for compatibility -->
+                  <select id="provider" style="display:none;">
+                    <option value="openrouter">OpenRouter</option>
+                    <!-- <option value="anthropic">Anthropic</option> -->
+                    <!-- <option value="openai">OpenAI</option> -->
+                    <!-- <option value="google">Google (Gemini)</option> -->
+                  </select>
                 </div>
-              </div>
-              <!-- Hidden select for compatibility -->
-              <select id="provider" style="display:none;">
-                <option value="openrouter">OpenRouter</option>
-                <!-- <option value="anthropic">Anthropic</option> -->
-                <!-- <option value="openai">OpenAI</option> -->
-                <!-- <option value="google">Google (Gemini)</option> -->
-              </select>
-            </div>
 
-            <div class="section">
-              <div class="section-title" id="apiKeyLabel">OpenRouter API Key</div>
-              <div class="api-key-row">
-                <input type="password" id="apiKey" class="settings-input" />
-                <button class="btn btn-get-api" id="getApiKeyBtn">Get OpenRouter API</button>
-              </div>
-            </div>
-
+                <div class="section" style="margin-bottom: 0;">
+                  <div class="section-title" id="apiKeyLabel">OpenRouter API Key</div>
+                  <div class="api-key-row">
+                    <input type="password" id="apiKey" class="settings-input" />
+                    <button class="btn btn-get-api" id="getApiKeyBtn">Get OpenRouter API</button>
+                  </div>
+                </div>
+<!--
             <div class="section"><div class="checkbox-group"><input type="checkbox" id="customUrl" /><label for="customUrl">Use custom base URL</label></div></div>
             <div class="section" id="customUrlField" style="display:none;">
               <div class="section-title">Custom Base URL</div>
               <input type="text" id="baseUrl" class="settings-input" placeholder="https://api.example.com/v1" />
             </div>
-
+-->
             <div class="section">
               <div class="section-title">Model</div>
               <div style="position: relative;">
@@ -427,16 +522,7 @@ export function getSettingsModalHtml(): string {
                 </div>
               </div>
               <div class="error-message" id="errorMessage" style="display: none;">✕ The model ID you provided is not available. Please choose a different model.</div>
-
-            </div>
-
-            <div class="section">
-              <div class="section-title">RAG Service (Odoo Documentation)</div>
-              <div class="checkbox-group">
-                <input type="checkbox" id="ragEnabled" />
-                <label for="ragEnabled">Enable RAG to retrieve relevant Odoo documentation context</label>
               </div>
-              <div class="info-text">When enabled, the AI will retrieve relevant Odoo documentation from the RAG server before generating responses, improving accuracy for Odoo-specific queries.</div>
             </div>
           </div>
         </div>
