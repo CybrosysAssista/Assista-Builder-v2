@@ -8,7 +8,7 @@ import { listDirTool } from './listDir.js';
 import { findByNameTool } from './findByName.js';
 import { codeSearchTool } from './codeSearch.js';
 import { todoListTool, setTodoListContext } from './todoList.js';
-import { runCommandTool } from './runCommand.js';
+// import { runCommandTool } from './runCommand.js';
 import { multiEditTool } from './multiEdit.js';
 import { fileSearchTool } from './fileSearch.js';
 import { globFileSearchTool } from './globFileSearch.js';
@@ -26,7 +26,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   findByNameTool,
   codeSearchTool,
   todoListTool,
-  runCommandTool,
+  // runCommandTool,
   multiEditTool,
   fileSearchTool,
   globFileSearchTool,
@@ -53,4 +53,4 @@ export { executeTool as executeToolByName };
 /**
  * Re-export tool definitions for convenience
  */
-export { readFileTool, writeFileTool, applyDiffTool, askFollowupQuestionTool };
+export { readFileTool, writeFileTool, applyDiffTool, grepSearchTool, listDirTool, findByNameTool, codeSearchTool, todoListTool, multiEditTool, fileSearchTool, globFileSearchTool, };

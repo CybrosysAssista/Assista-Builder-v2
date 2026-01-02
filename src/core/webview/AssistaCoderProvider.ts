@@ -10,6 +10,7 @@ import { MentionController } from './mentions/MentionController.js';
 import { OdooEnvironmentService } from '../utils/odooDetection.js';
 import { questionManager } from '../utils/questionManager.js';
 import { AssistaAuthService } from '../utils/assistaAuthService.js';
+import { fetchAvailableModels, fetchExternalKey } from '../utils/apiUtils.js';
 
 export class AssistaCoderProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaCoderView';
@@ -47,6 +48,9 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
         };
 
         webviewView.webview.html = getHtmlForWebview(webviewView.webview, this._extensionUri);
+
+        // Fetch and send available models to webview
+        this.fetchAndSendModels();
 
         // Register webview provider with question manager
         questionManager.registerWebviewProvider({
@@ -86,8 +90,10 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 if (!text) {
                     return;
                 }
+                console.log("Hello",message)
                 const mode = typeof message.mode === 'string' ? message.mode : 'agent';
-                await this.handleUserMessage(text, mode);
+                const model = typeof message.model === 'string' ? message.model : 'custom-api';
+                await this.handleUserMessage(text, mode, model);
                 return;
             }
 
@@ -485,7 +491,7 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
         this.sendAssistantMessage(msg, sessionId);
     }
 
-    private async handleUserMessage(text: string, mode: string = 'agent') {
+    private async handleUserMessage(text: string, mode: string = 'agent', model: string = 'custom-api') {
         const activeSession = await getActiveSession(this._context);
         const sessionId = activeSession.id;
 
@@ -510,9 +516,34 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
             await writeSessionMessagesById(this._context, sessionId, currentMessages);
 
             const startTime = Date.now();
+            let externalConfig = undefined;
+
+            if (model !== 'custom-api') {
+                const email = await AssistaAuthService.getUserEmail();
+                if (!email) {
+                    await this.sendAssistantMessage('You must be signed in to use this model. Please sign in from the settings or profile menu.', sessionId, 'error');
+                    return;
+                }
+
+                try {
+                    const keyData = await fetchExternalKey(email);
+                    externalConfig = {
+                        apiKey: keyData.apiKey,
+                        model: model,
+                        provider: 'openrouter'
+                    };
+                } catch (error) {
+                    console.error('[AssistaCoder] Failed to fetch external key:', error);
+                    await this.sendAssistantMessage('Failed to authenticate with Assista server. Please try again later or use a custom API key.', sessionId, 'error');
+                    return;
+                }
+            }
+
             const response = await runAgent({
                 contents: text,
                 mode,
+                model,
+                externalConfig,
                 abortSignal: abortController.signal,
                 onProgress: (msg: string) => this.handleProgressMessage(msg, sessionId)
             }, this._context, this._odooEnvService, sessionId);
@@ -638,6 +669,19 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
             return singleLine;
         }
         return `${singleLine.slice(0, 80)}…`;
+    }
+
+    private async fetchAndSendModels(): Promise<void> {
+        console.log('[AssistaCoder] fetchAndSendModels triggered');
+        try {
+            const models = await fetchAvailableModels();
+            console.log(`[AssistaCoder] Successfully fetched ${models.length} models`);
+            this.postMessage('availableModels', { models });
+        } catch (error) {
+            console.error('[AssistaCoder] Failed to fetch available models:', error);
+            // Send empty models array to trigger fallback to custom API only
+            this.postMessage('availableModels', { models: [], error: true });
+        }
     }
 
     dispose(): void {

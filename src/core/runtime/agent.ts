@@ -8,6 +8,7 @@ import type { InternalMessage } from "../agent/types.js";
 import type { ChatMessage, ChatRole, ToolExecution } from "./sessions/types.js";
 import { OdooEnvironmentService } from "../utils/odooDetection.js";
 import { RAGService } from "../utils/ragService.js";
+import { ProviderConfig } from "../providers/types.js";
 
 /**
  * Convert session messages to internal message format
@@ -180,8 +181,20 @@ export async function runAgent(
   }
 
   // Get provider configuration
-  const { provider: providerName, config: providerConfig } =
-    await getActiveProviderConfig(context);
+  let providerName: string;
+  let providerConfig: ProviderConfig;
+
+  if (params.externalConfig) {
+    providerName = params.externalConfig.provider || 'openrouter';
+    providerConfig = {
+      apiKey: params.externalConfig.apiKey,
+      model: params.externalConfig.model,
+    };
+  } else {
+    const config = await getActiveProviderConfig(context);
+    providerName = config.provider;
+    providerConfig = config.config;
+  }
   const configSection = vscode.workspace.getConfiguration("assistaCoder");
   const customInstructions = configSection.get<string>(
     "systemPrompt.customInstructions",
@@ -189,6 +202,7 @@ export async function runAgent(
   );
 
   // Create provider adapter
+  // console.log(`[Assista Coder] Using provider:`, providerName, providerConfig);
   const adapter = createProvider(providerName, providerConfig, context);
 
   // Convert session history to internal format
@@ -249,7 +263,7 @@ export async function runAgent(
   // Log request before calling orchestrator
   // console.log('[Assista Coder] Request to orchestrator:',requestPayload);
   // console.log('[Assista Coder] context:',context);
-  // console.log('[Assista Coder] adapter:',adapter);
+  // console.log('[Assista Coder] adapter:', adapter);
   // console.log('[Assista Coder] Internal history:',internalHistory);
 
   const response = await runAgentOrchestrator(

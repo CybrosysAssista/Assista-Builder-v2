@@ -654,11 +654,6 @@ export function initChatUI(vscode) {
         if (messagesEl) messagesEl.style.display = '';
         if (inputBar) inputBar.style.display = '';
 
-        // Validate model selection
-        if (selectedModel !== 'custom-api') {
-            appendMessage("You don't have the subscription. You need to have the subscription to access this model.", 'system');
-            return;
-        }
 
         appendMessage(text, "user");
         clearInput();
@@ -748,6 +743,95 @@ export function initChatUI(vscode) {
 
         persistState();
     }
+
+    function populateModelDropdown(models) {
+        console.log('[AssistaCoder] populateModelDropdown called with:', models);
+        if (!modelDropdown) {
+            console.error('[AssistaCoder] modelDropdown element not found!');
+            return;
+        }
+
+        // Clear existing items except custom API
+        const customApiBtn = modelDropdown.querySelector('[data-action="custom-api"]');
+        modelDropdown.innerHTML = '';
+
+        // Add fetched models
+        if (models && models.length > 0) {
+            models.forEach(model => {
+                const button = document.createElement('button');
+                button.className = 'item';
+                button.setAttribute('data-model', model.id);
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = model.name;
+                button.appendChild(nameSpan);
+
+                if (model.costMultiplier) {
+                    const costSpan = document.createElement('span');
+                    costSpan.style.opacity = '.6';
+                    costSpan.style.fontSize = '11px';
+                    costSpan.textContent = `${model.costMultiplier}x`;
+                    button.appendChild(costSpan);
+                }
+
+                modelDropdown.appendChild(button);
+            });
+
+            // Set first model as default if no model is selected yet
+            if (models.length > 0 && selectedModel === 'gpt5-low') {
+                applyModel(models[0].id, models[0].name);
+            }
+        }
+
+        // Re-add custom API button at the end
+        if (customApiBtn) {
+            modelDropdown.appendChild(customApiBtn);
+        }
+
+        // Update label if it's still showing loading text
+        if (modelLabel && modelLabel.textContent === 'Loading models...') {
+            if (models && models.length > 0) {
+                applyModel(models[0].id, models[0].name);
+            } else {
+                applyModel('custom-api', 'Custom API');
+            }
+        }
+
+        // Sync to welcome screen dropdown
+        const welcomeModelDropdown = document.getElementById('welcomeModelDropdown');
+        if (welcomeModelDropdown) {
+            const welcomeCustomApiBtn = welcomeModelDropdown.querySelector('[data-action="custom-api"]');
+            welcomeModelDropdown.innerHTML = '';
+
+            if (models && models.length > 0) {
+                models.forEach(model => {
+                    const button = document.createElement('button');
+                    button.className = 'item';
+                    button.setAttribute('data-model', model.id);
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = model.name;
+                    button.appendChild(nameSpan);
+
+                    if (model.costMultiplier) {
+                        const costSpan = document.createElement('span');
+                        costSpan.style.opacity = '.6';
+                        costSpan.style.fontSize = '11px';
+                        costSpan.textContent = `${model.costMultiplier}x`;
+                        button.appendChild(costSpan);
+                    }
+
+                    welcomeModelDropdown.appendChild(button);
+                });
+            }
+
+            if (welcomeCustomApiBtn) {
+                welcomeModelDropdown.appendChild(welcomeCustomApiBtn);
+            }
+        }
+        console.log('[AssistaCoder] populateModelDropdown completed');
+    }
+
 
     // Toggle menus
     modeToggle?.addEventListener('click', (e) => {
@@ -1009,6 +1093,7 @@ export function initChatUI(vscode) {
         getSelectedModelLabel: () => modelLabel ? modelLabel.textContent : 'GPT-5 (low reasoning)',
         // Allow other modules (e.g., welcome.js) to set the selected model
         setSelectedModel: (id, label) => applyModel(id, label),
-        setSelectedMode: (mode) => applyMode(mode)
+        setSelectedMode: (mode) => applyMode(mode),
+        populateModelDropdown: (models) => populateModelDropdown(models)
     };
 };
