@@ -1,3 +1,24 @@
+const SAVED_KEYS = {
+    google: '',
+    openrouter: '',
+    openai: '',
+    anthropic: ''
+};
+
+const SAVED_MODELS = {
+    google: '',
+    openrouter: '',
+    openai: '',
+    anthropic: ''
+};
+
+const DEFAULT_MODELS = {
+    google: 'gemini-1.5-flash-001',
+    openrouter: 'anthropic/claude-3.5-sonnet',
+    openai: 'gpt-4o',
+    anthropic: 'claude-3-haiku-20240307'
+};
+
 export function initSettingsUI(vscode) {
     const settingsPage = document.getElementById('settingsPage');
     const historyPage = document.getElementById('historyPage');
@@ -38,11 +59,6 @@ export function initSettingsUI(vscode) {
     let sidebarResizeObserver;
     // Track the model that should be selected (from saved settings or user's choice)
     let desiredModelId = '';
-    // const DEFAULT_MODELS = { google: 'gemini-2.5-flash' };
-    // Keep saved keys in memory (from settingsData) to rehydrate input when switching providers
-    // const SAVED_KEYS = { google: '', openrouter: '', openai: '', anthropic: '' };
-    // Keep saved models in memory to rehydrate input when switching providers
-    // const SAVED_MODELS = { google: '', openrouter: '', openai: '', anthropic: '' };
     // Store all available models for filtering
     let allModels = [];
     // Track prior scroll state and lock scrolling while Settings is open
@@ -51,13 +67,13 @@ export function initSettingsUI(vscode) {
     function updateProviderUiLabels(provider) {
         if (!apiKeyLabel) return;
         const map = {
-            // google: {
-            //     label: 'Gemini API Key',
-            //     doc: 'https://ai.google.dev/docs',
-            //     text: 'Google AI documentation',
-            //     apiUrl: 'https://aistudio.google.com/app/apikey',
-            //     btnText: 'Get Gemini API'
-            // },
+            google: {
+                label: 'Gemini API Key',
+                doc: 'https://ai.google.dev/docs',
+                text: 'Google AI documentation',
+                apiUrl: 'https://aistudio.google.com/app/apikey',
+                btnText: 'Get Gemini API'
+            },
             openrouter: {
                 label: 'OpenRouter API Key',
                 doc: 'https://openrouter.ai/docs',
@@ -65,20 +81,20 @@ export function initSettingsUI(vscode) {
                 apiUrl: 'https://openrouter.ai/keys',
                 btnText: 'Get OpenRouter API'
             },
-            // openai: {
-            //     label: 'OpenAI API Key',
-            //     doc: 'https://platform.openai.com/docs',
-            //     text: 'OpenAI documentation',
-            //     apiUrl: 'https://platform.openai.com/api-keys',
-            //     btnText: 'Get OpenAI API'
-            // },
-            // anthropic: {
-            //     label: 'Anthropic API Key',
-            //     doc: 'https://docs.anthropic.com',
-            //     text: 'Anthropic documentation',
-            //     apiUrl: 'https://console.anthropic.com/settings/keys',
-            //     btnText: 'Get Anthropic API'
-            // },
+            openai: {
+                label: 'OpenAI API Key',
+                doc: 'https://platform.openai.com/docs',
+                text: 'OpenAI documentation',
+                apiUrl: 'https://platform.openai.com/api-keys',
+                btnText: 'Get OpenAI API'
+            },
+            anthropic: {
+                label: 'Anthropic API Key',
+                doc: 'https://docs.anthropic.com',
+                text: 'Anthropic documentation',
+                apiUrl: 'https://console.anthropic.com/settings/keys',
+                btnText: 'Get Anthropic API'
+            },
         };
         const cfg = map[provider] || map.openrouter;
         apiKeyLabel.textContent = cfg.label;
@@ -114,48 +130,20 @@ export function initSettingsUI(vscode) {
         requestModelsTimer = setTimeout(() => requestModelList(), delay);
     }
 
-    function showSectionInternal(sectionName) {
-        const providers = document.getElementById('providersSection');
-        const general = document.getElementById('generalSection');
-        if (!providers || !general) return;
-        providers.style.display = 'none';
-        general.style.display = 'none';
-        document.querySelectorAll('.sidebar .sidebar-item').forEach((el) => el.classList.remove('active'));
-        const items = document.querySelectorAll('.sidebar .sidebar-item');
-
-        if (sectionName === 'general') {
-            general.style.display = 'block';
-            if (items[0]) items[0].classList.add('active'); // items[0] is now Profile
-            // Hide Save button in Profile section (use visibility to keep layout stable)
-            if (settingsSaveBtn) {
-                settingsSaveBtn.style.visibility = 'hidden';
-                settingsSaveBtn.style.display = '';
-            }
-            // Fetch usage data for the active provider (defaulting to openrouter for credits check)
-            const provider = document.getElementById('provider')?.value || 'openrouter';
-            vscode.postMessage({ command: 'fetchUsage', provider });
-        } else {
-            providers.style.display = 'block';
-            if (items[1]) items[1].classList.add('active'); // items[1] is now Providers
-            // Show Save button in Providers section only if unsaved changes exist
-            if (settingsSaveBtn) {
-                settingsSaveBtn.style.display = '';
-                settingsSaveBtn.style.visibility = settingsSaveBtn.disabled ? 'hidden' : 'visible';
-            }
+    function showSectionInternal() {
+        // Single page now - always show Save button since we have provider settings
+        if (settingsSaveBtn) {
+            settingsSaveBtn.style.display = '';
+            settingsSaveBtn.style.visibility = settingsSaveBtn.disabled ? 'hidden' : 'visible';
         }
+        // Fetch usage data for the active provider (defaulting to openrouter for credits check)
+        const provider = document.getElementById('provider')?.value || 'openrouter';
+        vscode.postMessage({ command: 'fetchUsage', provider });
     }
 
     window.showSection = showSectionInternal;
 
-    function wireSettingsSidebar() {
-        const items = document.querySelectorAll('.sidebar .sidebar-item');
-        if (items[0]) {
-            items[0].addEventListener('click', () => showSectionInternal('general')); // items[0] is Profile
-        }
-        if (items[1]) {
-            items[1].addEventListener('click', () => showSectionInternal('providers')); // items[1] is Providers
-        }
-    }
+    // No sidebar to wire - single page layout
 
     function startSidebarObserver() {
         try {
@@ -314,7 +302,7 @@ export function initSettingsUI(vscode) {
         }
     }
 
-    function openSettings(section = 'general') {
+    function openSettings() {
         if (!settingsPage) return;
         if (messagesEl) messagesEl.style.display = 'none';
         if (inputBar) inputBar.style.display = 'none';
@@ -330,7 +318,6 @@ export function initSettingsUI(vscode) {
         } catch (_) { /* no-op */ }
         settingsPage.style.display = 'block';
         vscode.postMessage({ command: 'loadSettings' });
-        try { wireSettingsSidebar(); } catch (_) { }
         try { startSidebarObserver(); } catch (_) { }
         try { setupProviderDropdown(); } catch (_) { }
         // Show the requested section immediately
@@ -610,7 +597,6 @@ export function initSettingsUI(vscode) {
             }
 
             debounceRequestModelList(50);
-            try { wireSettingsSidebar(); } catch (_) { }
             try { startSidebarObserver(); } catch (_) { }
 
             // Disable save button since settings are freshly loaded (no changes yet)

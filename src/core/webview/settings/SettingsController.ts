@@ -10,44 +10,59 @@ export class SettingsController {
   public async handleLoadSettings() {
     const config = vscode.workspace.getConfiguration('assistaCoder');
     const providers = config.get<any>('providers', {});
-    const activeProvider = config.get<string>('activeProvider') || 'openrouter';
-    // const googleModel = providers?.google?.model || '';
+    const activeProvider = config.get<string>('activeProvider') || 'google';
+    const googleModel = providers?.google?.model || '';
     const openrouterModel = providers?.openrouter?.model || '';
-    // const openaiModel = providers?.openai?.model || '';
-    // const anthropicModel = providers?.anthropic?.model || '';
+    const openaiModel = providers?.openai?.model || '';
+    const anthropicModel = providers?.anthropic?.model || '';
 
-    // const googleKey = (await this.context.secrets.get('assistaCoder.apiKey.google')) || '';
-    const openrouterKey = (await this.context.secrets.get('assistaCoder.apiKey.openrouter')) || '';
-    // const openaiKey = (await this.context.secrets.get('assistaCoder.apiKey.openai')) || '';
-    // const anthropicKey = (await this.context.secrets.get('assistaCoder.apiKey.anthropic')) || '';
-    // const hasGoogleKey = !!googleKey;
+    // Parallel fetch for secrets and user data to minimize delay
+    const [googleKey, openrouterKey, openaiKey, anthropicKey, userData] = await Promise.all([
+      this.context.secrets.get('assistaCoder.apiKey.google'),
+      this.context.secrets.get('assistaCoder.apiKey.openrouter'),
+      this.context.secrets.get('assistaCoder.apiKey.openai'),
+      this.context.secrets.get('assistaCoder.apiKey.anthropic'),
+      AssistaAuthService.getUserData()
+    ]);
+
+    const hasGoogleKey = !!googleKey;
     const hasOpenrouterKey = !!openrouterKey;
-    // const hasOpenaiKey = !!openaiKey;
-    // const hasAnthropicKey = !!anthropicKey;
+    const hasOpenaiKey = !!openaiKey;
+    const hasAnthropicKey = !!anthropicKey;
 
     // Load RAG config
     const ragConfig = config.get<any>('rag', {});
     const ragEnabled = ragConfig.enabled !== undefined ? ragConfig.enabled : true;
 
-    // Load user data
-    const userData = await AssistaAuthService.getUserData();
-    const userDisplayName = await AssistaAuthService.getUserDisplayName();
-    const userEmail = await AssistaAuthService.getUserEmail();
+    // Derived user fields from session data to avoid redundant geSession calls
+    const userEmail = userData?.email || '';
+    let userDisplayName = userData?.name || 'User';
+
+    if (!userData?.name && userEmail) {
+      // Logic from AssistaAuthService.getUserDisplayName to derive from email
+      const emailParts = userEmail.split('@');
+      if (emailParts[0]) {
+        userDisplayName = emailParts[0]
+          .split(/[._]/)
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+          .join(' ');
+      }
+    }
 
     this.postMessage('settingsData', {
       activeProvider,
-      // googleModel,
+      googleModel,
       openrouterModel,
-      // openaiModel,
-      // anthropicModel,
-      // googleKey,
-      openrouterKey,
-      // openaiKey,
-      // anthropicKey,
-      // hasGoogleKey,
+      openaiModel,
+      anthropicModel,
+      googleKey: googleKey || '',
+      openrouterKey: openrouterKey || '',
+      openaiKey: openaiKey || '',
+      anthropicKey: anthropicKey || '',
+      hasGoogleKey,
       hasOpenrouterKey,
-      // hasOpenaiKey,
-      // hasAnthropicKey,
+      hasOpenaiKey,
+      hasAnthropicKey,
       ragEnabled,
       userData,
       userDisplayName,
@@ -58,40 +73,40 @@ export class SettingsController {
   public async handleSaveSettings(message: any) {
     try {
       const activeProvider = typeof message.activeProvider === 'string' ? message.activeProvider : 'openrouter';
-      // const googleKey = typeof message.googleKey === 'string' ? message.googleKey.trim() : '';
+      const googleKey = typeof message.googleKey === 'string' ? message.googleKey.trim() : '';
       const openrouterKey = typeof message.openrouterKey === 'string' ? message.openrouterKey.trim() : '';
-      // const openaiKey = typeof message.openaiKey === 'string' ? message.openaiKey.trim() : '';
-      // const anthropicKey = typeof message.anthropicKey === 'string' ? message.anthropicKey.trim() : '';
-      // const googleModel = typeof message.googleModel === 'string' ? message.googleModel.trim() : '';
+      const openaiKey = typeof message.openaiKey === 'string' ? message.openaiKey.trim() : '';
+      const anthropicKey = typeof message.anthropicKey === 'string' ? message.anthropicKey.trim() : '';
+      const googleModel = typeof message.googleModel === 'string' ? message.googleModel.trim() : '';
       const openrouterModel = typeof message.openrouterModel === 'string' ? message.openrouterModel.trim() : '';
-      // const openaiModel = typeof message.openaiModel === 'string' ? message.openaiModel.trim() : '';
-      // const anthropicModel = typeof message.anthropicModel === 'string' ? message.anthropicModel.trim() : '';
+      const openaiModel = typeof message.openaiModel === 'string' ? message.openaiModel.trim() : '';
+      const anthropicModel = typeof message.anthropicModel === 'string' ? message.anthropicModel.trim() : '';
 
       const config = vscode.workspace.getConfiguration('assistaCoder');
       const providers = config.get<any>('providers', {});
       const nextProviders: any = { ...providers };
 
-      // nextProviders.google = { ...(nextProviders.google || {}) };
+      nextProviders.google = { ...(nextProviders.google || {}) };
       nextProviders.openrouter = { ...(nextProviders.openrouter || {}) };
-      // nextProviders.openai = { ...(nextProviders.openai || {}) };
-      // nextProviders.anthropic = { ...(nextProviders.anthropic || {}) };
+      nextProviders.openai = { ...(nextProviders.openai || {}) };
+      nextProviders.anthropic = { ...(nextProviders.anthropic || {}) };
 
-      // if (googleModel) {
-      //   nextProviders.google.model = googleModel;
-      // }
+      if (googleModel) {
+        nextProviders.google.model = googleModel;
+      }
       if (openrouterModel) {
         nextProviders.openrouter.model = openrouterModel;
       }
-      // if (openaiModel) {
-      //   nextProviders.openai.model = openaiModel;
-      // }
-      // if (anthropicModel) {
-      //   nextProviders.anthropic.model = anthropicModel;
-      // }
+      if (openaiModel) {
+        nextProviders.openai.model = openaiModel;
+      }
+      if (anthropicModel) {
+        nextProviders.anthropic.model = anthropicModel;
+      }
 
       await config.update('providers', nextProviders, vscode.ConfigurationTarget.Global);
 
-      if (['openrouter'].includes(activeProvider)) {
+      if (['google', 'openrouter', 'openai', 'anthropic'].includes(activeProvider)) {
         console.log(`[AssistaCoder] Updating activeProvider to: ${activeProvider}`);
         await config.update('activeProvider', activeProvider, vscode.ConfigurationTarget.Global);
       } else {
@@ -106,12 +121,12 @@ export class SettingsController {
 
 
       // Save or delete Google API key
-      // if (googleKey) {
-      //   await this.context.secrets.store('assistaCoder.apiKey.google', googleKey);
-      // } else {
-      //   // User cleared the key - delete it from storage
-      //   await this.context.secrets.delete('assistaCoder.apiKey.google');
-      // }
+      if (googleKey) {
+        await this.context.secrets.store('assistaCoder.apiKey.google', googleKey);
+      } else {
+        // User cleared the key - delete it from storage
+        await this.context.secrets.delete('assistaCoder.apiKey.google');
+      }
 
       // Save or delete OpenRouter API key
       if (openrouterKey) {
@@ -120,25 +135,25 @@ export class SettingsController {
         // User cleared the key - delete it from storage
         await this.context.secrets.delete('assistaCoder.apiKey.openrouter');
       }
-      // if (openaiKey) {
-      //   await this.context.secrets.store('assistaCoder.apiKey.openai', openaiKey);
-      // }
-      // if (anthropicKey) {
-      //   await this.context.secrets.store('assistaCoder.apiKey.anthropic', anthropicKey);
-      // }
+      if (openaiKey) {
+        await this.context.secrets.store('assistaCoder.apiKey.openai', openaiKey);
+      }
+      if (anthropicKey) {
+        await this.context.secrets.store('assistaCoder.apiKey.anthropic', anthropicKey);
+      }
 
 
-      // const hasGoogleKey = !!(await this.context.secrets.get('assistaCoder.apiKey.google'));
+      const hasGoogleKey = !!(await this.context.secrets.get('assistaCoder.apiKey.google'));
       const hasOpenrouterKey = !!(await this.context.secrets.get('assistaCoder.apiKey.openrouter'));
-      // const hasOpenaiKey = !!(await this.context.secrets.get('assistaCoder.apiKey.openai'));
-      // const hasAnthropicKey = !!(await this.context.secrets.get('assistaCoder.apiKey.anthropic'));
+      const hasOpenaiKey = !!(await this.context.secrets.get('assistaCoder.apiKey.openai'));
+      const hasAnthropicKey = !!(await this.context.secrets.get('assistaCoder.apiKey.anthropic'));
 
       this.postMessage('settingsSaved', {
         success: true,
-        // hasGoogleKey,
+        hasGoogleKey,
         hasOpenrouterKey,
-        // hasOpenaiKey,
-        // hasAnthropicKey,
+        hasOpenaiKey,
+        hasAnthropicKey,
       });
     } catch (error: any) {
       this.postMessage('settingsSaved', {
@@ -185,112 +200,112 @@ export class SettingsController {
         models = items
           .map((m: any) => ({ id: String(m?.id || m?.name || ''), name: String(m?.name || m?.id || '') }))
           .filter((m) => !!m.id);
-      // } else if (provider === 'google') {
-      //   // Use Google Generative Language public models endpoint
-      //   const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.google')) || '';
-      //   if (!key) { throw new Error('Gemini API key is required to list models.'); }
-      //   // Fetch all pages
-      //   let nextPageToken: string | undefined;
-      //   const collected: any[] = [];
-      //   do {
-      //     const url = new URL('https://generativelanguage.googleapis.com/v1beta/models');
-      //     url.searchParams.set('key', key);
-      //     // Large page size to reduce pagination; API caps internally
-      //     url.searchParams.set('pageSize', '200');
-      //     if (nextPageToken) { url.searchParams.set('pageToken', nextPageToken); }
+      } else if (provider === 'google') {
+        // Use Google Generative Language public models endpoint
+        const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.google')) || '';
+        if (!key) { throw new Error('Gemini API key is required to list models.'); }
+        // Fetch all pages
+        let nextPageToken: string | undefined;
+        const collected: any[] = [];
+        do {
+          const url = new URL('https://generativelanguage.googleapis.com/v1beta/models');
+          url.searchParams.set('key', key);
+          // Large page size to reduce pagination; API caps internally
+          url.searchParams.set('pageSize', '200');
+          if (nextPageToken) { url.searchParams.set('pageToken', nextPageToken); }
 
-      //     const resp = await fetch(url.toString(), { method: 'GET' });
-      //     if (!resp.ok) {
-      //       const detail = await resp.text().catch(() => '');
-      //       throw new Error(`Google models error (${resp.status} ${resp.statusText})${detail ? `: ${detail}` : ''}`);
-      //     }
-      //     const json: any = await resp.json();
-      //     if (Array.isArray(json?.models)) { collected.push(...json.models); }
-      //     nextPageToken = typeof json?.nextPageToken === 'string' && json.nextPageToken ? json.nextPageToken : undefined;
-      //   } while (nextPageToken);
+          const resp = await fetch(url.toString(), { method: 'GET' });
+          if (!resp.ok) {
+            const detail = await resp.text().catch(() => '');
+            throw new Error(`Google models error (${resp.status} ${resp.statusText})${detail ? `: ${detail}` : ''}`);
+          }
+          const json: any = await resp.json();
+          if (Array.isArray(json?.models)) { collected.push(...json.models); }
+          nextPageToken = typeof json?.nextPageToken === 'string' && json.nextPageToken ? json.nextPageToken : undefined;
+        } while (nextPageToken);
 
-      //   const seen = new Set<string>();
-      //   models = collected
-      //     .map((m: any) => {
-      //       const raw = String(m?.name || ''); // e.g. 'models/gemini-2.5-flash'
-      //       const id = raw.startsWith('models/') ? raw.substring('models/'.length) : raw;
-      //       const name = String(m?.displayName || id);
-      //       return { id, name };
-      //     })
-      //     .filter((m) => !!m.id && !seen.has(m.id) && (seen.add(m.id), true))
-      //     .sort((a, b) => a.id.localeCompare(b.id));
-      //       // } else if (provider === 'openai') {
-      //   const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.openai')) || '';
-      //   if (!key) { throw new Error('OpenAI API key is required to list models.'); }
-      //   const resp = await fetch('https://api.openai.com/v1/models', {
-      //     method: 'GET',
-      //     headers: {
-      //       'Authorization': `Bearer ${key}`,
-      //       'Accept': 'application/json',
-      //     },
-      //   });
-      //   if (!resp.ok) {
-      //     const detail = await resp.text().catch(() => '');
-      //     throw new Error(`OpenAI models error (${resp.status} ${resp.statusText})${detail ? `: ${detail}` : ''}`);
-      //   }
-      //   const json: any = await resp.json();
-      //   const items: any[] = Array.isArray(json?.data) ? json.data : [];
-      //   const seen = new Set<string>();
-      //   models = items
-      //     .map((m: any) => ({ id: String(m?.id || ''), name: String(m?.id || '') }))
-      //     .filter((m) => !!m.id && !/(embedding|audio|tts|whisper|edits?|fine-tune|moderation)/i.test(m.id))
-      //     .filter((m) => !seen.has(m.id) && (seen.add(m.id), true))
-      //     .sort((a, b) => a.id.localeCompare(b.id));
-      //       // } else if (provider === 'anthropic') {
-      //   const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.anthropic')) || '';
+        const seen = new Set<string>();
+        models = collected
+          .map((m: any) => {
+            const raw = String(m?.name || ''); // e.g. 'models/gemini-2.5-flash'
+            const id = raw.startsWith('models/') ? raw.substring('models/'.length) : raw;
+            const name = String(m?.displayName || id);
+            return { id, name };
+          })
+          .filter((m) => !!m.id && !seen.has(m.id) && (seen.add(m.id), true))
+          .sort((a, b) => a.id.localeCompare(b.id));
+      } else if (provider === 'openai') {
+        const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.openai')) || '';
+        if (!key) { throw new Error('OpenAI API key is required to list models.'); }
+        const resp = await fetch('https://api.openai.com/v1/models', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${key}`,
+            'Accept': 'application/json',
+          },
+        });
+        if (!resp.ok) {
+          const detail = await resp.text().catch(() => '');
+          throw new Error(`OpenAI models error (${resp.status} ${resp.statusText})${detail ? `: ${detail}` : ''}`);
+        }
+        const json: any = await resp.json();
+        const items: any[] = Array.isArray(json?.data) ? json.data : [];
+        const seen = new Set<string>();
+        models = items
+          .map((m: any) => ({ id: String(m?.id || ''), name: String(m?.id || '') }))
+          .filter((m) => !!m.id && !/(embedding|audio|tts|whisper|edits?|fine-tune|moderation)/i.test(m.id))
+          .filter((m) => !seen.has(m.id) && (seen.add(m.id), true))
+          .sort((a, b) => a.id.localeCompare(b.id));
+      } else if (provider === 'anthropic') {
+        const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.anthropic')) || '';
 
-      //   // Try to fetch from API
-      //   try {
-      //     const resp = await fetch('https://api.anthropic.com/v1/models', {
-      //       method: 'GET',
-      //       headers: {
-      //       'x-api-key': key || 'dummy-key',
-      //       'anthropic-version': '2023-06-01',
-      //       'Accept': 'application/json',
-      //     },
-      //   });
+        // Try to fetch from API
+        try {
+          const resp = await fetch('https://api.anthropic.com/v1/models', {
+            method: 'GET',
+            headers: {
+              'x-api-key': key || 'dummy-key',
+              'anthropic-version': '2023-06-01',
+              'Accept': 'application/json',
+            },
+          });
 
-      //     if (resp.ok) {
-      //       const json: any = await resp.json();
-      //       const items: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json?.models) ? json.models : [];
-      //       if (items.length > 0) {
-      //         const seen = new Set<string>();
-      //         models = items
-      //           .map((m: any) => ({ id: String(m?.id || ''), name: String(m?.display_name || m?.name || m?.id || '') }))
-      //           .filter((m) => !!m.id && !seen.has(m.id) && (seen.add(m.id), true))
-      //           .sort((a, b) => a.id.localeCompare(b.id));
-      //     }
-      //   }
-      //   } catch (apiError) {
-      //     // API endpoint doesn't exist or failed
-      //   }
-      //       // } else if (provider === 'mistral') {
-      //   const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.mistral')) || '';
-      //   if (!key) { throw new Error('Mistral API key is required to list models.'); }
-      //   const resp = await fetch('https://api.mistral.ai/v1/models', {
-      //     method: 'GET',
-      //     headers: {
-      //       'Authorization': `Bearer ${key}`,
-      //       'Accept': 'application/json',
-      //     },
-      //   });
-      //   if (!resp.ok) {
-      //     const detail = await resp.text().catch(() => '');
-      //     throw new Error(`Mistral models error (${resp.status} ${resp.statusText})${detail ? `: ${detail}` : ''}`);
-      //   }
-      //   const json: any = await resp.json();
-      //   const items: any[] = Array.isArray(json?.data) ? json.data : [];
-      //   const seen = new Set<string>();
-      //   models = items
-      //     .map((m: any) => ({ id: String(m?.id || ''), name: String(m?.name || m?.id || '') }))
-      //     .filter((m) => !!m.id && !seen.has(m.id) && (seen.add(m.id), true))
-      //     .sort((a, b) => a.id.localeCompare(b.id));
-      // } else {
+          if (resp.ok) {
+            const json: any = await resp.json();
+            const items: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json?.models) ? json.models : [];
+            if (items.length > 0) {
+              const seen = new Set<string>();
+              models = items
+                .map((m: any) => ({ id: String(m?.id || ''), name: String(m?.display_name || m?.name || m?.id || '') }))
+                .filter((m) => !!m.id && !seen.has(m.id) && (seen.add(m.id), true))
+                .sort((a, b) => a.id.localeCompare(b.id));
+            }
+          }
+        } catch (apiError) {
+          // API endpoint doesn't exist or failed
+        }
+      } else if (provider === 'mistral') {
+        const key = providedKey || (await this.context.secrets.get('assistaCoder.apiKey.mistral')) || '';
+        if (!key) { throw new Error('Mistral API key is required to list models.'); }
+        const resp = await fetch('https://api.mistral.ai/v1/models', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${key}`,
+            'Accept': 'application/json',
+          },
+        });
+        if (!resp.ok) {
+          const detail = await resp.text().catch(() => '');
+          throw new Error(`Mistral models error (${resp.status} ${resp.statusText})${detail ? `: ${detail}` : ''}`);
+        }
+        const json: any = await resp.json();
+        const items: any[] = Array.isArray(json?.data) ? json.data : [];
+        const seen = new Set<string>();
+        models = items
+          .map((m: any) => ({ id: String(m?.id || ''), name: String(m?.name || m?.id || '') }))
+          .filter((m) => !!m.id && !seen.has(m.id) && (seen.add(m.id), true))
+          .sort((a, b) => a.id.localeCompare(b.id));
+      } else {
         throw new Error(`Listing models not implemented for provider: ${provider}`);
       }
 

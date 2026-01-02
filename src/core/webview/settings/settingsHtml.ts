@@ -4,43 +4,8 @@ export function getSettingsModalHtml(): string {
     <div id="settingsPage" style="display:none">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        /* Ensure no outer padding/margins so sidebar is flush to the panel edge */
         html, body, #settingsPage { margin: 0 !important; padding: 0 !important; }
-        .sidebar { width: 48px; border-right: 0.5px solid var(--vscode-panel-border); display: flex; flex-direction: column; overflow-y: auto; transition: width 0.3s ease; background-color: transparent; box-shadow: none; align-items: center; padding-top: 10px; }
-        .sidebar.collapsed { width: 50px; }
-        .sidebar-item {
-          display: flex;
-          width: 30px;
-          height: 30px;
-          padding: 7px;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          gap: 10px;
-          flex-shrink: 0;
-          border-radius: 7px;
-          cursor: pointer;
-          color: var(--vscode-editor-foreground);
-          transition: background-color 0.2s;
-          margin-bottom: 8px;
-        }
-        .sidebar-item:hover { background-color: var(--vscode-list-hoverBackground); }
-        .sidebar-item.active {
-          border-radius: 7px;
-          border: 0.5px solid rgba(188, 132, 135, 0.50);
-          background: rgba(188, 132, 135, 0.05);
-        }
-        /* Remove accent bar so active background starts at absolute left */
-        .sidebar-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: transparent; }
-        .sidebar-item-icon { font-size: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-        .sidebar-item-icon svg { width: 16px; height: 16px; fill: currentColor; display: block; }
-        .sidebar-item-text { display: none; }
-        .sidebar.collapsed .sidebar-item { padding: 12px; justify-content: center; }
-        .sidebar.collapsed .sidebar-item-text { opacity: 0; width: 0; }
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%; background-color: transparent; border-left: none; padding-left: 0; }
-        .settings-frame { display: flex; height: 100vh; min-height: 100vh; gap: 0; background-color: transparent; }
-        .sidebar, .settings-frame { margin: 0; padding: 0; }
-        .sidebar { height: 100%; align-self: stretch; }
+        .settings-content { display: flex; flex-direction: column; overflow-y: auto; height: 100vh; background-color: transparent; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; padding: 12px 24px; border-bottom: none; flex-wrap: nowrap; column-gap: 12px; }
         .header-buttons { display: flex; gap: 10px; }
         .btn { padding: 8px 16px; border: none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; }
@@ -69,7 +34,7 @@ export function getSettingsModalHtml(): string {
         .api-key-row input[type="password"] { flex: 1; }
         .section { margin-bottom: 16px; }
         /* Ensure content aligns with subheader padding */
-        .content-body { display: flex; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; min-height: calc(100vh - 120px); }
+        .content-body { display: flex; padding: 0px 24px; flex-direction: column; align-items: stretch; gap: 16px; align-self: stretch; }
         .settings-container { margin: 0; padding: 24px; flex-direction: column; align-items: stretch; gap: 16px; flex: 1 0 0; align-self: stretch; }
         .section-title { font-size: 13px; color: var(--vscode-editor-foreground); margin-bottom: 8px; font-weight: 400; font-style: normal; line-height: normal; flex: 1 0 0; }
         .section-description { font-size: 12px; color: var(--vscode-editor-foreground); margin-bottom: 15px; font-weight: 400; font-style: normal; line-height: normal; }
@@ -79,7 +44,7 @@ export function getSettingsModalHtml(): string {
         .profile-row select { flex: 1; }
         .inline-buttons { display: flex; gap: 5px; margin-left: 10px; }
         .icon-btn { background: none; border: none; color: var(--vscode-editor-foreground); cursor: pointer; padding: 4px 8px; border-radius: 3px; font-size: 14px; }
-        .checkbox-group { display: flex; align-items: center; margin-bottom: 12px; }
+        .checkbox-group { display: flex; align-items: center; margin-bottom: 0px; }
         .checkbox-group input[type="checkbox"] { width: auto; margin-right: 10px; cursor: pointer; }
         .checkbox-group label { font-size: 13px; }
         .info-text { font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 5px; font-weight: 400; font-style: normal; line-height: normal; }
@@ -209,14 +174,12 @@ export function getSettingsModalHtml(): string {
         .settings-input:focus { border-color: var(--vscode-focusBorder); background-color: var(--vscode-input-background); }
 
         /* Subheading for active section (text only) */
-        .subheader { display: flex; align-items: center; height: 32px; padding: 0 12px; color: var(--vscode-editor-foreground); background-color: var(--vscode-editorWidget-background); margin-bottom: 5px; }
+        .subheader { display: flex; align-items: center; height: 32px; padding: 0 12px; color: var(--vscode-editor-foreground); background-color: var(--vscode-editorWidget-background); margin: 5px; }
         .subheader .subheader-text { font-size: 14px; font-weight: 500; }
 
         /* Responsive tweaks */
         @media (max-width: 768px) {
           .sidebar { width: 50px; }
-          .sidebar-item { padding: 12px; justify-content: center; }
-          .sidebar-item-text { opacity: 0; width: 0; }
         }
         @media (max-width: 600px) {
           .settings-container { padding: 20px 16px; }
@@ -252,8 +215,8 @@ export function getSettingsModalHtml(): string {
             width: 100%;
           }
 
-          /* Usage Card Fixes for Narrow Widths */
-          .usage-card {
+          /* Profile Header Fixes for Narrow Widths */
+          .profile-header {
             padding: 12px;
           }
           .usage-header {
@@ -311,7 +274,7 @@ export function getSettingsModalHtml(): string {
         .back-btn svg { fill: var(--vscode-editor-foreground); }
 
         /* Settings title section */
-        .settings-title-section { padding: 0 24px; margin-bottom: 16px; }
+        .settings-title-section { padding: 0 24px; margin-bottom: 8px; }
         .settings-title-section h1 {
           font-size: 20px;
           font-style: normal;
@@ -326,7 +289,7 @@ export function getSettingsModalHtml(): string {
         .settings-subtitle { font-size: 13px; color: var(--vscode-descriptionForeground); margin: 0; font-weight: 400; font-style: normal; line-height: normal; }
 
         /* Profile & Usage Styles */
-        .profile-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 0 4px; max-width: 800px; }
+        .profile-header { display: flex; align-items: center; gap: 16px; margin-top: 8px; margin-bottom: 16px; padding: 16px; max-width: 800px; border: 0.5px solid rgba(188, 132, 135, 0.50); border-radius: 7px; background: rgba(188, 132, 135, 0.05); }
         .avatar {
           display: flex;
           width: 50px;
@@ -399,37 +362,8 @@ export function getSettingsModalHtml(): string {
         <h1>Settings</h1>
         <p class="settings-subtitle">Your conversation timeline</p>
       </div>
-      <div class="settings-frame">
-        <div class="sidebar" id="sidebar">
-          <div class="sidebar-item active" onclick="showSection('general')">
-            <span class="sidebar-item-icon" aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3.33329 13.3333H12.6666V14.6667H3.33329V13.3333ZM7.99996 12C5.05444 12 2.66663 9.61221 2.66663 6.66668C2.66663 3.72116 5.05444 1.33334 7.99996 1.33334C10.9455 1.33334 13.3333 3.72116 13.3333 6.66668C13.3333 9.61221 10.9455 12 7.99996 12ZM7.99996 10.6667C10.2091 10.6667 12 8.87581 12 6.66668C12 4.45754 10.2091 2.66668 7.99996 2.66668C5.79082 2.66668 3.99996 4.45754 3.99996 6.66668C3.99996 8.87581 5.79082 10.6667 7.99996 10.6667Z" fill="#CDCDCD"/>
-              </svg>
-            </span>
-            <span class="sidebar-item-text">Profile</span>
-          </div>
-          <div class="sidebar-item" onclick="showSection('providers')">
-            <span class="sidebar-item-icon" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <g clip-path="url(#clip0_90_121)">
-                  <path d="M4.66667 3.33332C4.66667 1.86056 5.86057 0.666656 7.33333 0.666656C8.80607 0.666656 10 1.86056 10 3.33332H13.3333C13.7015 3.33332 14 3.6318 14 3.99999V6.78046C14 6.99686 13.8949 7.19979 13.7183 7.32479C13.5415 7.44972 13.3152 7.48112 13.1112 7.40899C12.973 7.36019 12.8237 7.33332 12.6667 7.33332C11.9303 7.33332 11.3333 7.93026 11.3333 8.66666C11.3333 9.40306 11.9303 9.99999 12.6667 9.99999C12.8237 9.99999 12.973 9.97312 13.1112 9.92432C13.3152 9.85219 13.5415 9.88359 13.7183 10.0085C13.8949 10.1335 14 10.3365 14 10.5529V13.3333C14 13.7015 13.7015 14 13.3333 14H2.66667C2.29848 14 2 13.7015 2 13.3333V3.99999C2 3.6318 2.29848 3.33332 2.66667 3.33332H4.66667ZM7.33333 1.99999C6.59695 1.99999 6 2.59694 6 3.33332C6 3.49035 6.02687 3.63967 6.0757 3.77782C6.14781 3.98187 6.11641 4.20822 5.99145 4.38492C5.86649 4.56161 5.66355 4.66666 5.44714 4.66666H3.33333V12.6667H12.6667V11.3333C11.1939 11.3333 10 10.1394 10 8.66666C10 7.19392 11.1939 5.99999 12.6667 5.99999V4.66666H9.21953C9.00313 4.66666 8.8002 4.56161 8.6752 4.38492C8.55027 4.20822 8.51887 3.98187 8.591 3.77782C8.6398 3.63967 8.66667 3.49036 8.66667 3.33332C8.66667 2.59694 8.06973 1.99999 7.33333 1.99999Z" fill="#CDCDCD"/>
-                  </g>
-                  <defs>
-                  <clipPath id="clip0_90_121">
-                  <rect width="16" height="16" fill="white"/>
-                  </clipPath>
-                  </defs>
-                </svg>
-            </span>
-            <span class="sidebar-item-text">Providers</span>
-          </div>
-        </div>
-        <div class="main-content">
-          <div id="generalSection">
-            <div class="subheader"><span class="subheader-text">Profile</span></div>
+      <div class="settings-content">
             <div class="content-body">
-
             <div class="profile-header">
                 <div class="avatar">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -442,33 +376,8 @@ export function getSettingsModalHtml(): string {
                     <div class="user-name" id="userDisplayName">Loading...</div>
                     <div class="user-email" id="userEmail">Loading...</div>
                 </div>
-                <button class="logout-btn">Logout</button>
             </div>
 
-            <div class="usage-card">
-                <div class="usage-header">
-                    <span>Estimated Usage</span>
-                    <div class="usage-meta">
-                        <span>Resets on 12/11</span>
-                        <span class="badge">GPT-5</span>
-                    </div>
-                </div>
-                <div class="usage-stats">
-                    <div class="usage-label">
-                        <span>Credits</span>
-                        <span>254 / 300 Responses</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: 85%;"></div>
-                    </div>
-                </div>
-                <button class="upgrade-btn">Upgrade Plan</button>
-            </div>
-            </div>
-          </div>
-          <div id="providersSection" style="display:none;">
-          <div class="subheader"><span class="subheader-text">Providers</span></div>
-          <div class="content-body">
 
             <div class="section">
               <div class="section-title">API Provider </div>
@@ -529,7 +438,6 @@ export function getSettingsModalHtml(): string {
               </div>
               <div class="info-text">When enabled, the AI will retrieve relevant Odoo documentation from the RAG server before generating responses, improving accuracy for Odoo-specific queries.</div>
             </div>
-          </div>
           </div>
         </div>
       </div>

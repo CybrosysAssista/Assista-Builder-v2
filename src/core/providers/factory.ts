@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { ProviderAdapter } from './base.js';
 import { ProviderConfig } from './types.js';
-// import { GeminiAdapter } from './gemini.js';
+import { GeminiAdapter } from './gemini.js';
 import { OpenAIAdapter } from './openai.js';
 
 /**
@@ -13,13 +13,13 @@ export function createProvider(
   context: vscode.ExtensionContext
 ): ProviderAdapter {
   switch (providerName) {
-    // case 'google':
-    //   return new GeminiAdapter(config, context);
+    case 'google':
+      return new GeminiAdapter(config, context);
 
-    // case 'openai':
+    case 'openai':
     case 'openrouter':
-    // case 'anthropic':
-    // case 'custom':
+    case 'anthropic':
+    case 'custom':
       return new OpenAIAdapter(config, providerName, context);
 
     default:
