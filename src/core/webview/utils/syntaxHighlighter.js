@@ -110,6 +110,6 @@ export function applyDiffHighlighting(text) {
         }
 
         // Context lines
-        return applySyntaxHighlighting(line);
-    }).filter(line => line !== null).join('\n');
+        return `<span class="diff-context">${applySyntaxHighlighting(line)}</span>`;
+    }).filter(line => line !== null).join('');
 }

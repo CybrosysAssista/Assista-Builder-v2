@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
 import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
+import { applyVisualDiff, getCleanContent } from '../utils/decorationUtils.js';
 
 interface ApplyDiffArgs {
   path: string;
@@ -25,7 +26,7 @@ interface SearchReplaceBlock {
  */
 function findContentInLines(lines: string[], searchLines: string[], hintLine: number, searchRadius: number = 50): number {
   const hintIdx = hintLine - 1; // Convert to 0-based
-  
+
   // First, try exact match at hint location
   if (hintIdx >= 0 && hintIdx < lines.length) {
     let matches = true;
@@ -40,12 +41,12 @@ function findContentInLines(lines: string[], searchLines: string[], hintLine: nu
       return hintIdx;
     }
   }
-  
+
   // Search near the hint location (within searchRadius lines)
   const searchStart = Math.max(0, hintIdx - searchRadius);
   const maxValidStart = lines.length - searchLines.length;
   const searchEnd = Math.min(maxValidStart, hintIdx + searchRadius);
-  
+
   // Only search if we have valid range
   if (searchEnd >= searchStart) {
     for (let startIdx = searchStart; startIdx <= searchEnd; startIdx++) {
@@ -61,7 +62,7 @@ function findContentInLines(lines: string[], searchLines: string[], hintLine: nu
       }
     }
   }
-  
+
   // If not found near hint, search entire file
   for (let startIdx = 0; startIdx <= lines.length - searchLines.length; startIdx++) {
     let matches = true;
@@ -75,7 +76,7 @@ function findContentInLines(lines: string[], searchLines: string[], hintLine: nu
       return startIdx;
     }
   }
-  
+
   return -1; // Not found
 }
 
@@ -177,10 +178,14 @@ export const applyDiffTool: ToolDefinition = {
       const fileName = path.basename(args.path);
       const fileExt = path.extname(fileName).slice(1) || 'text';
 
-      // Check if file exists
+      // Check if file exists and get content (clean content if pending review)
       let originalContent: string;
       try {
-        originalContent = await fs.readFile(fullPath, 'utf-8');
+        const content = await getCleanContent(vscode.Uri.file(fullPath));
+        if (content === null) {
+          throw new Error('File not found');
+        }
+        originalContent = content;
       } catch (error) {
         return {
           status: 'error',
@@ -269,8 +274,8 @@ export const applyDiffTool: ToolDefinition = {
       // Calculate final new content (in memory)
       const newText = lines.join('\n');
 
-      // Apply changes directly without review
-      await fs.writeFile(fullPath, newText, 'utf-8');
+      // Apply changes with visual diff and review
+      await applyVisualDiff(fullPath, newText, 'Agent edited', originalContent);
 
       const result: any = {
         path: args.path,
@@ -279,7 +284,7 @@ export const applyDiffTool: ToolDefinition = {
 
       // Add warnings if any blocks were found at different lines than specified
       if (appliedBlocks.length > 0) {
-        result.warnings = appliedBlocks.map(b => 
+        result.warnings = appliedBlocks.map(b =>
           `Block specified at line ${b.hintLine} was found and applied at line ${b.actualLine}`
         );
       }

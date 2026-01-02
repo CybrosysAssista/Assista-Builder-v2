@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
 import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
+import { applyVisualDiff } from '../utils/decorationUtils.js';
 
 interface EditOperation {
   old_string: string;
@@ -84,15 +85,15 @@ export const multiEditTool: ToolDefinition = {
       // Check if file exists
       try {
         await fs.access(fullPath);
-        } catch {
-          return {
-            status: 'error',
-            error: {
-              message: `File does not exist: ${args.file_path}`,
-              code: 'NOT_FOUND',
-            },
-          };
-        }
+      } catch {
+        return {
+          status: 'error',
+          error: {
+            message: `File does not exist: ${args.file_path}`,
+            code: 'NOT_FOUND',
+          },
+        };
+      }
 
       // Read current file content
       let currentContent = await fs.readFile(fullPath, 'utf-8');
@@ -155,11 +156,8 @@ export const multiEditTool: ToolDefinition = {
         });
       }
 
-      // All edits succeeded - write the file
-      await fs.writeFile(fullPath, currentContent, 'utf-8');
-
-      // Apply changes directly
-      await fs.writeFile(fullPath, currentContent, 'utf-8');
+      // Apply changes with visual diff and review
+      await applyVisualDiff(fullPath, currentContent, 'Agent edited', originalContent);
 
       return {
         status: 'success',
