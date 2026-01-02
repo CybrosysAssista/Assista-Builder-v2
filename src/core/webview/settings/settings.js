@@ -228,6 +228,16 @@ export function initSettingsUI(vscode) {
         observer.observe(providerSelect, { attributes: true, attributeFilter: ['value'] });
     }
 
+    function setupCollapsibles() {
+        const trigger = document.getElementById('apiKeyTrigger');
+        const section = document.getElementById('apiKeyCollapsible');
+        if (trigger && section) {
+            trigger.addEventListener('click', () => {
+                section.classList.toggle('open');
+            });
+        }
+    }
+
     // Filter and render models in dropdown based on search query
     function filterAndRenderModels(query = '') {
         if (!modelDropdownList) return;
@@ -319,7 +329,6 @@ export function initSettingsUI(vscode) {
         settingsPage.style.display = 'block';
         vscode.postMessage({ command: 'loadSettings' });
         try { startSidebarObserver(); } catch (_) { }
-        try { setupProviderDropdown(); } catch (_) { }
         // Show the requested section immediately
         try { showSectionInternal(section); } catch (_) { }
     }
@@ -493,7 +502,8 @@ export function initSettingsUI(vscode) {
     });
 
     // RAG toggle
-    document.getElementById('ragEnabled')?.addEventListener('change', () => {
+    const ragCheckbox = document.getElementById('ragEnabled');
+    ragCheckbox?.addEventListener('change', () => {
         enableSaveBtn();
     });
 
@@ -523,6 +533,10 @@ export function initSettingsUI(vscode) {
             hideModelDropdown();
         }
     });
+
+    // Initialize UI components once
+    try { setupProviderDropdown(); } catch (_) { }
+    try { setupCollapsibles(); } catch (_) { }
 
     return {
         openSettings,
