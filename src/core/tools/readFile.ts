@@ -212,17 +212,17 @@ export const readFileTool: ToolDefinition = {
           } else if (offset !== undefined) {
             // Read chunk using offset and limit
             const startIdx = Math.max(0, offset - 1); // Convert to 0-based
-            const endIdx = limit !== undefined 
+            const endIdx = limit !== undefined
               ? Math.min(lines.length, startIdx + limit)
               : Math.min(lines.length, startIdx + 2000); // Default 2000 lines
-            
+
             const selectedLines = lines.slice(startIdx, endIdx);
             content = selectedLines.map((line, idx) => `${startIdx + idx + 1}|${line}`).join('\n');
           } else {
             // Read entire file (or up to limit if specified)
             const linesToRead = limit !== undefined ? lines.slice(0, limit) : lines;
             content = linesToRead.map((line, idx) => `${idx + 1}|${line}`).join('\n');
-            
+
             if (limit !== undefined && lines.length > limit) {
               content += `\n... (file has ${totalLines} total lines, showing first ${limit})`;
             }

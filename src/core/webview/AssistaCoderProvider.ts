@@ -11,6 +11,7 @@ import { OdooEnvironmentService } from '../utils/odooDetection.js';
 import { questionManager } from '../utils/questionManager.js';
 import { AssistaAuthService } from '../utils/assistaAuthService.js';
 import { fetchAvailableModels, fetchExternalKey } from '../utils/apiUtils.js';
+import { reviewManager } from '../utils/reviewManager.js';
 
 export class AssistaCoderProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'assistaCoderView';
@@ -54,6 +55,13 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
 
         // Register webview provider with question manager
         questionManager.registerWebviewProvider({
+            postMessage: (type: string, payload?: any) => {
+                this.postMessage(type, payload);
+            }
+        });
+
+        // Register webview provider with review manager
+        reviewManager.registerWebviewProvider({
             postMessage: (type: string, payload?: any) => {
                 this.postMessage(type, payload);
             }
@@ -338,6 +346,12 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 if (text) {
                     vscode.window.showErrorMessage(text);
                 }
+                return;
+            }
+
+            if (message.command === 'reviewResponse') {
+                const answer = message.answer as 'accept' | 'reject';
+                reviewManager.handleReviewResponse(answer);
                 return;
             }
 

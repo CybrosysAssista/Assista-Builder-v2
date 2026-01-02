@@ -1,4 +1,5 @@
 import { initMentionsUI } from '../mentions/mentions.js';
+import { initReviewUI } from '../review/review.js';
 import { applySyntaxHighlighting, applyDiffHighlighting } from '../utils/syntaxHighlighter.js';
 import { initToolsUI } from './tools.js';
 
@@ -29,7 +30,13 @@ export function initChatUI(vscode) {
     let activeSessionId;
 
     function showThinkingIndicator() {
-        if (thinkingIndicator || !messagesEl) return;
+        if (!messagesEl) return;
+
+        // If it already exists, move it to the bottom
+        if (thinkingIndicator) {
+            messagesEl.appendChild(thinkingIndicator);
+            return;
+        }
 
         thinkingIndicator = document.createElement('div');
         thinkingIndicator.className = 'thinking-indicator';
@@ -61,8 +68,10 @@ export function initChatUI(vscode) {
     });
 
     const showToolExecution = (data) => {
-        removeThinkingIndicator();
+        // Don't remove thinking indicator here to prevent the "gap"
+        // Instead, ensure it's at the bottom
         toolsUI.showToolExecution(data);
+        showThinkingIndicator();
     };
 
     const updateToolExecution = (data) => {
@@ -139,7 +148,7 @@ export function initChatUI(vscode) {
 
 
 
-    function enhanceMarkdownContent(container) {
+    function enhanceMarkdownContent(container, isStreaming = false) {
         if (!container) {
             return;
         }
@@ -150,6 +159,9 @@ export function initChatUI(vscode) {
         container.querySelectorAll("table").forEach((table) => {
             table.setAttribute("role", "table");
         });
+
+        // Skip heavy DOM manipulations during streaming to maintain performance
+        if (isStreaming) return;
 
         // Convert JSON tool calls to code blocks
         // Use TreeWalker to find ALL text nodes containing "toolCall":
@@ -266,11 +278,20 @@ export function initChatUI(vscode) {
         });
     }
 
+    function renderMarkdownContent(text, html, markdown, isFinal = true) {
+        if (markdown && typeof window.markdownRenderer !== 'undefined') {
+            const renderFn = isFinal
+                ? (window.markdownRenderer.renderMarkdownComplete || window.markdownRenderer.renderMarkdown)
+                : window.markdownRenderer.renderMarkdown;
+            return renderFn(markdown);
+        }
+        return html || text || '';
+    }
+
     let streamingMessageBubble = null;
     let streamingTextBuffer = '';
     let streamingRenderTimeout = null;
     let streamingRow = null;
-    // Initialize Review UI
 
     function appendMessage(text, sender, html, markdown) {
         if (!messagesEl || (!text && !html && !markdown)) {
@@ -290,19 +311,7 @@ export function initChatUI(vscode) {
 
         if (sender === "ai") {
             bubble.classList.add("markdown");
-
-            // Prefer client-side markdown rendering (use complete mode for final messages)
-            if (markdown && typeof window.markdownRenderer !== 'undefined') {
-                const renderFn = window.markdownRenderer.renderMarkdownComplete || window.markdownRenderer.renderMarkdown;
-                const renderedHtml = renderFn(markdown);
-                bubble.innerHTML = renderedHtml;
-            } else if (html) {
-                // Fallback to HTML if provided (for backwards compatibility)
-                bubble.innerHTML = html;
-            } else {
-                bubble.textContent = text;
-            }
-
+            bubble.innerHTML = renderMarkdownContent(text, html, markdown, true);
             enhanceMarkdownContent(bubble);
         } else {
             bubble.textContent = text;
@@ -317,11 +326,13 @@ export function initChatUI(vscode) {
         if (!messagesEl) {
             return;
         }
-        removeThinkingIndicator();
         showChatArea();
 
         // Check if we need to create a new streaming message
         if (!streamingMessageBubble) {
+            // ONLY remove the indicator when we are actually starting to show text
+            removeThinkingIndicator();
+
             // Create new row and bubble for streaming
             streamingRow = document.createElement("div");
             streamingRow.className = "message-row";
@@ -346,10 +357,9 @@ export function initChatUI(vscode) {
             streamingRenderTimeout = requestAnimationFrame(() => {
                 try {
                     // Use streaming mode for real-time rendering
-                    const renderedHtml = window.markdownRenderer.renderMarkdown(streamingTextBuffer);
-                    streamingMessageBubble.innerHTML = renderedHtml;
-                    // Enhance markdown content (syntax highlighting, code blocks, etc.)
-                    enhanceMarkdownContent(streamingMessageBubble);
+                    streamingMessageBubble.innerHTML = renderMarkdownContent('', '', streamingTextBuffer, false);
+                    // Enhance markdown content (basic formatting only during streaming)
+                    enhanceMarkdownContent(streamingMessageBubble, true);
                 } catch (error) {
                     console.error('[AssistaCoder] Error rendering streaming markdown:', error);
                     // Fallback to plain text if rendering fails
@@ -375,17 +385,13 @@ export function initChatUI(vscode) {
 
         // Final render of any remaining content (use complete mode for final render)
         if (streamingMessageBubble && streamingTextBuffer) {
-            if (typeof window.markdownRenderer !== 'undefined') {
-                try {
-                    // Use complete mode for final render
-                    const renderFn = window.markdownRenderer.renderMarkdownComplete || window.markdownRenderer.renderMarkdown;
-                    const renderedHtml = renderFn(streamingTextBuffer);
-                    streamingMessageBubble.innerHTML = renderedHtml;
-                    enhanceMarkdownContent(streamingMessageBubble);
-                } catch (error) {
-                    console.error('[AssistaCoder] Error in final render:', error);
-                    streamingMessageBubble.textContent = streamingTextBuffer;
-                }
+            try {
+                // Use complete mode for final render
+                streamingMessageBubble.innerHTML = renderMarkdownContent('', '', streamingTextBuffer, true);
+                enhanceMarkdownContent(streamingMessageBubble);
+            } catch (error) {
+                console.error('[AssistaCoder] Error in final render:', error);
+                streamingMessageBubble.textContent = streamingTextBuffer;
             }
         }
 
@@ -416,19 +422,7 @@ export function initChatUI(vscode) {
             if (bubble) {
                 // Replace the streaming bubble content with the final rendered message
                 bubble.classList.add('markdown');
-
-                // Prefer client-side markdown rendering (use complete mode for final messages)
-                if (markdown && typeof window.markdownRenderer !== 'undefined') {
-                    const renderFn = window.markdownRenderer.renderMarkdownComplete || window.markdownRenderer.renderMarkdown;
-                    const renderedHtml = renderFn(markdown);
-                    bubble.innerHTML = renderedHtml;
-                } else if (html) {
-                    // Fallback to HTML if provided
-                    bubble.innerHTML = html;
-                } else {
-                    bubble.textContent = text;
-                }
-
+                bubble.innerHTML = renderMarkdownContent(text, html, markdown, true);
                 enhanceMarkdownContent(bubble);
 
                 // Reset streaming state
@@ -452,6 +446,7 @@ export function initChatUI(vscode) {
         if (!inputEl) return;
         inputEl.innerHTML = "";
         inputEl.style.height = "";
+        inputEl.setAttribute('data-placeholder-visible', 'true');
         if (sendBtn) sendBtn.disabled = true;
     }
 
@@ -459,39 +454,31 @@ export function initChatUI(vscode) {
         if (!inputEl) return;
         inputEl.focus();
 
-        // Handle textarea/input just in case
-        if (typeof inputEl.selectionStart === 'number') {
-            const start = inputEl.selectionStart;
-            const end = inputEl.selectionEnd;
-            const val = inputEl.value;
-            inputEl.value = val.substring(0, start) + text + val.substring(end);
-            inputEl.selectionStart = inputEl.selectionEnd = start + text.length;
-        } else {
-            // Contenteditable
-            const sel = window.getSelection();
-            if (!sel) return;
+        // Contenteditable
+        const sel = window.getSelection();
+        if (!sel) return;
 
-            // Ensure we have a valid range within the inputEl
-            if (sel.rangeCount === 0 || !inputEl.contains(sel.anchorNode)) {
-                const range = document.createRange();
-                range.selectNodeContents(inputEl);
-                range.collapse(false); // Move to end
-                sel.removeAllRanges();
-                sel.addRange(range);
-            }
-
-            const range = sel.getRangeAt(0);
-            range.deleteContents();
-
-            const textNode = document.createTextNode(text);
-            range.insertNode(textNode);
-
-            // Move cursor to after the inserted text
-            range.setStart(textNode, text.length);
-            range.collapse(true);
+        // Ensure we have a valid range within the inputEl
+        if (sel.rangeCount === 0 || !inputEl.contains(sel.anchorNode)) {
+            const range = document.createRange();
+            range.selectNodeContents(inputEl);
+            range.collapse(false); // Move to end
             sel.removeAllRanges();
             sel.addRange(range);
         }
+
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+
+        const textNode = document.createTextNode(text);
+        range.insertNode(textNode);
+
+        // Move cursor to after the inserted text
+        range.setStart(textNode, text.length);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+
         inputEl.dispatchEvent(new Event('input'));
     }
 
@@ -599,15 +586,10 @@ export function initChatUI(vscode) {
 
     function persistState() {
         try {
-            // Don't persist empty sessions (Welcome Screen) to avoid flickering on reload
-            // This causes the webview to restore the previous valid chat state instead
-            if (!currentMessages || currentMessages.length === 0) {
-                return;
-            }
-
+            // Always persist state to ensure clearing messages is saved
             vscode.setState?.({
                 activeSessionId,
-                messages: currentMessages,
+                messages: currentMessages || [],
                 selectedMode,
                 selectedModel,
                 selectedModelLabel: modelLabel ? modelLabel.textContent : undefined
@@ -626,7 +608,7 @@ export function initChatUI(vscode) {
         streamingTextBuffer = '';
         streamingRow = null;
         if (streamingRenderTimeout) {
-            clearTimeout(streamingRenderTimeout);
+            cancelAnimationFrame(streamingRenderTimeout);
             streamingRenderTimeout = null;
         }
     }
