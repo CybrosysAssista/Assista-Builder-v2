@@ -53,7 +53,7 @@ export async function getActiveProviderConfig(
     }
 
     const defaultModels: Record<string, string> = {
-        google: 'gemini-1.5-pro-latest',
+        google: 'gemini-1.5-flash-001',
         openrouter: 'anthropic/claude-3.5-sonnet'
     };
 
@@ -107,7 +107,7 @@ export async function getActiveProviderConfig(
 export function getRAGConfig(): RAGConfig {
     const configSection = vscode.workspace.getConfiguration('assistaCoder');
     const ragConfig = configSection.get<any>('rag', {});
-    
+
     return {
         enabled: ragConfig.enabled !== undefined ? ragConfig.enabled : true,
         serverUrl: ragConfig.serverUrl || 'https://odoo-rag.cyllo.cloud',

@@ -16,10 +16,15 @@ export class SettingsController {
     const openaiModel = providers?.openai?.model || '';
     const anthropicModel = providers?.anthropic?.model || '';
 
-    const googleKey = (await this.context.secrets.get('assistaCoder.apiKey.google')) || '';
-    const openrouterKey = (await this.context.secrets.get('assistaCoder.apiKey.openrouter')) || '';
-    const openaiKey = (await this.context.secrets.get('assistaCoder.apiKey.openai')) || '';
-    const anthropicKey = (await this.context.secrets.get('assistaCoder.apiKey.anthropic')) || '';
+    // Parallel fetch for secrets and user data to minimize delay
+    const [googleKey, openrouterKey, openaiKey, anthropicKey, userData] = await Promise.all([
+      this.context.secrets.get('assistaCoder.apiKey.google'),
+      this.context.secrets.get('assistaCoder.apiKey.openrouter'),
+      this.context.secrets.get('assistaCoder.apiKey.openai'),
+      this.context.secrets.get('assistaCoder.apiKey.anthropic'),
+      AssistaAuthService.getUserData()
+    ]);
+
     const hasGoogleKey = !!googleKey;
     const hasOpenrouterKey = !!openrouterKey;
     const hasOpenaiKey = !!openaiKey;
@@ -29,10 +34,20 @@ export class SettingsController {
     const ragConfig = config.get<any>('rag', {});
     const ragEnabled = ragConfig.enabled !== undefined ? ragConfig.enabled : true;
 
-    // Load user data
-    const userData = await AssistaAuthService.getUserData();
-    const userDisplayName = await AssistaAuthService.getUserDisplayName();
-    const userEmail = await AssistaAuthService.getUserEmail();
+    // Derived user fields from session data to avoid redundant geSession calls
+    const userEmail = userData?.email || '';
+    let userDisplayName = userData?.name || 'User';
+
+    if (!userData?.name && userEmail) {
+      // Logic from AssistaAuthService.getUserDisplayName to derive from email
+      const emailParts = userEmail.split('@');
+      if (emailParts[0]) {
+        userDisplayName = emailParts[0]
+          .split(/[._]/)
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+          .join(' ');
+      }
+    }
 
     this.postMessage('settingsData', {
       activeProvider,
@@ -40,10 +55,10 @@ export class SettingsController {
       openrouterModel,
       openaiModel,
       anthropicModel,
-      googleKey,
-      openrouterKey,
-      openaiKey,
-      anthropicKey,
+      googleKey: googleKey || '',
+      openrouterKey: openrouterKey || '',
+      openaiKey: openaiKey || '',
+      anthropicKey: anthropicKey || '',
       hasGoogleKey,
       hasOpenrouterKey,
       hasOpenaiKey,
@@ -57,7 +72,7 @@ export class SettingsController {
 
   public async handleSaveSettings(message: any) {
     try {
-      const activeProvider = typeof message.activeProvider === 'string' ? message.activeProvider : 'google';
+      const activeProvider = typeof message.activeProvider === 'string' ? message.activeProvider : 'openrouter';
       const googleKey = typeof message.googleKey === 'string' ? message.googleKey.trim() : '';
       const openrouterKey = typeof message.openrouterKey === 'string' ? message.openrouterKey.trim() : '';
       const openaiKey = typeof message.openaiKey === 'string' ? message.openaiKey.trim() : '';
