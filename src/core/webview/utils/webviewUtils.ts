@@ -27,15 +27,13 @@ function getModelMenuHtml(idPrefix: string, assets?: { model?: string; dropdown?
     <div class="menu" id="${rootId}">
       <button class="chip-btn" id="${toggleId}" title="Model">
         ${modelIcon}
-        <span id="${labelId}">GPT-5 (low reasoning)</span>
+        <span id="${labelId}">Loading models...</span>
         ${dropdownIcon}
       </button>
       <div class="dropdown" id="${dropdownId}" role="listbox">
-        <button class="item" data-model="gpt5-low"><span>GPT-5 (low reasoning)</span><span style="opacity:.6;font-size:11px">0.5x</span></button>
-        <button class="item" data-model="gpt5-high"><span>GPT-5 (high reasoning)</span><span style="opacity:.6;font-size:11px">3x</span></button>
-        <button class="item" data-model="gpt4"><span>GPT-4</span><span style="opacity:.6;font-size:11px">2x</span></button>
-        <button class="item" data-model="sonnet-4.5"><span>Claude Sonnet 4.5</span><span style="opacity:.6;font-size:11px">2x</span></button>
-        <button class="item" data-model="sonnet-4-thinking"><span>Claude Sonnet 4.5 Thinking</span><span style="opacity:.6;font-size:11px">3x</span></button>
+        <div class="item loading-item" style="opacity:.6;cursor:default;pointer-events:none;">
+          <span>Loading available models...</span>
+        </div>
         <button class="item custom" data-action="custom-api"><span>Use custom API key…</span></button>
       </div>
     </div>`;
