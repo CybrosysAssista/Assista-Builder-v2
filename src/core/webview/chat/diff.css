@@ -1,0 +1,72 @@
+/* Diff View Styles */
+.diff-view {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    /* Enable horizontal scroll */
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: var(--vscode-editor-font-size, 13px);
+    line-height: 20px;
+    white-space: pre;
+    /* Prevent wrapping */
+    padding: 0;
+    margin: 0;
+}
+
+.diff-add {
+    background-color: rgba(46, 160, 67, 0.2);
+    color: #b4f0bf;
+    display: block;
+    width: max-content;
+    /* Force width to content size */
+    min-width: 100%;
+    /* But at least fill the container */
+    padding: 0 16px;
+    /* Consistent padding */
+    margin: 0;
+    box-sizing: border-box;
+    min-height: 20px;
+}
+
+.diff-remove {
+    background-color: rgba(248, 81, 73, 0.2);
+    color: #ffdcd7;
+    display: block;
+    width: max-content;
+    /* Force width to content size */
+    min-width: 100%;
+    /* But at least fill the container */
+    padding: 0 16px;
+    /* Consistent padding */
+    margin: 0;
+    box-sizing: border-box;
+    min-height: 20px;
+}
+
+.diff-marker {
+    color: var(--vscode-descriptionForeground);
+    font-weight: bold;
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 0 16px;
+    /* Consistent padding */
+    margin: 0;
+    box-sizing: border-box;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    line-height: 20px;
+    min-height: 20px;
+}
+
+.diff-context {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    padding: 0 16px;
+    margin: 0;
+    box-sizing: border-box;
+    min-height: 20px;
+    color: var(--vscode-editor-foreground);
+}

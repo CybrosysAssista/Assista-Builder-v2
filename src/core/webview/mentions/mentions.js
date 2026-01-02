@@ -75,7 +75,7 @@ export function initMentionsUI(vscode, opts) {
     const foldersBase = (window.__ASSISTA_ICON_FOLDERS_BASE__ || '').toString();
     const img = (base, n) => (base && n) ? `<img class="file-icon" alt="" src="${base}/${n}"/>` : null;
     const badge = (label, bg, fg = '#111') =>
-      `<svg style="width:16px;height:16px;flex:0 0 16px;" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="1.5" rx="3.5" ry="3.5" width="17" height="17" fill="${bg}" /><text x="10" y="13" text-anchor="middle" font-size="8" font-family="Segoe UI, Arial" fill="${fg}">${label}</text></svg>`;
+      `<span class="mention-badge" style="background-color:${bg};color:${fg}" data-label="${label}"></span>`;
     if (isFolder) {
       return img(foldersBase, 'folder.svg')
         || `<svg style="width:16px;height:16px;flex:0 0 16px;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#9aa4b2" d="M10 4l2 2h7a3 3 0 0 1 3 3v7a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V7a3 3 0 0 1 3-3h5z"/></svg>`;
@@ -150,9 +150,17 @@ export function initMentionsUI(vscode, opts) {
     if (pickerList) pickerList.innerHTML = '';
   }
   // Helper to insert mention and handle existing '@' prefix
-  function insertMention(name, isFolder = false) {
+  function insertMention(name, isFolder = null) {
     hideMentionTooltip();
     closeMenu();
+
+    // Guess if it's a folder if not explicitly provided (e.g. from drag and drop)
+    if (isFolder === null) {
+      const nm = String(name || '').toLowerCase();
+      const lastPart = nm.split(/[\\\/]/).pop() || '';
+      isFolder = lastPart && !lastPart.includes('.');
+    }
+
     const base = (String(name).split(/[\\\/]/).pop()) || String(name);
     const iconHtml = fileIconFor(name, isFolder);
 
