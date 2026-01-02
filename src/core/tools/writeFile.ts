@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 
 import type { ToolDefinition, ToolResult } from '../agent/types.js';
 import { validateWorkspacePath, resolveWorkspacePath } from './toolUtils.js';
+import { applyVisualDiff } from '../utils/decorationUtils.js';
 
 interface WriteFileArgs {
   path: string;
@@ -95,8 +96,8 @@ export const writeFileTool: ToolDefinition = {
         };
       }
 
-      // Apply changes directly
-      await fs.writeFile(fullPath, args.content, 'utf-8');
+      // Apply changes with visual diff and review
+      await applyVisualDiff(fullPath, args.content, 'Agent created/modified');
 
       const actualLines = args.content.split(/\r?\n/).length;
       return {

@@ -270,7 +270,13 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
             let contentToShow = '';
             let isDiff = false;
 
-            if (args.content) {
+            if (toolName === 'write_to_file') {
+                const content = args.content || args.CodeContent || '';
+                if (content) {
+                    contentToShow = content.split(/\r?\n/).map(line => '+' + line).join('\n');
+                    isDiff = true;
+                }
+            } else if (args.content) {
                 contentToShow = args.content;
             } else if (args.diff) {
                 contentToShow = args.diff;
@@ -302,6 +308,7 @@ export function initToolsUI(vscode, { messagesEl, showChatArea, applySyntaxHighl
                 pre.style.padding = '8px 4px';
                 pre.style.fontSize = '12px';
                 pre.style.background = 'var(--vscode-editor-background)';
+                pre.style.overflowX = 'auto';
 
                 if (isDiff) {
                     pre.innerHTML = applyDiffHighlighting(contentToShow);
