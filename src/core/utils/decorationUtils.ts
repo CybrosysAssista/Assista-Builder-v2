@@ -243,7 +243,7 @@ export async function applyVisualDiff(
     const pending = pendingDecorations.get(uriStr);
 
     if (pending) {
-        console.log('[DecorationUtils] Found pending decorations. Reconstructing clean content.');
+        // console.log('[DecorationUtils] Found pending decorations. Reconstructing clean content.');
         // If we have pending edits, the 'originalContent' should remain the ANCHOR (the very first original).
         // We assume previousTextByUri has the anchor.
         originalContent = previousTextByUri.get(uriStr) || null;

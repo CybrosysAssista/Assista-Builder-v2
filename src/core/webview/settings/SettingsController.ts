@@ -107,7 +107,7 @@ export class SettingsController {
       await config.update('providers', nextProviders, vscode.ConfigurationTarget.Global);
 
       if (['google', 'openrouter', 'openai', 'anthropic'].includes(activeProvider)) {
-        console.log(`[AssistaCoder] Updating activeProvider to: ${activeProvider}`);
+        // console.log(`[AssistaCoder] Updating activeProvider to: ${activeProvider}`);
         await config.update('activeProvider', activeProvider, vscode.ConfigurationTarget.Global);
       } else {
         console.warn(`[AssistaCoder] Invalid activeProvider: ${activeProvider}`);

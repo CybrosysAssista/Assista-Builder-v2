@@ -98,7 +98,7 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 if (!text) {
                     return;
                 }
-                console.log("Hello",message)
+                // console.log("Hello",message)
                 const mode = typeof message.mode === 'string' ? message.mode : 'agent';
                 const model = typeof message.model === 'string' ? message.model : 'custom-api';
                 await this.handleUserMessage(text, mode, model);
@@ -267,7 +267,7 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
                 const id = typeof message.id === 'string' ? message.id : '';
                 if (id) {
                     const switched = await switchActiveSession(this._context, id);
-                    console.log('[AssistaCoder] Session opened from history:', switched);
+                    // console.log('[AssistaCoder] Session opened from history:', switched);
                     this._view?.show?.(true);
                     await this.queueHydration(switched.id, switched.messages);
                     this.postMessage('historyOpened', { sessionId: switched.id });
@@ -568,7 +568,7 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
             }
 
             const elapsed = Date.now() - startTime;
-            console.log(`[AssistaCoder] Total completion time taken in ${elapsed}ms`);
+            // console.log(`[AssistaCoder] Total completion time taken in ${elapsed}ms`);
             const reply = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
             await this.sendAssistantMessage(reply, sessionId);
             void this.syncActiveSession();
@@ -686,13 +686,13 @@ export class AssistaCoderProvider implements vscode.WebviewViewProvider {
     }
 
     private async fetchAndSendModels(): Promise<void> {
-        console.log('[AssistaCoder] fetchAndSendModels triggered');
+        // console.log('[AssistaCoder] fetchAndSendModels triggered');
         try {
             const models = await fetchAvailableModels();
-            console.log(`[AssistaCoder] Successfully fetched ${models.length} models`);
+            // console.log(`[AssistaCoder] Successfully fetched ${models.length} models`);
             this.postMessage('availableModels', { models });
         } catch (error) {
-            console.error('[AssistaCoder] Failed to fetch available models:', error);
+            // console.error('[AssistaCoder] Failed to fetch available models:', error);
             // Send empty models array to trigger fallback to custom API only
             this.postMessage('availableModels', { models: [], error: true });
         }

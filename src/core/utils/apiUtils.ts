@@ -16,20 +16,20 @@ export interface AvailableModelsResponse {
  * @returns Promise resolving to array of available models
  */
 export async function fetchAvailableModels(): Promise<AvailableModel[]> {
-    console.log('[AssistaCoder] fetchAvailableModels called');
+    //console.log('[AssistaCoder] fetchAvailableModels called');
     return new Promise((resolve, reject) => {
         const url = 'https://assista-api.cybrosys.com/api/settings/available-models';
-        console.log(`[AssistaCoder] Fetching models from: ${url}`);
+        //console.log(`[AssistaCoder] Fetching models from: ${url}`);
 
         const request = https.get(url, (response) => {
             let data = '';
-            console.log(`[AssistaCoder] API status code: ${response.statusCode}`);
+            //console.log(`[AssistaCoder] API status code: ${response.statusCode}`);
 
             // Handle redirect
             if (response.statusCode === 301 || response.statusCode === 302) {
                 if (response.headers.location) {
                     const redirectUrl = response.headers.location;
-                    console.log(`[AssistaCoder] Redirecting to: ${redirectUrl}`);
+                    //console.log(`[AssistaCoder] Redirecting to: ${redirectUrl}`);
                     const redirectRequest = (redirectUrl.startsWith('https') ? https : http).get(redirectUrl, (redirectResponse) => {
                         let redirectData = '';
 
@@ -40,7 +40,7 @@ export async function fetchAvailableModels(): Promise<AvailableModel[]> {
                         redirectResponse.on('end', () => {
                             try {
                                 const result = JSON.parse(redirectData);
-                                console.log('[AssistaCoder] API raw response (after redirect):', result);
+                                //console.log('[AssistaCoder] API raw response (after redirect):', result);
                                 if (Array.isArray(result)) {
                                     resolve(result.map(m => ({ id: m, name: m.split('/').pop() || m })));
                                 } else if (result && Array.isArray(result.models)) {
@@ -78,7 +78,7 @@ export async function fetchAvailableModels(): Promise<AvailableModel[]> {
             response.on('end', () => {
                 try {
                     const result = JSON.parse(data);
-                    console.log('[AssistaCoder] API raw response:', result);
+                    //console.log('[AssistaCoder] API raw response:', result);
                     if (Array.isArray(result)) {
                         // Handle array of strings case
                         const models = result.map(modelId => ({
@@ -119,7 +119,7 @@ export async function fetchAvailableModels(): Promise<AvailableModel[]> {
  * @returns Promise resolving to the API key response
  */
 export async function fetchExternalKey(email: string): Promise<{ apiKey: string; keyName: string; usageLimit: number; limitReset: string }> {
-    console.log(`[AssistaCoder] fetchExternalKey called for: ${email}`);
+    //console.log(`[AssistaCoder] fetchExternalKey called for: ${email}`);
     return new Promise((resolve, reject) => {
         const url = `https://assista-api.cybrosys.com/api/settings/external/openrouter-key?email=${encodeURIComponent(email)}`;
 

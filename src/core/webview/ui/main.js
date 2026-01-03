@@ -235,7 +235,7 @@ window.addEventListener('message', (event) => {
             break;
         }
         case 'availableModels': {
-            console.log('[AssistaCoder] Webview received availableModels:', payload.models);
+            // console.log('[AssistaCoder] Webview received availableModels:', payload.models);
             const models = Array.isArray(payload.models) ? payload.models : [];
             if (typeof chat.populateModelDropdown === 'function') {
                 chat.populateModelDropdown(models);

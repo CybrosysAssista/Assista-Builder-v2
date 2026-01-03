@@ -30,12 +30,12 @@ export class OdooEnvironmentService {
   }
 
   public async getEnvironment(force = false): Promise<OdooEnv> {
-    console.log('getEnvironment called');
+    //console.log('getEnvironment called');
     if (!force && this.cache) {
-      console.log('getEnvironment returning cached environment:', this.cache);
+      //console.log('getEnvironment returning cached environment:', this.cache);
       return this.cache;
     }
-    console.log('getEnvironment detecting environment');
+    //console.log('getEnvironment detecting environment');
     const env = await this.detectEnvironment();
     this.cache = env;
     return this.cache;

@@ -60,7 +60,7 @@ export async function runAgentOrchestrator(
   try {
     while (true) {
       const providerRequest = await adapter.buildRequest(systemInstruction, internalMessages, tools, params.config);
-      console.log('[Assista Coder] Provider Request:', providerRequest);
+      //console.log('[Assista Coder] Provider Request:', providerRequest);
 
       const stream = adapter.createMessageStream(providerRequest, { ...params.config, abortSignal });
 
@@ -98,7 +98,7 @@ export async function runAgentOrchestrator(
 
             case 'usage':
               // Log usage if needed
-              console.log(`[Assista Coder] Usage: ${event.inputTokens} input, ${event.outputTokens} output tokens`);
+              //console.log(`[Assista Coder] Usage: ${event.inputTokens} input, ${event.outputTokens} output tokens`);
               break;
 
             case 'error':
@@ -124,8 +124,8 @@ export async function runAgentOrchestrator(
         throw e;
       }
 
-      console.log('[Assista Coder] Final Streamed Text:', streamedText);
-      console.log('[Assista Coder] Tool Calls:', toolCalls);
+      //console.log('[Assista Coder] Final Streamed Text:', streamedText);
+      //console.log('[Assista Coder] Tool Calls:', toolCalls);
 
       // Add assistant message (text + tool calls)
       const assistantContent: any[] = [];

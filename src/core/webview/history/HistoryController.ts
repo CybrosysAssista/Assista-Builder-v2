@@ -30,7 +30,7 @@ export class HistoryController {
     const id = String(message?.id || '');
     if (!id) return;
     const switched = await switchActiveSession(this.context, id);
-    console.log('[AssistaCoder] Session opened from history (via HistoryController):', switched);
+    // console.log('[AssistaCoder] Session opened from history (via HistoryController):', switched);
     this.postMessage('historyOpened', { sessionId: switched.id });
   }
 

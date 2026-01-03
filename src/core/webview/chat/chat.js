@@ -727,7 +727,7 @@ export function initChatUI(vscode) {
     }
 
     function populateModelDropdown(models) {
-        console.log('[AssistaCoder] populateModelDropdown called with:', models);
+        // console.log('[AssistaCoder] populateModelDropdown called with:', models);
         if (!modelDropdown) {
             console.error('[AssistaCoder] modelDropdown element not found!');
             return;
@@ -811,7 +811,7 @@ export function initChatUI(vscode) {
                 welcomeModelDropdown.appendChild(welcomeCustomApiBtn);
             }
         }
-        console.log('[AssistaCoder] populateModelDropdown completed');
+        // console.log('[AssistaCoder] populateModelDropdown completed');
     }
 
 

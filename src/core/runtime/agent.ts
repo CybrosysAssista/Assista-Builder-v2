@@ -229,8 +229,8 @@ export async function runAgent(
 
       if (ragResult.context && ragResult.context.trim().length > 0) {
         ragContext = ragResult.context;
-        console.log(`[Assista Coder] RAG context:\n${ragContext}`);
-        console.log(`[Assista Coder] RAG context retrieved: ${ragResult.totalChunks} chunks`);
+        // console.log(`[Assista Coder] RAG context:\n${ragContext}`);
+        // console.log(`[Assista Coder] RAG context retrieved: ${ragResult.totalChunks} chunks`);
       }
     } catch (error) {
       // Fail gracefully - log warning but continue without RAG
